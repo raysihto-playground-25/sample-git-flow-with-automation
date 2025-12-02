@@ -162,8 +162,8 @@ jobs:
             git commit --allow-empty -m "chore(sync): Placeholder for back-merge - conflicts need manual resolution"
           fi
           
-          # Force push the sync branch
-          if ! git push --force origin "$SYNC_BRANCH" 2>&1; then
+          # Force push the sync branch (using --force-with-lease --force-if-includes for safer force push)
+          if ! git push --force-with-lease --force-if-includes origin "$SYNC_BRANCH" 2>&1; then
             echo "Error: Failed to push sync branch '$SYNC_BRANCH'."
             exit 1
           fi
@@ -235,9 +235,13 @@ jobs:
             
             gh pr edit "$PR_NUMBER" --title "$PR_TITLE" --body "$PR_BODY"
             
-            # Convert to draft if merge failed
+            # Update PR draft status based on merge result
             if [ "$MERGE_SUCCESS" = "false" ]; then
+              # Convert to draft if merge failed
               gh pr ready "$PR_NUMBER" --undo 2>/dev/null || true
+            else
+              # Mark as ready if merge succeeded (handles previous failure → now success case)
+              gh pr ready "$PR_NUMBER" 2>/dev/null || true
             fi
             
             echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
