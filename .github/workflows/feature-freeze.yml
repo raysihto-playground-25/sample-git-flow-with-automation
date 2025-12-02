@@ -1,4 +1,4 @@
-name: Create Release Branch
+name: Feature Freeze - Create Release Branch
 
 on:
   workflow_dispatch:
@@ -24,11 +24,11 @@ on:
         default: 'master'
 
 concurrency:
-  group: create-release-branch
+  group: feature-freeze
   cancel-in-progress: true
 
 jobs:
-  create-release:
+  feature-freeze:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -144,7 +144,7 @@ jobs:
           
           # Use atomic push for branch, commit, and tag together
           if ! git push --atomic origin "$RELEASE_BRANCH" "$RC_TAG" 2>&1; then
-            echo "Error: Failed to push release branch or RC tag. One of these may already exist due to a concurrent workflow run."
+            echo "Error: Failed to push release branch or RC tag. One of these may already exist."
             exit 1
           fi
 
