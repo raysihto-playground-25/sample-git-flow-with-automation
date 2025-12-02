@@ -174,6 +174,8 @@ jobs:
           # Check mergeable state
           if [ "$MERGEABLE_STATE" = "dirty" ]; then
             ERRORS="${ERRORS}- PR has unresolved conflicts (mergeable_state: dirty)\n"
+          elif [ "$MERGEABLE_STATE" = "blocked" ]; then
+            ERRORS="${ERRORS}- PR is blocked by failing status checks or branch protection rules (mergeable_state: blocked)\n"
           fi
           
           if [ -n "$ERRORS" ]; then
@@ -326,7 +328,7 @@ jobs:
           
           while [ "$HAS_NEXT_PAGE" = "true" ]; do
             # Build GraphQL arguments dynamically to avoid code duplication
-            GRAPHQL_ARGS=("-f" "query=$QUERY" "-F" "owner=$OWNER" "-F" "name=$REPO_NAME" "-F" "number=$PR_NUMBER")
+            GRAPHQL_ARGS=("-f" "query=$QUERY" "-f" "owner=$OWNER" "-f" "name=$REPO_NAME" "-f" "number=$PR_NUMBER")
             if [ -n "$CURSOR" ]; then
               GRAPHQL_ARGS+=("-f" "cursor=$CURSOR")
             fi
