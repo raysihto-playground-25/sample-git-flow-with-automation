@@ -36,14 +36,14 @@ jobs:
           VERSION=$(echo "$BRANCH_NAME" | sed 's|release/||')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           
-          # Get existing RC tags for this version and find the highest number
-          EXISTING_RC_TAGS=$(git tag -l "v${VERSION}-rc.*" | sort -V)
+          # Get the highest existing RC tag for this version (single line output)
+          HIGHEST_RC_TAG=$(git tag -l "v${VERSION}-rc.*" | sort -V | tail -1)
           
-          if [ -z "$EXISTING_RC_TAGS" ]; then
+          if [ -z "$HIGHEST_RC_TAG" ]; then
             HIGHEST_RC=0
           else
-            # Extract the highest RC number
-            HIGHEST_RC=$(echo "$EXISTING_RC_TAGS" | tail -n 1 | sed "s/v${VERSION}-rc\.//")
+            # Extract the RC number from the tag
+            HIGHEST_RC=$(echo "$HIGHEST_RC_TAG" | sed "s/v${VERSION}-rc\.//")
           fi
           
           echo "highest_rc=$HIGHEST_RC" >> $GITHUB_OUTPUT
@@ -135,21 +135,19 @@ jobs:
           RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
           PR_EXISTS="${{ steps.sync_branch.outputs.exists }}"
           
-          # Fetch develop branch
+          # Fetch develop and release branches
           git fetch origin "${{ env.DEVELOP_BRANCH }}"
-          
-          if [ "$PR_EXISTS" = "true" ]; then
-            # Sync PR exists - reset to develop and re-merge
-            git fetch origin "$SYNC_BRANCH" || true
-            git checkout -B "$SYNC_BRANCH" "origin/${{ env.DEVELOP_BRANCH }}"
-          else
-            # Create new sync branch from develop
-            git checkout -b "$SYNC_BRANCH" "origin/${{ env.DEVELOP_BRANCH }}"
-          fi
-          
-          # Try to merge release branch with --no-ff --no-edit
           git fetch origin "$RELEASE_BRANCH"
           
+          # Fetch existing sync branch if it exists
+          if [ "$PR_EXISTS" = "true" ]; then
+            git fetch origin "$SYNC_BRANCH" || true
+          fi
+          
+          # Create or reset sync branch from develop
+          git checkout -B "$SYNC_BRANCH" "origin/${{ env.DEVELOP_BRANCH }}"
+          
+          # Try to merge release branch with --no-ff --no-edit
           if git merge --no-ff --no-edit "origin/$RELEASE_BRANCH" 2>&1; then
             echo "merge_success=true" >> $GITHUB_OUTPUT
             echo "Merge successful"
@@ -237,16 +235,30 @@ jobs:
             
             gh pr edit "$PR_NUMBER" --title "$PR_TITLE" --body "$PR_BODY"
             
+            # Convert to draft if merge failed
+            if [ "$MERGE_SUCCESS" = "false" ]; then
+              gh pr ready "$PR_NUMBER" --undo 2>/dev/null || true
+            fi
+            
             echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
             echo "pr_action=updated" >> $GITHUB_OUTPUT
             echo "Updated existing PR: $PR_URL"
           else
-            # Create new PR
-            PR_URL=$(gh pr create \
-              --title "$PR_TITLE" \
-              --body "$PR_BODY" \
-              --head "$SYNC_BRANCH" \
-              --base "${{ env.DEVELOP_BRANCH }}")
+            # Create new PR (draft if merge failed)
+            if [ "$MERGE_SUCCESS" = "false" ]; then
+              PR_URL=$(gh pr create \
+                --title "$PR_TITLE" \
+                --body "$PR_BODY" \
+                --head "$SYNC_BRANCH" \
+                --base "${{ env.DEVELOP_BRANCH }}" \
+                --draft)
+            else
+              PR_URL=$(gh pr create \
+                --title "$PR_TITLE" \
+                --body "$PR_BODY" \
+                --head "$SYNC_BRANCH" \
+                --base "${{ env.DEVELOP_BRANCH }}")
+            fi
             
             echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
             echo "pr_action=created" >> $GITHUB_OUTPUT
