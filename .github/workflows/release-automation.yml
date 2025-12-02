@@ -11,6 +11,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: release-automation
+  cancel-in-progress: false
+
 env:
   MASTER_BRANCH: master
   DEVELOP_BRANCH: develop
@@ -27,7 +31,7 @@ jobs:
       branch: ${{ steps.branch_info.outputs.branch }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.release_branch || github.ref }}
           fetch-depth: 0
@@ -107,7 +111,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
