@@ -18,7 +18,7 @@ on:
     types: [created]
 
 env:
-  RELEASE_BRANCH_PREFIX: "release"
+  RELEASE_BRANCH_PREFIX: "release/"
   DEVELOP_BRANCH: "develop"
   # Sync branches are used to back-merge changes from release branches to develop.
   # These branches use merge commits instead of squash to preserve full commit history.
@@ -608,11 +608,11 @@ jobs:
           echo "Sync prefix: $SYNC_PREFIX"
           
           # Determine merge method
-          # 1. If base branch starts with RELEASE_BRANCH_PREFIX/ -> squash
+          # 1. If base branch starts with RELEASE_BRANCH_PREFIX -> squash
           # 2. If base branch is DEVELOP_BRANCH AND head branch does NOT start with SYNC_BRANCH_PREFIX -> squash
           # 3. Otherwise -> merge (merge commit)
           
-          if [[ "$BASE_REF" == "${RELEASE_PREFIX}/"* ]]; then
+          if [[ "$BASE_REF" == "${RELEASE_PREFIX}"* ]]; then
             echo "Base branch is a release branch, using squash merge"
             echo "method=squash" >> $GITHUB_OUTPUT
           elif [ "$BASE_REF" = "$DEVELOP_BRANCH" ] && [[ "$HEAD_REF" != "${SYNC_PREFIX}"* ]]; then
