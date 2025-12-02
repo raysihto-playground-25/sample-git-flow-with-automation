@@ -1,0 +1,806 @@
+name: Mergebot
+
+# =============================================================================
+# Mergebot - PR Merge Automation Workflow
+# =============================================================================
+# This workflow provides automated PR merging for repositories where branch
+# protection rules are unavailable (e.g., GitHub Free plan) or when additional
+# merge controls are needed beyond what branch protection offers.
+#
+# LIMITATIONS:
+# - Fork PRs are NOT supported: GITHUB_TOKEN has limited write permissions for
+#   fork-originated PRs by default, which will cause merge operations to fail.
+# - Only OWNER, MEMBER, and COLLABORATOR can execute the merge command.
+# =============================================================================
+
+on:
+  issue_comment:
+    types: [created]
+
+env:
+  RELEASE_BRANCH_PREFIX: "release/"
+  DEVELOP_BRANCH: "develop"
+  # Sync branches are used to back-merge changes from release branches to develop.
+  # These branches use merge commits instead of squash to preserve full commit history.
+  SYNC_BRANCH_PREFIX: "fix/sync/"
+  # Command regex using POSIX character classes for Bash ERE compatibility
+  COMMAND_REGEX: '^[[:space:]]*@mergebot[[:space:]]+merge[[:space:]]*$'
+  # Retry configuration for waiting on GitHub to calculate mergeable status
+  MERGEABLE_RETRY_COUNT: "5"
+  MERGEABLE_RETRY_INTERVAL: "10"
+
+# Concurrency per PR number to avoid parallel execution
+concurrency:
+  group: mergebot-pr-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  mergebot:
+    name: Mergebot
+    # Only run if this is a PR comment (not an issue)
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Check if comment is from a bot
+        id: check_bot
+        run: |
+          set -Eeuo pipefail
+          USER_TYPE="${{ github.event.comment.user.type }}"
+          if [ "$USER_TYPE" = "Bot" ]; then
+            echo "Comment is from a bot, skipping"
+            echo "is_bot=true" >> $GITHUB_OUTPUT
+          else
+            echo "Comment is from a human"
+            echo "is_bot=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Parse and validate command
+        id: parse_command
+        if: steps.check_bot.outputs.is_bot == 'false'
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMAND_REGEX: ${{ env.COMMAND_REGEX }}
+        run: |
+          set -Eeuo pipefail
+          echo "Checking if comment matches command regex..."
+          
+          # Match the entire comment body against the command regex
+          if [[ "$COMMENT_BODY" =~ $COMMAND_REGEX ]]; then
+            echo "Command matched!"
+            echo "command_valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "Command did not match"
+            echo "command_valid=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check author association
+        id: check_author
+        if: steps.check_bot.outputs.is_bot == 'false' && steps.parse_command.outputs.command_valid == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          AUTHOR_ASSOCIATION="${{ github.event.comment.author_association }}"
+          PR_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+          ACTOR="${{ github.actor }}"
+          
+          echo "Author association: $AUTHOR_ASSOCIATION"
+          echo "Actor: $ACTOR"
+          
+          # Check 1: author_association must be OWNER, MEMBER, or COLLABORATOR
+          case "$AUTHOR_ASSOCIATION" in
+            OWNER|MEMBER|COLLABORATOR)
+              echo "Author association check passed"
+              ;;
+            *)
+              echo "Author association check failed"
+              
+              COMMENT_BODY="## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`@mergebot merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`"
+              
+              gh api repos/$REPO/issues/$PR_NUMBER/comments \
+                -f body="$COMMENT_BODY"
+
+              exit 1
+              ;;
+          esac
+          
+          # Check 2: Verify user has write+ permission on the repository (write, maintain, admin)
+          echo "Checking repository permission level..."
+          
+          # Fetch collaborator permission for the actor
+          PERM_RESPONSE=$(gh api repos/$REPO/collaborators/$ACTOR/permission 2>&1) || {
+            echo "Failed to fetch permission: $PERM_RESPONSE"
+            
+            COMMENT_BODY="## Permission check failed\n\nUnable to verify your repository permissions. This may occur if:\n- You are not a collaborator on this repository\n- The API call failed\n\nPlease ensure you have write access to this repository."
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+            
+            exit 1
+          }
+          
+          PERMISSION=$(echo "$PERM_RESPONSE" | jq -r '.permission // "none"')
+          echo "Repository permission level: $PERMISSION"
+          
+          case "$PERMISSION" in
+            admin|maintain|write)
+              echo "Repository permission check passed"
+              echo "allowed=true" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "Insufficient repository permissions"
+              echo "allowed=false" >> $GITHUB_OUTPUT
+              
+              COMMENT_BODY="## Permission denied\n\nYou need at least **write** permission on this repository to use the \`@mergebot merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`\nYour permission level: \`$PERMISSION\`"
+              
+              gh api repos/$REPO/issues/$PR_NUMBER/comments \
+                -f body="$COMMENT_BODY"
+
+              exit 1
+              ;;
+          esac
+
+      - name: Check if fork PR
+        id: check_fork
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          PR_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+          
+          # Get PR data to check if it's from a fork
+          # Use robust detection: check head.repo.fork flag OR compare owner IDs
+          # This handles cases where head.repo.full_name is null (e.g., fork repo deleted)
+          PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
+          IS_FORK=$(echo "$PR_DATA" | jq -r '(.head.repo.fork // false) or ((.head.repo.owner.id // 0) != (.base.repo.owner.id // 0))')
+          HEAD_REPO_NAME=$(echo "$PR_DATA" | jq -r '.head.repo.full_name // "(null)"')
+          BASE_REPO_NAME=$(echo "$PR_DATA" | jq -r '.base.repo.full_name')
+          
+          echo "Head repo: $HEAD_REPO_NAME"
+          echo "Base repo: $BASE_REPO_NAME"
+          echo "Is fork (robust check): $IS_FORK"
+          
+          if [ "$IS_FORK" = "true" ]; then
+            echo "This is a fork PR - not supported"
+            echo "is_fork=true" >> $GITHUB_OUTPUT
+            
+            # Post comment about fork PR limitation
+            COMMENT_BODY="## Fork PR not supported\n\nThe \`@mergebot merge\` command is not supported for PRs from forked repositories.\n\nThis is because the GITHUB_TOKEN has limited write permissions for fork-originated PRs by default."
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+            
+            exit 1
+          else
+            echo "This is not a fork PR"
+            echo "is_fork=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add eyes reaction to acknowledge command
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          COMMENT_ID="${{ github.event.comment.id }}"
+          REPO="${{ github.repository }}"
+          
+          echo "Adding :eyes: reaction to comment $COMMENT_ID"
+          
+          gh api repos/$REPO/issues/comments/$COMMENT_ID/reactions \
+            -X POST \
+            -f content="eyes" || echo "Failed to add reaction (may already exist)"
+
+      - name: Fetch PR data
+        id: pr_data
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' &&
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          PR_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+          
+          echo "Fetching PR #$PR_NUMBER data..."
+          
+          # Get PR data using gh api
+          PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
+          
+          # Extract key fields, log them, and set outputs using a single jq process
+          # for better performance and maintainability.
+          echo "$PR_DATA" | jq -r '
+            "state=\(.state)\n" +
+            "locked=\(.locked)\n" +
+            "draft=\(.draft)\n" +
+            "merged=\(.merged)\n" +
+            "mergeable=\(.mergeable // "null")\n" +
+            "mergeable_state=\(.mergeable_state)\n" +
+            "head_sha=\(.head.sha)\n" +
+            "head_ref=\(.head.ref)\n" +
+            "base_ref=\(.base.ref)\n" +
+            "author=\(.user.login)"
+          ' | while IFS= read -r line; do
+            echo "$line" >> $GITHUB_OUTPUT
+            # Remap for logging to match original output format
+            case "${line%%=*}" in
+              state) echo "PR State: ${line#*=}" ;;
+              locked) echo "Locked: ${line#*=}" ;;
+              draft) echo "Draft: ${line#*=}" ;;
+              merged) echo "Merged: ${line#*=}" ;;
+              mergeable) echo "Mergeable: ${line#*=}" ;;
+              mergeable_state) echo "Mergeable State: ${line#*=}" ;;
+              head_sha) echo "Head SHA: ${line#*=}" ;;
+              head_ref) echo "Head Ref: ${line#*=}" ;;
+              base_ref) echo "Base Ref: ${line#*=}" ;;
+              author) echo "Author: ${line#*=}" ;;
+            esac
+          done
+
+      - name: Check if already merged
+        id: check_merged
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' &&
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          MERGED="${{ steps.pr_data.outputs.merged }}"
+          PR_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+          
+          if [ "$MERGED" = "true" ]; then
+            echo "PR is already merged"
+            echo "already_merged=true" >> $GITHUB_OUTPUT
+            
+            # Post comment
+            COMMENT_BODY=$(printf '## Already merged\n\nThis PR has already been merged.')
+            gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
+          else
+            echo "already_merged=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check PR status (closed/locked/draft)
+        id: check_pr_status
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
+          steps.check_merged.outputs.already_merged == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          STATE="${{ steps.pr_data.outputs.state }}"
+          LOCKED="${{ steps.pr_data.outputs.locked }}"
+          DRAFT="${{ steps.pr_data.outputs.draft }}"
+          MERGEABLE_STATE="${{ steps.pr_data.outputs.mergeable_state }}"
+          PR_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+          
+          ERRORS=""
+          
+          # Check if PR is closed
+          if [ "$STATE" = "closed" ]; then
+            ERRORS="${ERRORS}- PR is closed\n"
+          fi
+          
+          # Check if PR is locked
+          if [ "$LOCKED" = "true" ]; then
+            ERRORS="${ERRORS}- PR is locked\n"
+          fi
+          
+          # Check if PR is a draft
+          if [ "$DRAFT" = "true" ]; then
+            ERRORS="${ERRORS}- PR is a draft - please mark as ready for review before merging\n"
+          fi
+          
+          # Check mergeable state
+          COMMENT_TITLE=""
+          if [ "$MERGEABLE_STATE" = "dirty" ]; then
+            COMMENT_TITLE="## Conflicts detected"
+            ERRORS="${ERRORS}- PR has unresolved conflicts (mergeable_state: dirty)\n"
+          elif [ "$MERGEABLE_STATE" = "blocked" ]; then
+            COMMENT_TITLE="## Blocked by checks"
+            ERRORS="${ERRORS}- PR is blocked by failing status checks or branch protection rules (mergeable_state: blocked)\n"
+          elif [ "$MERGEABLE_STATE" = "unstable" ]; then
+            COMMENT_TITLE="## Failing checks"
+            ERRORS="${ERRORS}- PR has failing status checks (mergeable_state: unstable)\n"
+          elif [ "$MERGEABLE_STATE" = "behind" ]; then
+            COMMENT_TITLE="## Update branch required"
+            ERRORS="${ERRORS}- PR branch is behind the base branch; please update the branch\n"
+          fi
+          
+          # Check other conditions and set title
+          if [ "$STATE" = "closed" ] || [ "$LOCKED" = "true" ] || [ "$DRAFT" = "true" ]; then
+            if [ "$STATE" = "closed" ]; then
+              COMMENT_TITLE="## PR is closed"
+            elif [ "$LOCKED" = "true" ]; then
+              COMMENT_TITLE="## PR is locked"
+            elif [ "$DRAFT" = "true" ]; then
+              COMMENT_TITLE="## PR is a draft"
+            fi
+          fi
+          
+          # Use generic title if multiple issues or no specific title
+          if [ -z "$COMMENT_TITLE" ] && [ -n "$ERRORS" ]; then
+            COMMENT_TITLE="## Merge checks failed"
+          fi
+          
+          if [ -n "$ERRORS" ]; then
+            echo "PR status checks failed"
+            echo "status_ok=false" >> $GITHUB_OUTPUT
+            
+            # Post comment with errors - use printf to handle newlines
+            COMMENT_BODY=$(printf '%s\n\nThe following issues must be resolved before merging:\n\n%b' "$COMMENT_TITLE" "$ERRORS")
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+          else
+            echo "PR status checks passed"
+            echo "status_ok=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check approvals and dismiss stale ones
+        id: check_approvals
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
+          steps.check_merged.outputs.already_merged == 'false' &&
+          steps.check_pr_status.outputs.status_ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          PR_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+          HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
+          
+          # Get PR author from pr_data step output to exclude self-approvals
+          PR_AUTHOR="${{ steps.pr_data.outputs.author }}"
+          
+          echo "Checking approvals for PR #$PR_NUMBER (head SHA: $HEAD_SHA)..."
+          echo "PR Author: $PR_AUTHOR (self-approvals will be excluded)"
+          
+          # Get all reviews
+          REVIEWS=$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews --paginate)
+          
+          # Find approved reviews
+          APPROVED_REVIEWS=$(echo "$REVIEWS" | jq '[.[] | select(.state == "APPROVED")]')
+          APPROVED_COUNT=$(echo "$APPROVED_REVIEWS" | jq 'length')
+          
+          echo "Found $APPROVED_COUNT approved reviews"
+          
+          STALE_REVIEWS_DISMISSED=false
+          STALE_REVIEW_MESSAGES=""
+          DISMISS_FAILED_MESSAGES=""
+          VALID_APPROVALS=0
+          
+          # Check each approved review using TSV format for better readability
+          if [ "$APPROVED_COUNT" -gt 0 ]; then
+            while IFS=$'\t' read -r REVIEW_ID COMMIT_ID USER; do
+              # Skip if essential values are empty
+              if [ -z "$REVIEW_ID" ] || [ -z "$COMMIT_ID" ] || [ -z "$USER" ]; then
+                echo "Warning: Could not parse review fields. Skipping."
+                continue
+              fi
+              
+              echo "Review ID: $REVIEW_ID, Commit ID: $COMMIT_ID, User: $USER"
+              
+              # Exclude PR author's own approval (self-approval)
+              if [ "$USER" = "$PR_AUTHOR" ]; then
+                echo "Skipping self-approval from PR author @$USER"
+                continue
+              fi
+              
+              if [ "$COMMIT_ID" != "$HEAD_SHA" ]; then
+                echo "Review $REVIEW_ID is stale (commit: $COMMIT_ID, current: $HEAD_SHA). Dismissing..."
+                
+                DISMISS_MESSAGE="Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${COMMIT_ID:0:7}, current HEAD: ${HEAD_SHA:0:7})."
+                
+                # Dismiss the stale review and capture failure
+                DISMISS_RESULT=""
+                if ! DISMISS_RESULT=$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/dismissals \
+                  -X PUT \
+                  -f message="$DISMISS_MESSAGE" 2>&1); then
+                  echo "Warning: Failed to dismiss review $REVIEW_ID: $DISMISS_RESULT"
+                  DISMISS_FAILED_MESSAGES="${DISMISS_FAILED_MESSAGES}- Failed to dismiss approval from @$USER (insufficient permissions or branch protection settings)\n"
+                else
+                  STALE_REVIEWS_DISMISSED=true
+                  STALE_REVIEW_MESSAGES="${STALE_REVIEW_MESSAGES}- Dismissed approval from @$USER (reviewed commit: \`${COMMIT_ID:0:7}\`, current HEAD: \`${HEAD_SHA:0:7}\`)\n"
+                fi
+              else
+                echo "Review $REVIEW_ID is valid (matches current HEAD SHA)"
+                VALID_APPROVALS=$((VALID_APPROVALS + 1))
+              fi
+            done < <(echo "$APPROVED_REVIEWS" | jq -r '.[] | "\(.id)\t\(.commit_id)\t\(.user.login)"')
+          fi
+          
+          echo "Valid approvals: $VALID_APPROVALS"
+          echo "valid_approvals=$VALID_APPROVALS" >> $GITHUB_OUTPUT
+          
+          # If stale reviews were dismissed, notify
+          if [ "$STALE_REVIEWS_DISMISSED" = "true" ] || [ -n "$DISMISS_FAILED_MESSAGES" ]; then
+            echo "stale_dismissed=true" >> $GITHUB_OUTPUT
+            delimiter="$(openssl rand -hex 8)"
+            echo "stale_messages<<${delimiter}" >> $GITHUB_OUTPUT
+            echo -e "$STALE_REVIEW_MESSAGES" >> $GITHUB_OUTPUT
+            echo "${delimiter}" >> $GITHUB_OUTPUT
+            
+            STALE_COMMENT=""
+            if [ -n "$STALE_REVIEW_MESSAGES" ]; then
+              STALE_COMMENT=$(printf '## Stale approvals dismissed\n\nThe following approvals were dismissed because new commits were pushed after the reviews:\n\n%b' "$STALE_REVIEW_MESSAGES")
+            fi
+            
+            # Report dismiss failures if any
+            if [ -n "$DISMISS_FAILED_MESSAGES" ]; then
+              if [ -n "$STALE_COMMENT" ]; then
+                STALE_COMMENT=$(printf '%s\n\n### Dismiss failures\n\nThe following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n\n%b' "$STALE_COMMENT" "$DISMISS_FAILED_MESSAGES")
+              else
+                STALE_COMMENT=$(printf '## Stale approval dismiss failures\n\nThe following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n\n%b' "$DISMISS_FAILED_MESSAGES")
+              fi
+            fi
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$STALE_COMMENT"
+          else
+            echo "stale_dismissed=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check if we have at least one valid approval
+          if [ "$VALID_APPROVALS" -lt 1 ]; then
+            echo "approval_ok=false" >> $GITHUB_OUTPUT
+          else
+            echo "approval_ok=true" >> $GITHUB_OUTPUT
+          fi
+
+      # GraphQL is used because REST API doesn't provide review thread resolution status
+      - name: Check review threads are resolved
+        id: check_threads
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
+          steps.check_merged.outputs.already_merged == 'false' &&
+          steps.check_pr_status.outputs.status_ok == 'true' &&
+          steps.check_approvals.outputs.approval_ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          PR_NUMBER="${{ github.event.issue.number }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO_NAME="${{ github.event.repository.name }}"
+          REPO="${{ github.repository }}"
+          
+          # Helper function to post failure comment and exit
+          fail_with_comment() {
+            local message="$1"
+            echo "$message"
+            COMMENT_BODY=$(printf '## Merge checks failed\n\n%s' "$message")
+            gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
+            exit 1
+          }
+          
+          echo "Checking review threads for PR #$PR_NUMBER..."
+          
+          UNRESOLVED_THREADS=0
+          HAS_NEXT_PAGE=true
+          CURSOR=""
+          
+          QUERY='query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+            repository(owner: $owner, name: $name) {
+              pullRequest(number: $number) {
+                reviewThreads(first: 100, after: $cursor) {
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                  nodes {
+                    isResolved
+                    isOutdated
+                  }
+                }
+              }
+            }
+          }'
+          
+          while [ "$HAS_NEXT_PAGE" = "true" ]; do
+            # Build GraphQL arguments dynamically to avoid code duplication
+            GRAPHQL_ARGS=("-f" "query=$QUERY" "-f" "owner=$OWNER" "-f" "name=$REPO_NAME" "-f" "number=$PR_NUMBER")
+            if [ -n "$CURSOR" ]; then
+              GRAPHQL_ARGS+=("-f" "cursor=$CURSOR")
+            fi
+            
+            RESPONSE=$(gh api graphql "${GRAPHQL_ARGS[@]}") || {
+              fail_with_comment "Failed to fetch review threads status. Please try again."
+            }
+            
+            # Check for GraphQL errors in the response
+            if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+              echo "GraphQL query returned errors:"
+              echo "$RESPONSE" | jq '.errors'
+              fail_with_comment "An error occurred while fetching review threads status. Please try again."
+            fi
+            
+            # Count unresolved threads (excluding outdated ones is optional, but we count all unresolved)
+            # Use // [] to safely handle cases where nodes might be null or missing
+            PAGE_UNRESOLVED=$(echo "$RESPONSE" | jq '(.data.repository.pullRequest.reviewThreads.nodes // []) | map(select(.isResolved == false)) | length')
+            PAGE_UNRESOLVED=${PAGE_UNRESOLVED:-0}
+            UNRESOLVED_THREADS=$((UNRESOLVED_THREADS + PAGE_UNRESOLVED))
+            
+            # Check for next page
+            HAS_NEXT_PAGE=$(echo "$RESPONSE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
+            # Explicitly validate HAS_NEXT_PAGE to avoid infinite loops or unexpected behavior
+            if [ "$HAS_NEXT_PAGE" != "true" ] && [ "$HAS_NEXT_PAGE" != "false" ]; then
+              echo "Unexpected value for hasNextPage: '$HAS_NEXT_PAGE'. Failing for safety."
+              fail_with_comment "Unexpected response from GitHub API (hasNextPage=$HAS_NEXT_PAGE). Please try again or contact support."
+            fi
+            CURSOR=$(echo "$RESPONSE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // ""')
+            
+            echo "Page processed. Unresolved in this page: $PAGE_UNRESOLVED, Has next page: $HAS_NEXT_PAGE"
+          done
+          
+          echo "Total unresolved threads: $UNRESOLVED_THREADS"
+          echo "unresolved_count=$UNRESOLVED_THREADS" >> $GITHUB_OUTPUT
+          
+          if [ "$UNRESOLVED_THREADS" -gt 0 ]; then
+            echo "threads_ok=false" >> $GITHUB_OUTPUT
+          else
+            echo "threads_ok=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Report validation failures
+        id: report_failures
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
+          steps.check_merged.outputs.already_merged == 'false' &&
+          steps.check_pr_status.outputs.status_ok == 'true' &&
+          (steps.check_approvals.outputs.approval_ok == 'false' || steps.check_threads.outputs.threads_ok == 'false')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          PR_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+          
+          ERRORS=""
+          COMMENT_TITLE=""
+          
+          # Check approval status
+          APPROVAL_OK="${{ steps.check_approvals.outputs.approval_ok }}"
+          VALID_APPROVALS="${{ steps.check_approvals.outputs.valid_approvals }}"
+          if [ "$APPROVAL_OK" = "false" ]; then
+            if [ -z "$COMMENT_TITLE" ]; then
+              COMMENT_TITLE="## Approvals required"
+            fi
+            ERRORS="${ERRORS}- No valid approvals found for the current HEAD SHA. At least one approval (from someone other than the PR author) is required.\n"
+          fi
+          
+          # Check threads status
+          THREADS_OK="${{ steps.check_threads.outputs.threads_ok }}"
+          UNRESOLVED_COUNT="${{ steps.check_threads.outputs.unresolved_count }}"
+          if [ "$THREADS_OK" = "false" ]; then
+            if [ -z "$COMMENT_TITLE" ]; then
+              COMMENT_TITLE="## Unresolved conversations"
+            elif [ "$COMMENT_TITLE" != "## Merge checks failed" ]; then
+              COMMENT_TITLE="## Merge checks failed"
+            fi
+            ERRORS="${ERRORS}- $UNRESOLVED_COUNT unresolved review thread(s). All conversations must be resolved before merging.\n"
+          fi
+          
+          COMMENT_BODY=$(printf '%s\n\nThe following issues must be resolved before merging:\n\n%b' "$COMMENT_TITLE" "$ERRORS")
+          
+          gh api repos/$REPO/issues/$PR_NUMBER/comments \
+            -f body="$COMMENT_BODY"
+          
+          echo "Validation failed, exiting"
+          exit 1
+
+      - name: Determine merge method
+        id: merge_method
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
+          steps.check_merged.outputs.already_merged == 'false' &&
+          steps.check_pr_status.outputs.status_ok == 'true' &&
+          steps.check_approvals.outputs.approval_ok == 'true' &&
+          steps.check_threads.outputs.threads_ok == 'true'
+        run: |
+          set -Eeuo pipefail
+          BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
+          HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
+          RELEASE_PREFIX="${{ env.RELEASE_BRANCH_PREFIX }}"
+          DEVELOP_BRANCH="${{ env.DEVELOP_BRANCH }}"
+          SYNC_PREFIX="${{ env.SYNC_BRANCH_PREFIX }}"
+          
+          echo "Base ref: $BASE_REF"
+          echo "Head ref: $HEAD_REF"
+          echo "Release prefix: $RELEASE_PREFIX"
+          echo "Develop branch: $DEVELOP_BRANCH"
+          echo "Sync prefix: $SYNC_PREFIX"
+          
+          # Determine merge method
+          # 1. If base branch starts with RELEASE_BRANCH_PREFIX -> squash
+          # 2. If base branch is DEVELOP_BRANCH AND head branch does NOT start with SYNC_BRANCH_PREFIX -> squash
+          # 3. Otherwise -> merge (merge commit)
+          
+          if [[ "$BASE_REF" == "${RELEASE_PREFIX}"* ]]; then
+            echo "Base branch is a release branch, using squash merge"
+            echo "method=squash" >> $GITHUB_OUTPUT
+          elif [ "$BASE_REF" = "$DEVELOP_BRANCH" ] && [[ "$HEAD_REF" != "${SYNC_PREFIX}"* ]]; then
+            echo "Base branch is develop and head is not a sync branch, using squash merge"
+            echo "method=squash" >> $GITHUB_OUTPUT
+          else
+            echo "Using merge commit"
+            echo "method=merge" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Perform merge
+        id: perform_merge
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
+          steps.check_merged.outputs.already_merged == 'false' &&
+          steps.check_pr_status.outputs.status_ok == 'true' &&
+          steps.check_approvals.outputs.approval_ok == 'true' &&
+          steps.check_threads.outputs.threads_ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          PR_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+          MERGE_METHOD="${{ steps.merge_method.outputs.method }}"
+          ORIGINAL_HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
+          HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
+          BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
+          
+          # TOCTOU check: Re-fetch PR data immediately before merge
+          echo "Performing TOCTOU check before merge..."
+          echo "Original HEAD SHA: $ORIGINAL_HEAD_SHA"
+          
+          PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
+          
+          CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+          MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
+          MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
+          
+          echo "Current HEAD SHA: $CURRENT_HEAD_SHA"
+          echo "Mergeable: $MERGEABLE"
+          echo "Mergeable State: $MERGEABLE_STATE"
+          
+          # Check for TOCTOU violation
+          if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
+            echo "TOCTOU violation detected!"
+            
+            COMMENT_BODY=$(printf '## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+            
+            exit 1
+          fi
+          
+          # Check mergeability (handle null which means GitHub hasn't calculated it yet)
+          # Retry configuration is controlled by MERGEABLE_RETRY_COUNT and MERGEABLE_RETRY_INTERVAL env vars
+          # Note: If new commits are pushed during this wait period, the TOCTOU check below will fail
+          # and the user will need to run @mergebot merge again after the new commits are reviewed.
+          MERGEABLE_RETRY_COUNT=${MERGEABLE_RETRY_COUNT:-5}
+          MERGEABLE_RETRY_INTERVAL=${MERGEABLE_RETRY_INTERVAL:-10}
+          for i in $(seq 1 $MERGEABLE_RETRY_COUNT); do
+            if [ "$MERGEABLE" != "null" ]; then
+              break
+            fi
+            if [ $i -eq 1 ]; then
+              echo "Mergeable status is not yet available (is null). Waiting..."
+            fi
+            sleep $MERGEABLE_RETRY_INTERVAL
+            echo "Re-fetching PR data (Attempt $i/$MERGEABLE_RETRY_COUNT)"
+            PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
+            MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
+            MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
+            CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+          done
+          
+          # TOCTOU check: ensure HEAD SHA hasn't changed during waiting
+          # Uses CURRENT_HEAD_SHA from the initial fetch or the last retry loop iteration
+          if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
+            echo "TOCTOU violation detected after retry loop!"
+            
+            COMMENT_BODY=$(printf '## New commits detected\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+            
+            exit 1
+          fi
+          
+          if [ "$MERGEABLE" = "false" ] || [ "$MERGEABLE" = "null" ] || [ "$MERGEABLE_STATE" = "dirty" ]; then
+            echo "Mergeability check failed!"
+            
+            if [ "$MERGEABLE" = "null" ]; then
+              COMMENT_BODY=$(printf '## Mergeability status pending\n\nGitHub is still calculating mergeability for this PR.\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n- Retries: count=%s, interval=%ss\n\nPlease try `@mergebot merge` again shortly.' "$MERGEABLE" "$MERGEABLE_STATE" "$MERGEABLE_RETRY_COUNT" "$MERGEABLE_RETRY_INTERVAL")
+            elif [ "$MERGEABLE_STATE" = "dirty" ]; then
+              COMMENT_BODY=$(printf '## Conflicts detected\n\nThis PR has merge conflicts that must be resolved before merging.\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve the conflicts and try again.' "$MERGEABLE" "$MERGEABLE_STATE")
+            else
+              COMMENT_BODY=$(printf '## Cannot merge\n\nThis PR cannot be merged:\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve any conflicts or issues before attempting to merge.' "$MERGEABLE" "$MERGEABLE_STATE")
+            fi
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+            
+            exit 1
+          fi
+          
+          echo "TOCTOU check passed. Proceeding with merge..."
+          echo "Merging PR #$PR_NUMBER with method: $MERGE_METHOD"
+          echo "HEAD SHA: $ORIGINAL_HEAD_SHA"
+          
+          # Prepare commit message body with traceability info
+          COMMAND_ISSUER="${{ github.actor }}"
+          COMMIT_MESSAGE_BODY="Merged-by: @mergebot (on behalf of @${COMMAND_ISSUER})"
+          
+          # Perform the merge
+          MERGE_FAILED=false
+          MERGE_RESULT=$(gh api repos/$REPO/pulls/$PR_NUMBER/merge \
+            -X PUT \
+            -f merge_method="$MERGE_METHOD" \
+            -f sha="$ORIGINAL_HEAD_SHA" \
+            -f commit_message="$COMMIT_MESSAGE_BODY" 2>&1) || MERGE_FAILED=true
+          
+          if [ "$MERGE_FAILED" = "true" ]; then
+            echo "Merge failed!"
+            echo "Result: $MERGE_RESULT"
+            echo "merge_success=false" >> $GITHUB_OUTPUT
+            
+            # Extract error message
+            ERROR_MSG=$(echo "$MERGE_RESULT" | jq -r '.message // "Unknown error"' 2>/dev/null || echo "$MERGE_RESULT")
+            
+            COMMENT_BODY=$(printf '## Merge failed\n\nFailed to merge PR:\n\n- Error: %s\n\nPlease check the PR status and try again.' "$ERROR_MSG")
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+            
+            exit 1
+          else
+            echo "Merge successful!"
+            echo "merge_success=true" >> $GITHUB_OUTPUT
+            
+            # Post success comment
+            COMMENT_BODY=$(printf '## Merged by mergebot\n\n✅ This PR has been successfully merged.\n\n**Details:**\n- **Merge Method:** `%s`\n- **Base Branch:** `%s`\n- **Head Branch:** `%s`\n- **HEAD SHA:** `%s`' "$MERGE_METHOD" "$BASE_REF" "$HEAD_REF" "${ORIGINAL_HEAD_SHA:0:7}")
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+          fi
