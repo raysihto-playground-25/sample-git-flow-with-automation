@@ -104,6 +104,8 @@ jobs:
               
               gh api repos/$REPO/issues/$PR_NUMBER/comments \
                 -f body="$COMMENT_BODY"
+
+              exit 1
               ;;
           esac
 
@@ -191,7 +193,8 @@ jobs:
             "mergeable_state=\(.mergeable_state)\n" +
             "head_sha=\(.head.sha)\n" +
             "head_ref=\(.head.ref)\n" +
-            "base_ref=\(.base.ref)"
+            "base_ref=\(.base.ref)\n" +
+            "author=\(.user.login)"
           ' | while IFS= read -r line; do
             echo "$line" >> $GITHUB_OUTPUT
             # Remap for logging to match original output format
@@ -205,6 +208,7 @@ jobs:
               head_sha) echo "Head SHA: ${line#*=}" ;;
               head_ref) echo "Head Ref: ${line#*=}" ;;
               base_ref) echo "Base Ref: ${line#*=}" ;;
+              author) echo "Author: ${line#*=}" ;;
             esac
           done
 
@@ -333,9 +337,8 @@ jobs:
           REPO="${{ github.repository }}"
           HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
           
-          # Get PR author to exclude self-approvals
-          PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
-          PR_AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login')
+          # Get PR author from pr_data step output to exclude self-approvals
+          PR_AUTHOR="${{ steps.pr_data.outputs.author }}"
           
           echo "Checking approvals for PR #$PR_NUMBER (head SHA: $HEAD_SHA)..."
           echo "PR Author: $PR_AUTHOR (self-approvals will be excluded)"
@@ -723,12 +726,17 @@ jobs:
           echo "Merging PR #$PR_NUMBER with method: $MERGE_METHOD"
           echo "HEAD SHA: $ORIGINAL_HEAD_SHA"
           
+          # Prepare commit message body with traceability info
+          COMMAND_ISSUER="${{ github.actor }}"
+          COMMIT_MESSAGE_BODY="Merged-by: @mergebot (on behalf of @${COMMAND_ISSUER})"
+          
           # Perform the merge
           MERGE_FAILED=false
           MERGE_RESULT=$(gh api repos/$REPO/pulls/$PR_NUMBER/merge \
             -X PUT \
             -f merge_method="$MERGE_METHOD" \
-            -f sha="$ORIGINAL_HEAD_SHA" 2>&1) || MERGE_FAILED=true
+            -f sha="$ORIGINAL_HEAD_SHA" \
+            -f commit_message="$COMMIT_MESSAGE_BODY" 2>&1) || MERGE_FAILED=true
           
           if [ "$MERGE_FAILED" = "true" ]; then
             echo "Merge failed!"
