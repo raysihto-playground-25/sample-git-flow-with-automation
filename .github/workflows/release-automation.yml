@@ -35,10 +35,12 @@ jobs:
 
       - name: Extract release branch info
         id: branch_info
+        env:
+          INPUT_RELEASE_BRANCH: ${{ inputs.release_branch }}
         run: |
           # Support both direct push trigger and workflow_call trigger
-          if [ -n "${{ inputs.release_branch }}" ]; then
-            BRANCH_NAME="${{ inputs.release_branch }}"
+          if [ -n "$INPUT_RELEASE_BRANCH" ]; then
+            BRANCH_NAME="$INPUT_RELEASE_BRANCH"
           else
             BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           fi
