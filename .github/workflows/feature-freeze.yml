@@ -13,6 +13,10 @@ on:
           - patch
         default: 'minor'
 
+concurrency:
+  group: feature-freeze
+  cancel-in-progress: false
+
 env:
   MASTER_BRANCH: master
   DEVELOP_BRANCH: develop
