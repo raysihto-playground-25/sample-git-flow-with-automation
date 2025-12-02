@@ -11,6 +11,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: release-automation
+  cancel-in-progress: false
+
 env:
   MASTER_BRANCH: master
   DEVELOP_BRANCH: develop
