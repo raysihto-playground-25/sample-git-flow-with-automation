@@ -24,7 +24,7 @@ env:
   # These branches use merge commits instead of squash to preserve full commit history.
   SYNC_BRANCH_PREFIX: "fix/sync/"
   # Command regex using POSIX character classes for Bash ERE compatibility
-  COMMAND_REGEX: '^[[:space:]]*@mergebot[[:space:]]+merge[[:space:]]*$'
+  COMMAND_REGEX: '^[[:space:]]*/exec[[:space:]]+merge[[:space:]]*$'
   # Retry configuration for waiting on GitHub to calculate mergeable status
   MERGEABLE_RETRY_COUNT: "5"
   MERGEABLE_RETRY_INTERVAL: "10"
@@ -77,6 +77,21 @@ jobs:
             echo "command_valid=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Add eyes reaction to acknowledge command
+        if: steps.check_bot.outputs.is_bot == 'false' && steps.parse_command.outputs.command_valid == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          COMMENT_ID="${{ github.event.comment.id }}"
+          REPO="${{ github.repository }}"
+          
+          echo "Adding :eyes: reaction to comment $COMMENT_ID"
+          
+          gh api repos/$REPO/issues/comments/$COMMENT_ID/reactions \
+            -X POST \
+            -f content="eyes" || echo "Failed to add reaction (may already exist)"
+
       - name: Check author association
         id: check_author
         if: steps.check_bot.outputs.is_bot == 'false' && steps.parse_command.outputs.command_valid == 'true'
@@ -100,7 +115,7 @@ jobs:
             *)
               echo "Author association check failed"
               
-              COMMENT_BODY="## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`@mergebot merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`"
+              COMMENT_BODY="## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`/exec merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`"
               
               gh api repos/$REPO/issues/$PR_NUMBER/comments \
                 -f body="$COMMENT_BODY"
@@ -136,7 +151,7 @@ jobs:
               echo "Insufficient repository permissions"
               echo "allowed=false" >> $GITHUB_OUTPUT
               
-              COMMENT_BODY="## Permission denied\n\nYou need at least **write** permission on this repository to use the \`@mergebot merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`\nYour permission level: \`$PERMISSION\`"
+              COMMENT_BODY="## Permission denied\n\nYou need at least **write** permission on this repository to use the \`/exec merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`\nYour permission level: \`$PERMISSION\`"
               
               gh api repos/$REPO/issues/$PR_NUMBER/comments \
                 -f body="$COMMENT_BODY"
@@ -175,7 +190,7 @@ jobs:
             echo "is_fork=true" >> $GITHUB_OUTPUT
             
             # Post comment about fork PR limitation
-            COMMENT_BODY="## Fork PR not supported\n\nThe \`@mergebot merge\` command is not supported for PRs from forked repositories.\n\nThis is because the GITHUB_TOKEN has limited write permissions for fork-originated PRs by default."
+            COMMENT_BODY="## Fork PR not supported\n\nThe \`/exec merge\` command is not supported for PRs from forked repositories.\n\nThis is because the GITHUB_TOKEN has limited write permissions for fork-originated PRs by default."
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
@@ -185,25 +200,6 @@ jobs:
             echo "This is not a fork PR"
             echo "is_fork=false" >> $GITHUB_OUTPUT
           fi
-
-      - name: Add eyes reaction to acknowledge command
-        if: |
-          steps.check_bot.outputs.is_bot == 'false' && 
-          steps.parse_command.outputs.command_valid == 'true' && 
-          steps.check_author.outputs.allowed == 'true' &&
-          steps.check_fork.outputs.is_fork == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -Eeuo pipefail
-          COMMENT_ID="${{ github.event.comment.id }}"
-          REPO="${{ github.repository }}"
-          
-          echo "Adding :eyes: reaction to comment $COMMENT_ID"
-          
-          gh api repos/$REPO/issues/comments/$COMMENT_ID/reactions \
-            -X POST \
-            -f content="eyes" || echo "Failed to add reaction (may already exist)"
 
       - name: Fetch PR data
         id: pr_data
@@ -684,7 +680,7 @@ jobs:
           if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
             echo "TOCTOU violation detected!"
             
-            COMMENT_BODY=$(printf '## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
+            COMMENT_BODY=$(printf '## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `/exec merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
@@ -695,7 +691,7 @@ jobs:
           # Check mergeability (handle null which means GitHub hasn't calculated it yet)
           # Retry configuration is controlled by MERGEABLE_RETRY_COUNT and MERGEABLE_RETRY_INTERVAL env vars
           # Note: If new commits are pushed during this wait period, the TOCTOU check below will fail
-          # and the user will need to run @mergebot merge again after the new commits are reviewed.
+          # and the user will need to run /exec merge again after the new commits are reviewed.
           MERGEABLE_RETRY_COUNT=${MERGEABLE_RETRY_COUNT:-5}
           MERGEABLE_RETRY_INTERVAL=${MERGEABLE_RETRY_INTERVAL:-10}
           for i in $(seq 1 $MERGEABLE_RETRY_COUNT); do
@@ -718,7 +714,7 @@ jobs:
           if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
             echo "TOCTOU violation detected after retry loop!"
             
-            COMMENT_BODY=$(printf '## New commits detected\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
+            COMMENT_BODY=$(printf '## New commits detected\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `/exec merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
@@ -730,7 +726,7 @@ jobs:
             echo "Mergeability check failed!"
             
             if [ "$MERGEABLE" = "null" ]; then
-              COMMENT_BODY=$(printf '## Mergeability status pending\n\nGitHub is still calculating mergeability for this PR.\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n- Retries: count=%s, interval=%ss\n\nPlease try `@mergebot merge` again shortly.' "$MERGEABLE" "$MERGEABLE_STATE" "$MERGEABLE_RETRY_COUNT" "$MERGEABLE_RETRY_INTERVAL")
+              COMMENT_BODY=$(printf '## Mergeability status pending\n\nGitHub is still calculating mergeability for this PR.\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n- Retries: count=%s, interval=%ss\n\nPlease try `/exec merge` again shortly.' "$MERGEABLE" "$MERGEABLE_STATE" "$MERGEABLE_RETRY_COUNT" "$MERGEABLE_RETRY_INTERVAL")
             elif [ "$MERGEABLE_STATE" = "dirty" ]; then
               COMMENT_BODY=$(printf '## Conflicts detected\n\nThis PR has merge conflicts that must be resolved before merging.\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve the conflicts and try again.' "$MERGEABLE" "$MERGEABLE_STATE")
             else
