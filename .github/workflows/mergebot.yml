@@ -87,20 +87,56 @@ jobs:
           AUTHOR_ASSOCIATION="${{ github.event.comment.author_association }}"
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
+          ACTOR="${{ github.actor }}"
           
           echo "Author association: $AUTHOR_ASSOCIATION"
+          echo "Actor: $ACTOR"
           
+          # Check 1: author_association must be OWNER, MEMBER, or COLLABORATOR
           case "$AUTHOR_ASSOCIATION" in
             OWNER|MEMBER|COLLABORATOR)
-              echo "Author has sufficient permissions"
+              echo "Author association check passed"
+              ;;
+            *)
+              echo "Author association check failed"
+              
+              COMMENT_BODY="## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`@mergebot merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`"
+              
+              gh api repos/$REPO/issues/$PR_NUMBER/comments \
+                -f body="$COMMENT_BODY"
+
+              exit 1
+              ;;
+          esac
+          
+          # Check 2: Verify user has write+ permission on the repository (write, maintain, admin)
+          echo "Checking repository permission level..."
+          
+          # Fetch collaborator permission for the actor
+          PERM_RESPONSE=$(gh api repos/$REPO/collaborators/$ACTOR/permission 2>&1) || {
+            echo "Failed to fetch permission: $PERM_RESPONSE"
+            
+            COMMENT_BODY="## Permission check failed\n\nUnable to verify your repository permissions. This may occur if:\n- You are not a collaborator on this repository\n- The API call failed\n\nPlease ensure you have write access to this repository."
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+            
+            exit 1
+          }
+          
+          PERMISSION=$(echo "$PERM_RESPONSE" | jq -r '.permission // "none"')
+          echo "Repository permission level: $PERMISSION"
+          
+          case "$PERMISSION" in
+            admin|maintain|write)
+              echo "Repository permission check passed"
               echo "allowed=true" >> $GITHUB_OUTPUT
               ;;
             *)
-              echo "Author does not have sufficient permissions"
+              echo "Insufficient repository permissions"
               echo "allowed=false" >> $GITHUB_OUTPUT
               
-              # Post comment about insufficient permissions
-              COMMENT_BODY="## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`@mergebot merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`"
+              COMMENT_BODY="## Permission denied\n\nYou need at least **write** permission on this repository to use the \`@mergebot merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`\nYour permission level: \`$PERMISSION\`"
               
               gh api repos/$REPO/issues/$PR_NUMBER/comments \
                 -f body="$COMMENT_BODY"
