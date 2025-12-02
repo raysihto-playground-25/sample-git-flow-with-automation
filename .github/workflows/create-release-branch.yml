@@ -18,7 +18,7 @@ on:
         type: string
         default: 'develop'
       target_branch:
-        description: 'Target branch for merge PR'
+        description: 'Target branch used as the base of the generated PR'
         required: true
         type: string
         default: 'master'
@@ -127,40 +127,28 @@ jobs:
           fi
           echo "RC tag '$RC_TAG' does not exist, proceeding..."
 
-      - name: Create release branch
+      - name: Create release branch and empty commit with RC tag
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
           SOURCE_BRANCH="${{ inputs.source_branch }}"
           RELEASE_BRANCH="release/${NEW_VERSION}"
-
-          git fetch origin "$SOURCE_BRANCH"
-          git checkout -b "$RELEASE_BRANCH" "origin/$SOURCE_BRANCH"
-          
-          # Push the branch with error handling
-          if ! git push origin "$RELEASE_BRANCH" 2>&1; then
-            echo "Error: Failed to push release branch '$RELEASE_BRANCH'. It may already exist due to a concurrent workflow run."
-            exit 1
-          fi
-
-          echo "Created and pushed release branch: $RELEASE_BRANCH"
-
-      - name: Create empty commit and RC tag
-        run: |
-          NEW_VERSION="${{ steps.new_version.outputs.version }}"
           RC_TAG="v${NEW_VERSION}-rc.1"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git commit --allow-empty -m "Release candidate ${RC_TAG}"
+          git fetch origin "$SOURCE_BRANCH"
+          git checkout -b "$RELEASE_BRANCH" "origin/$SOURCE_BRANCH"
+          git commit --allow-empty -m "chore(release): Release candidate ${RC_TAG}"
           git tag "$RC_TAG"
           
-          # Use atomic push to prevent race conditions for both branch and tag
-          if ! git push --atomic origin HEAD "$RC_TAG" 2>&1; then
-            echo "Error: Failed to push commit and RC tag '$RC_TAG'. The tag may already exist due to a concurrent workflow run."
+          # Use atomic push for branch, commit, and tag together
+          if ! git push --atomic origin "$RELEASE_BRANCH" "$RC_TAG" 2>&1; then
+            echo "Error: Failed to push release branch or RC tag. One of these may already exist due to a concurrent workflow run."
             exit 1
           fi
 
+          echo "Created and pushed release branch: $RELEASE_BRANCH"
           echo "Created empty commit and pushed RC tag: $RC_TAG"
 
       - name: Create Draft Pull Request
