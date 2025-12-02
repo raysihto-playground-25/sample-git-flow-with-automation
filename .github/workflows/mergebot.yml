@@ -88,37 +88,33 @@ jobs:
           # Get PR data using gh api
           PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
           
-          # Extract key fields
-          STATE=$(echo "$PR_DATA" | jq -r '.state')
-          LOCKED=$(echo "$PR_DATA" | jq -r '.locked')
-          DRAFT=$(echo "$PR_DATA" | jq -r '.draft')
-          MERGED=$(echo "$PR_DATA" | jq -r '.merged')
-          MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable')
-          MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
-          HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
-          HEAD_REF=$(echo "$PR_DATA" | jq -r '.head.ref')
-          BASE_REF=$(echo "$PR_DATA" | jq -r '.base.ref')
-          
-          echo "PR State: $STATE"
-          echo "Locked: $LOCKED"
-          echo "Draft: $DRAFT"
-          echo "Merged: $MERGED"
-          echo "Mergeable: $MERGEABLE"
-          echo "Mergeable State: $MERGEABLE_STATE"
-          echo "Head SHA: $HEAD_SHA"
-          echo "Head Ref: $HEAD_REF"
-          echo "Base Ref: $BASE_REF"
-          
-          # Set outputs
-          echo "state=$STATE" >> $GITHUB_OUTPUT
-          echo "locked=$LOCKED" >> $GITHUB_OUTPUT
-          echo "draft=$DRAFT" >> $GITHUB_OUTPUT
-          echo "merged=$MERGED" >> $GITHUB_OUTPUT
-          echo "mergeable=$MERGEABLE" >> $GITHUB_OUTPUT
-          echo "mergeable_state=$MERGEABLE_STATE" >> $GITHUB_OUTPUT
-          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
-          echo "head_ref=$HEAD_REF" >> $GITHUB_OUTPUT
-          echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
+          # Extract key fields, log them, and set outputs using a single jq process
+          # for better performance and maintainability.
+          echo "$PR_DATA" | jq -r '
+            "state=\(.state)\n" +
+            "locked=\(.locked)\n" +
+            "draft=\(.draft)\n" +
+            "merged=\(.merged)\n" +
+            "mergeable=\(.mergeable // "null")\n" +
+            "mergeable_state=\(.mergeable_state)\n" +
+            "head_sha=\(.head.sha)\n" +
+            "head_ref=\(.head.ref)\n" +
+            "base_ref=\(.base.ref)"
+          ' | while IFS= read -r line; do
+            echo "$line" >> $GITHUB_OUTPUT
+            # Remap for logging to match original output format
+            case "${line%%=*}" in
+              state) echo "PR State: ${line#*=}" ;;
+              locked) echo "Locked: ${line#*=}" ;;
+              draft) echo "Draft: ${line#*=}" ;;
+              merged) echo "Merged: ${line#*=}" ;;
+              mergeable) echo "Mergeable: ${line#*=}" ;;
+              mergeable_state) echo "Mergeable State: ${line#*=}" ;;
+              head_sha) echo "Head SHA: ${line#*=}" ;;
+              head_ref) echo "Head Ref: ${line#*=}" ;;
+              base_ref) echo "Base Ref: ${line#*=}" ;;
+            esac
+          done
 
       - name: Check if already merged
         id: check_merged
@@ -517,9 +513,12 @@ jobs:
           done
           
           # TOCTOU check after retry loop: ensure HEAD SHA hasn't changed during waiting
-          # Re-fetch PR data and compare HEAD SHA
+          # Re-fetch PR data to get the absolute latest state for all checks.
           PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
           CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+          MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
+          MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
+
           if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
             echo "TOCTOU violation detected after retry loop!"
             
