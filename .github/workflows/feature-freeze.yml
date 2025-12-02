@@ -23,10 +23,6 @@ on:
         type: string
         default: 'master'
 
-concurrency:
-  group: feature-freeze
-  cancel-in-progress: true
-
 jobs:
   feature-freeze:
     runs-on: ubuntu-latest
@@ -152,6 +148,7 @@ jobs:
           echo "Created empty commit and pushed RC tag: $RC_TAG"
 
       - name: Create Draft Pull Request
+        id: create_pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -159,11 +156,28 @@ jobs:
           RELEASE_BRANCH="release/${NEW_VERSION}"
           TARGET_BRANCH="${{ inputs.target_branch }}"
 
-          gh pr create \
+          PR_URL=$(gh pr create \
             --title "[WIP] chore(release): Release v${NEW_VERSION}" \
             --body "Release v${NEW_VERSION} from ${RELEASE_BRANCH} to ${TARGET_BRANCH}" \
             --head "$RELEASE_BRANCH" \
             --base "$TARGET_BRANCH" \
-            --draft
+            --draft)
 
           echo "Created draft PR from $RELEASE_BRANCH to $TARGET_BRANCH"
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+
+      - name: Workflow Summary
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          RELEASE_BRANCH="release/${NEW_VERSION}"
+          RC_TAG="v${NEW_VERSION}-rc.1"
+          PR_URL="${{ steps.create_pr.outputs.pr_url }}"
+
+          echo "## Feature Freeze Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **New Version** | \`${NEW_VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Branch** | \`${RELEASE_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **RC Tag** | \`${RC_TAG}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Pull Request** | ${PR_URL} |" >> $GITHUB_STEP_SUMMARY
