@@ -296,8 +296,6 @@ jobs:
           LOCKED="${{ steps.pr_data.outputs.locked }}"
           DRAFT="${{ steps.pr_data.outputs.draft }}"
           MERGEABLE_STATE="${{ steps.pr_data.outputs.mergeable_state }}"
-          PR_NUMBER="${{ github.event.issue.number }}"
-          REPO="${{ github.repository }}"
           
           ERRORS=""
           
@@ -317,51 +315,31 @@ jobs:
           fi
           
           # Check mergeable state
-          COMMENT_TITLE=""
           if [ "$MERGEABLE_STATE" = "dirty" ]; then
-            COMMENT_TITLE="## Conflicts detected"
             ERRORS="${ERRORS}- PR has unresolved conflicts (mergeable_state: dirty)\n"
           elif [ "$MERGEABLE_STATE" = "blocked" ]; then
-            COMMENT_TITLE="## Blocked by checks"
             ERRORS="${ERRORS}- PR is blocked by failing status checks or branch protection rules (mergeable_state: blocked)\n"
           elif [ "$MERGEABLE_STATE" = "unstable" ]; then
-            COMMENT_TITLE="## Failing checks"
             ERRORS="${ERRORS}- PR has failing status checks (mergeable_state: unstable)\n"
           elif [ "$MERGEABLE_STATE" = "behind" ]; then
-            COMMENT_TITLE="## Update branch required"
             ERRORS="${ERRORS}- PR branch is behind the base branch; please update the branch\n"
-          fi
-          
-          # Check other conditions and set title
-          if [ "$STATE" = "closed" ] || [ "$LOCKED" = "true" ] || [ "$DRAFT" = "true" ]; then
-            if [ "$STATE" = "closed" ]; then
-              COMMENT_TITLE="## PR is closed"
-            elif [ "$LOCKED" = "true" ]; then
-              COMMENT_TITLE="## PR is locked"
-            elif [ "$DRAFT" = "true" ]; then
-              COMMENT_TITLE="## PR is a draft"
-            fi
-          fi
-          
-          # Use generic title if multiple issues or no specific title
-          if [ -z "$COMMENT_TITLE" ] && [ -n "$ERRORS" ]; then
-            COMMENT_TITLE="## Merge checks failed"
           fi
           
           if [ -n "$ERRORS" ]; then
             echo "PR status checks failed"
             echo "status_ok=false" >> $GITHUB_OUTPUT
-            
-            # Post comment with errors - use printf to handle newlines
-            COMMENT_BODY=$(printf '%s\n\nThe following issues must be resolved before merging:\n\n%b' "$COMMENT_TITLE" "$ERRORS")
-            
-            gh api repos/$REPO/issues/$PR_NUMBER/comments \
-              -f body="$COMMENT_BODY"
+            # Save errors for aggregated reporting (use heredoc delimiter for multiline)
+            delimiter="$(openssl rand -hex 8)"
+            echo "status_errors<<${delimiter}" >> $GITHUB_OUTPUT
+            echo -e "$ERRORS" >> $GITHUB_OUTPUT
+            echo "${delimiter}" >> $GITHUB_OUTPUT
           else
             echo "PR status checks passed"
             echo "status_ok=true" >> $GITHUB_OUTPUT
+            echo "status_errors=" >> $GITHUB_OUTPUT
           fi
 
+      # This step runs regardless of PR status to collect all validation errors at once
       - name: Check approvals and dismiss stale ones
         id: check_approvals
         if: |
@@ -369,8 +347,7 @@ jobs:
           steps.parse_command.outputs.command_valid == 'true' && 
           steps.check_author.outputs.allowed == 'true' &&
           steps.check_fork.outputs.is_fork == 'false' &&
-          steps.check_merged.outputs.already_merged == 'false' &&
-          steps.check_pr_status.outputs.status_ok == 'true'
+          steps.check_merged.outputs.already_merged == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -478,6 +455,7 @@ jobs:
           fi
 
       # GraphQL is used because REST API doesn't provide review thread resolution status
+      # This step runs regardless of PR status or approval status to collect all validation errors at once
       - name: Check review threads are resolved
         id: check_threads
         if: |
@@ -485,9 +463,7 @@ jobs:
           steps.parse_command.outputs.command_valid == 'true' && 
           steps.check_author.outputs.allowed == 'true' &&
           steps.check_fork.outputs.is_fork == 'false' &&
-          steps.check_merged.outputs.already_merged == 'false' &&
-          steps.check_pr_status.outputs.status_ok == 'true' &&
-          steps.check_approvals.outputs.approval_ok == 'true'
+          steps.check_merged.outputs.already_merged == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -575,6 +551,7 @@ jobs:
             echo "threads_ok=true" >> $GITHUB_OUTPUT
           fi
 
+      # Unified error reporting step - aggregates all validation failures into a single comment
       - name: Report validation failures
         id: report_failures
         if: |
@@ -583,46 +560,47 @@ jobs:
           steps.check_author.outputs.allowed == 'true' &&
           steps.check_fork.outputs.is_fork == 'false' &&
           steps.check_merged.outputs.already_merged == 'false' &&
-          steps.check_pr_status.outputs.status_ok == 'true' &&
-          (steps.check_approvals.outputs.approval_ok == 'false' || steps.check_threads.outputs.threads_ok == 'false')
+          (steps.check_pr_status.outputs.status_ok == 'false' || steps.check_approvals.outputs.approval_ok == 'false' || steps.check_threads.outputs.threads_ok == 'false')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS_ERRORS: ${{ steps.check_pr_status.outputs.status_errors }}
         run: |
           set -Eeuo pipefail
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
           
           ERRORS=""
-          COMMENT_TITLE=""
+          ERROR_COUNT=0
+          
+          # Check PR status errors (closed/locked/draft/conflicts)
+          STATUS_OK="${{ steps.check_pr_status.outputs.status_ok }}"
+          if [ "$STATUS_OK" = "false" ]; then
+            ERRORS="${ERRORS}${STATUS_ERRORS}"
+            ERROR_COUNT=$((ERROR_COUNT + 1))
+          fi
           
           # Check approval status
           APPROVAL_OK="${{ steps.check_approvals.outputs.approval_ok }}"
-          VALID_APPROVALS="${{ steps.check_approvals.outputs.valid_approvals }}"
           if [ "$APPROVAL_OK" = "false" ]; then
-            if [ -z "$COMMENT_TITLE" ]; then
-              COMMENT_TITLE="## Approvals required"
-            fi
             ERRORS="${ERRORS}- No valid approvals found for the current HEAD SHA. At least one approval (from someone other than the PR author) is required.\n"
+            ERROR_COUNT=$((ERROR_COUNT + 1))
           fi
           
           # Check threads status
           THREADS_OK="${{ steps.check_threads.outputs.threads_ok }}"
           UNRESOLVED_COUNT="${{ steps.check_threads.outputs.unresolved_count }}"
           if [ "$THREADS_OK" = "false" ]; then
-            if [ -z "$COMMENT_TITLE" ]; then
-              COMMENT_TITLE="## Unresolved conversations"
-            elif [ "$COMMENT_TITLE" != "## Merge checks failed" ]; then
-              COMMENT_TITLE="## Merge checks failed"
-            fi
             ERRORS="${ERRORS}- $UNRESOLVED_COUNT unresolved review thread(s). All conversations must be resolved before merging.\n"
+            ERROR_COUNT=$((ERROR_COUNT + 1))
           fi
           
+          COMMENT_TITLE="## Merge checks failed"
           COMMENT_BODY=$(printf '%s\n\nThe following issues must be resolved before merging:\n\n%b' "$COMMENT_TITLE" "$ERRORS")
           
           gh api repos/$REPO/issues/$PR_NUMBER/comments \
             -f body="$COMMENT_BODY"
           
-          echo "Validation failed, exiting"
+          echo "Validation failed with $ERROR_COUNT issue(s), exiting"
           exit 1
 
       - name: Determine merge method
