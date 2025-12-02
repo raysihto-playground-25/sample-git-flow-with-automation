@@ -318,20 +318,26 @@ jobs:
           }'
           
           while [ "$HAS_NEXT_PAGE" = "true" ]; do
-            if [ -z "$CURSOR" ]; then
-              RESPONSE=$(gh api graphql -f query="$QUERY" -F owner="$OWNER" -F name="$REPO_NAME" -F number="$PR_NUMBER") || {
-                echo "GraphQL query failed"
-                COMMENT_BODY=$(printf '## Merge checks failed\n\nFailed to fetch review threads status. Please try again.')
-                gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
-                exit 1
-              }
-            else
-              RESPONSE=$(gh api graphql -f query="$QUERY" -F owner="$OWNER" -F name="$REPO_NAME" -F number="$PR_NUMBER" -f cursor="$CURSOR") || {
-                echo "GraphQL query failed"
-                COMMENT_BODY=$(printf '## Merge checks failed\n\nFailed to fetch review threads status. Please try again.')
-                gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
-                exit 1
-              }
+            # Build GraphQL arguments dynamically to avoid code duplication
+            GRAPHQL_ARGS=("-f" "query=$QUERY" "-F" "owner=$OWNER" "-F" "name=$REPO_NAME" "-F" "number=$PR_NUMBER")
+            if [ -n "$CURSOR" ]; then
+              GRAPHQL_ARGS+=("-f" "cursor=$CURSOR")
+            fi
+            
+            RESPONSE=$(gh api graphql "${GRAPHQL_ARGS[@]}") || {
+              echo "GraphQL query command failed"
+              COMMENT_BODY=$(printf '## Merge checks failed\n\nFailed to fetch review threads status. Please try again.')
+              gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
+              exit 1
+            }
+            
+            # Check for GraphQL errors in the response
+            if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+              echo "GraphQL query returned errors:"
+              echo "$RESPONSE" | jq '.errors'
+              COMMENT_BODY=$(printf '## Merge checks failed\n\nAn error occurred while fetching review threads status. Please try again.')
+              gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
+              exit 1
             fi
             
             # Count unresolved threads (excluding outdated ones is optional, but we count all unresolved)
