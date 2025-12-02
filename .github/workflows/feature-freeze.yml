@@ -160,7 +160,7 @@ jobs:
           TARGET_BRANCH="${{ inputs.target_branch }}"
 
           gh pr create \
-            --title "[WIP] Release v${NEW_VERSION}" \
+            --title "[WIP] chore(release): Release v${NEW_VERSION}" \
             --body "Release v${NEW_VERSION} from ${RELEASE_BRANCH} to ${TARGET_BRANCH}" \
             --head "$RELEASE_BRANCH" \
             --base "$TARGET_BRANCH" \
