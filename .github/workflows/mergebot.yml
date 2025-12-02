@@ -346,7 +346,8 @@ jobs:
             fi
             
             # Count unresolved threads (excluding outdated ones is optional, but we count all unresolved)
-            PAGE_UNRESOLVED=$(echo "$RESPONSE" | jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo "0")
+            # Use // [] to safely handle cases where nodes might be null or missing
+            PAGE_UNRESOLVED=$(echo "$RESPONSE" | jq '(.data.repository.pullRequest.reviewThreads.nodes // []) | map(select(.isResolved == false)) | length')
             PAGE_UNRESOLVED=${PAGE_UNRESOLVED:-0}
             UNRESOLVED_THREADS=$((UNRESOLVED_THREADS + PAGE_UNRESOLVED))
             
@@ -498,6 +499,7 @@ jobs:
           # and the user will need to run @mergebot merge again after the new commits are reviewed.
           MERGEABLE_RETRY_COUNT=${MERGEABLE_RETRY_COUNT:-5}
           MERGEABLE_RETRY_INTERVAL=${MERGEABLE_RETRY_INTERVAL:-10}
+          RETRY_EXECUTED=false
           for i in $(seq 1 $MERGEABLE_RETRY_COUNT); do
             if [ "$MERGEABLE" != "null" ]; then
               break
@@ -510,14 +512,18 @@ jobs:
             PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
             MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
             MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
+            CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+            RETRY_EXECUTED=true
           done
           
           # TOCTOU check after retry loop: ensure HEAD SHA hasn't changed during waiting
-          # Re-fetch PR data to get the absolute latest state for all checks.
-          PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
-          CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
-          MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
-          MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
+          # Only re-fetch if the retry loop didn't execute (to avoid redundant API call)
+          if [ "$RETRY_EXECUTED" = "false" ]; then
+            PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
+            CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+            MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
+            MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
+          fi
 
           if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
             echo "TOCTOU violation detected after retry loop!"
