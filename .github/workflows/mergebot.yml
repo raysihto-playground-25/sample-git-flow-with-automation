@@ -478,6 +478,7 @@ jobs:
           fi
 
       # GraphQL is used because REST API doesn't provide review thread resolution status
+      # This step runs regardless of approval status to collect all validation errors at once
       - name: Check review threads are resolved
         id: check_threads
         if: |
@@ -486,8 +487,7 @@ jobs:
           steps.check_author.outputs.allowed == 'true' &&
           steps.check_fork.outputs.is_fork == 'false' &&
           steps.check_merged.outputs.already_merged == 'false' &&
-          steps.check_pr_status.outputs.status_ok == 'true' &&
-          steps.check_approvals.outputs.approval_ok == 'true'
+          steps.check_pr_status.outputs.status_ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
