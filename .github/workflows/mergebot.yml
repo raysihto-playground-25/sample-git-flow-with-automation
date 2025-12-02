@@ -292,6 +292,15 @@ jobs:
           REPO_NAME="${{ github.event.repository.name }}"
           REPO="${{ github.repository }}"
           
+          # Helper function to post failure comment and exit
+          fail_with_comment() {
+            local message="$1"
+            echo "$message"
+            COMMENT_BODY=$(printf '## Merge checks failed\n\n%s' "$message")
+            gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
+            exit 1
+          }
+          
           echo "Checking review threads for PR #$PR_NUMBER..."
           
           UNRESOLVED_THREADS=0
@@ -323,19 +332,14 @@ jobs:
             fi
             
             RESPONSE=$(gh api graphql "${GRAPHQL_ARGS[@]}") || {
-              echo "GraphQL query command failed"
-              COMMENT_BODY=$(printf '## Merge checks failed\n\nFailed to fetch review threads status. Please try again.')
-              gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
-              exit 1
+              fail_with_comment "Failed to fetch review threads status. Please try again."
             }
             
             # Check for GraphQL errors in the response
             if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
               echo "GraphQL query returned errors:"
               echo "$RESPONSE" | jq '.errors'
-              COMMENT_BODY=$(printf '## Merge checks failed\n\nAn error occurred while fetching review threads status. Please try again.')
-              gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
-              exit 1
+              fail_with_comment "An error occurred while fetching review threads status. Please try again."
             fi
             
             # Count unresolved threads (excluding outdated ones is optional, but we count all unresolved)
@@ -499,7 +503,11 @@ jobs:
           if [ "$MERGEABLE" = "false" ] || [ "$MERGEABLE" = "null" ] || [ "$MERGEABLE_STATE" = "dirty" ]; then
             echo "Mergeability check failed!"
             
-            COMMENT_BODY=$(printf '## Merge checks failed\n\nThis PR cannot be merged:\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve any conflicts or issues before attempting to merge.' "$MERGEABLE" "$MERGEABLE_STATE")
+            if [ "$MERGEABLE" = "null" ]; then
+              COMMENT_BODY=$(printf '## Merge checks failed\n\nThis PR'\''s mergeability status has not been determined by GitHub yet.\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease wait a moment and then run `@mergebot merge` again.' "$MERGEABLE" "$MERGEABLE_STATE")
+            else
+              COMMENT_BODY=$(printf '## Merge checks failed\n\nThis PR cannot be merged:\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve any conflicts or issues before attempting to merge.' "$MERGEABLE" "$MERGEABLE_STATE")
+            fi
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
