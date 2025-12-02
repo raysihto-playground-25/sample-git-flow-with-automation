@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - 'release/**'
+  workflow_call:
+    inputs:
+      release_branch:
+        description: 'Release branch name (e.g., release/1.0.0)'
+        required: true
+        type: string
 
 env:
   MASTER_BRANCH: master
@@ -23,13 +29,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.release_branch || github.ref }}
           fetch-depth: 0
           fetch-tags: true
 
       - name: Extract release branch info
         id: branch_info
+        env:
+          INPUT_RELEASE_BRANCH: ${{ inputs.release_branch }}
         run: |
-          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          # Support both direct push trigger and workflow_call trigger
+          if [ -n "$INPUT_RELEASE_BRANCH" ]; then
+            BRANCH_NAME="$INPUT_RELEASE_BRANCH"
+          else
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          fi
           echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
           
           # Extract version from release/X.Y.Z

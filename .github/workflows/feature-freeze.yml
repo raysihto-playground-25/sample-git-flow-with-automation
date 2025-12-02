@@ -23,6 +23,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      version: ${{ steps.new_version.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -161,4 +163,14 @@ jobs:
           echo "| **Release Branch** | \`${RELEASE_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Pull Request** | ${PR_URL} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "*Note: RC tag will be created automatically by the Release Branch Automation workflow.*" >> $GITHUB_STEP_SUMMARY
+          echo "*Note: RC tag will be created by the subsequent Release Branch Automation job.*" >> $GITHUB_STEP_SUMMARY
+
+  release-automation:
+    name: Trigger Release Branch Automation
+    needs: feature-freeze
+    uses: ./.github/workflows/release-automation.yml
+    with:
+      release_branch: release/${{ needs.feature-freeze.outputs.version }}
+    permissions:
+      contents: write
+      pull-requests: write
