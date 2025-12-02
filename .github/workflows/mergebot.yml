@@ -132,8 +132,8 @@ jobs:
             echo "already_merged=true" >> $GITHUB_OUTPUT
             
             # Post comment
-            gh api repos/$REPO/issues/$PR_NUMBER/comments \
-              -f body=$'## Already merged\n\nThis PR has already been merged.'
+            COMMENT_BODY=$(printf '## Already merged\n\nThis PR has already been merged.')
+            gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
           else
             echo "already_merged=false" >> $GITHUB_OUTPUT
           fi
@@ -219,20 +219,12 @@ jobs:
           STALE_REVIEW_MESSAGES=""
           VALID_APPROVALS=0
           
-          # Check each approved review
+          # Check each approved review using TSV format for better readability
           if [ "$APPROVED_COUNT" -gt 0 ]; then
-            for row in $(echo "$APPROVED_REVIEWS" | jq -r '.[] | @base64'); do
-              _jq() {
-                echo "${row}" | base64 --decode 2>/dev/null | jq -r ${1} 2>/dev/null || echo ""
-              }
-              
-              REVIEW_ID=$(_jq '.id')
-              COMMIT_ID=$(_jq '.commit_id')
-              USER=$(_jq '.user.login')
-              
-              # Validate parsed values - skip if critical fields are empty
-              if [ -z "$REVIEW_ID" ] || [ -z "$COMMIT_ID" ]; then
-                echo "Warning: Could not parse review ID or commit ID from review object. Skipping."
+            while IFS=$'\t' read -r REVIEW_ID COMMIT_ID USER; do
+              # Skip if essential values are empty
+              if [ -z "$REVIEW_ID" ] || [ -z "$COMMIT_ID" ] || [ -z "$USER" ]; then
+                echo "Warning: Could not parse review fields. Skipping."
                 continue
               fi
               
@@ -254,7 +246,7 @@ jobs:
                 echo "Review $REVIEW_ID is valid (matches current HEAD SHA)"
                 VALID_APPROVALS=$((VALID_APPROVALS + 1))
               fi
-            done
+            done < <(echo "$APPROVED_REVIEWS" | jq -r '.[] | "\(.id)\t\(.commit_id)\t\(.user.login)"')
           fi
           
           echo "Valid approvals: $VALID_APPROVALS"
