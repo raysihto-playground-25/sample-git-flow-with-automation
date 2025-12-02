@@ -1,0 +1,295 @@
+name: Release Branch Automation
+
+on:
+  push:
+    branches:
+      - 'release/**'
+
+env:
+  MASTER_BRANCH: master
+  DEVELOP_BRANCH: develop
+
+jobs:
+  rc-tagging:
+    name: Create RC Tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.branch_info.outputs.version }}
+      rc_tag: ${{ steps.create_rc.outputs.rc_tag }}
+      branch: ${{ steps.branch_info.outputs.branch }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Extract release branch info
+        id: branch_info
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          
+          # Extract version from release/X.Y.Z
+          VERSION=$(echo "$BRANCH_NAME" | sed 's|release/||')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Get the highest existing RC tag for this version (single line output)
+          HIGHEST_RC_TAG=$(git tag -l "v${VERSION}-rc.*" | sort -V | tail -1)
+          
+          if [ -z "$HIGHEST_RC_TAG" ]; then
+            HIGHEST_RC=0
+          else
+            # Extract the RC number from the tag
+            HIGHEST_RC=$(echo "$HIGHEST_RC_TAG" | sed "s/v${VERSION}-rc\.//")
+          fi
+          
+          echo "highest_rc=$HIGHEST_RC" >> $GITHUB_OUTPUT
+          echo "Highest existing RC number: $HIGHEST_RC"
+
+      - name: Create and push RC tag
+        id: create_rc
+        run: |
+          VERSION="${{ steps.branch_info.outputs.version }}"
+          HIGHEST_RC="${{ steps.branch_info.outputs.highest_rc }}"
+          NEXT_RC=$((HIGHEST_RC + 1))
+          RC_TAG="v${VERSION}-rc.${NEXT_RC}"
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git tag "$RC_TAG"
+          
+          if ! git push origin "$RC_TAG" 2>&1; then
+            echo "Error: Failed to push RC tag '$RC_TAG'. It may already exist."
+            exit 1
+          fi
+          
+          echo "rc_tag=$RC_TAG" >> $GITHUB_OUTPUT
+          echo "Created and pushed RC tag: $RC_TAG"
+
+      - name: RC Tagging Summary
+        run: |
+          VERSION="${{ steps.branch_info.outputs.version }}"
+          RC_TAG="${{ steps.create_rc.outputs.rc_tag }}"
+          BRANCH_NAME="${{ steps.branch_info.outputs.branch }}"
+          
+          echo "## RC Tagging Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Branch** | \`${BRANCH_NAME}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **RC Tag** | \`${RC_TAG}\` |" >> $GITHUB_STEP_SUMMARY
+
+  back-merge:
+    name: Create Back-merge PR
+    runs-on: ubuntu-latest
+    needs: rc-tagging
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup git config
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Prepare sync branch
+        id: sync_branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.rc-tagging.outputs.version }}"
+          RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
+          RC_TAG="${{ needs.rc-tagging.outputs.rc_tag }}"
+          SYNC_BRANCH="fix/sync/merge-release-${VERSION}-to-${{ env.DEVELOP_BRANCH }}"
+          
+          echo "sync_branch=$SYNC_BRANCH" >> $GITHUB_OUTPUT
+          echo "Sync branch: $SYNC_BRANCH"
+          
+          # Check if sync PR already exists for this version
+          EXISTING_PR=$(gh pr list --head "$SYNC_BRANCH" --base "${{ env.DEVELOP_BRANCH }}" --state open --json number,url --jq '.[0] // empty')
+          
+          if [ -n "$EXISTING_PR" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "pr_number=$(echo "$EXISTING_PR" | jq -r '.number')" >> $GITHUB_OUTPUT
+            echo "pr_url=$(echo "$EXISTING_PR" | jq -r '.url')" >> $GITHUB_OUTPUT
+            echo "Existing sync PR found: $(echo "$EXISTING_PR" | jq -r '.url')"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "No existing sync PR found"
+          fi
+
+      - name: Create or update sync branch
+        id: merge_result
+        run: |
+          SYNC_BRANCH="${{ steps.sync_branch.outputs.sync_branch }}"
+          RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
+          PR_EXISTS="${{ steps.sync_branch.outputs.exists }}"
+          
+          # Fetch develop and release branches
+          git fetch origin "${{ env.DEVELOP_BRANCH }}"
+          git fetch origin "$RELEASE_BRANCH"
+          
+          # Fetch existing sync branch if it exists
+          if [ "$PR_EXISTS" = "true" ]; then
+            git fetch origin "$SYNC_BRANCH" || true
+          fi
+          
+          # Create or reset sync branch from develop
+          git checkout -B "$SYNC_BRANCH" "origin/${{ env.DEVELOP_BRANCH }}"
+          
+          # Try to merge release branch with --no-ff --no-edit
+          if git merge --no-ff --no-edit "origin/$RELEASE_BRANCH" 2>&1; then
+            echo "merge_success=true" >> $GITHUB_OUTPUT
+            echo "Merge successful"
+          else
+            echo "merge_success=false" >> $GITHUB_OUTPUT
+            echo "Merge failed (likely due to conflicts)"
+            
+            # Abort the failed merge
+            git merge --abort || true
+            
+            # Create a dummy commit for PR creation
+            git commit --allow-empty -m "chore(sync): Placeholder for back-merge - conflicts need manual resolution"
+          fi
+          
+          # Force push the sync branch (using --force-with-lease --force-if-includes for safer force push)
+          if ! git push --force-with-lease --force-if-includes origin "$SYNC_BRANCH" 2>&1; then
+            echo "Error: Failed to push sync branch '$SYNC_BRANCH'."
+            exit 1
+          fi
+          
+          echo "Pushed sync branch: $SYNC_BRANCH"
+
+      - name: Create or update back-merge PR
+        id: create_pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SYNC_BRANCH="${{ steps.sync_branch.outputs.sync_branch }}"
+          RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
+          VERSION="${{ needs.rc-tagging.outputs.version }}"
+          RC_TAG="${{ needs.rc-tagging.outputs.rc_tag }}"
+          PR_EXISTS="${{ steps.sync_branch.outputs.exists }}"
+          MERGE_SUCCESS="${{ steps.merge_result.outputs.merge_success }}"
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+          
+          # Determine title and body based on merge success
+          if [ "$MERGE_SUCCESS" = "true" ]; then
+            PR_TITLE="fix(sync): Back-merge ${RELEASE_BRANCH} to ${{ env.DEVELOP_BRANCH }}"
+            PR_BODY="Automatic back-merge PR to sync release changes to ${{ env.DEVELOP_BRANCH }} branch.
+
+          **Release Branch:** \`${RELEASE_BRANCH}\`
+
+          **Sync Branch:** \`${SYNC_BRANCH}\`
+
+          **RC Tag:** \`${RC_TAG}\`
+
+          **Trigger Commit:** \`${SHORT_SHA}\`
+
+          ---
+          _This PR was automatically created by the release branch automation workflow._"
+          else
+            PR_TITLE="[WIP] fix(sync): Back-merge ${RELEASE_BRANCH} to ${{ env.DEVELOP_BRANCH }}"
+            PR_BODY="> [!CAUTION]
+          > **Merge conflicts detected!** This PR requires manual conflict resolution.
+          >
+          > Please resolve the conflicts locally by:
+          > 1. \\\`git fetch origin\\\`
+          > 2. \\\`git checkout ${SYNC_BRANCH}\\\`
+          > 3. \\\`git reset --hard origin/${{ env.DEVELOP_BRANCH }}\\\`
+          > 4. \\\`git merge --no-ff origin/${RELEASE_BRANCH}\\\`
+          > 5. Resolve conflicts manually
+          > 6. \\\`git push --force origin ${SYNC_BRANCH}\\\`
+
+          ---
+
+          Automatic back-merge PR to sync release changes to ${{ env.DEVELOP_BRANCH }} branch.
+
+          **Release Branch:** \`${RELEASE_BRANCH}\`
+
+          **Sync Branch:** \`${SYNC_BRANCH}\`
+
+          **RC Tag:** \`${RC_TAG}\`
+
+          **Trigger Commit:** \`${SHORT_SHA}\`
+
+          ---
+          _This PR was automatically created by the release branch automation workflow._"
+          fi
+          
+          if [ "$PR_EXISTS" = "true" ]; then
+            # Update existing PR
+            PR_NUMBER="${{ steps.sync_branch.outputs.pr_number }}"
+            PR_URL="${{ steps.sync_branch.outputs.pr_url }}"
+            
+            gh pr edit "$PR_NUMBER" --title "$PR_TITLE" --body "$PR_BODY"
+            
+            # Update PR draft status based on merge result
+            if [ "$MERGE_SUCCESS" = "false" ]; then
+              # Convert to draft if merge failed
+              gh pr ready "$PR_NUMBER" --undo 2>/dev/null || true
+            else
+              # Mark as ready if merge succeeded (handles previous failure → now success case)
+              gh pr ready "$PR_NUMBER" 2>/dev/null || true
+            fi
+            
+            echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+            echo "pr_action=updated" >> $GITHUB_OUTPUT
+            echo "Updated existing PR: $PR_URL"
+          else
+            # Create new PR (draft if merge failed)
+            if [ "$MERGE_SUCCESS" = "false" ]; then
+              PR_URL=$(gh pr create \
+                --title "$PR_TITLE" \
+                --body "$PR_BODY" \
+                --head "$SYNC_BRANCH" \
+                --base "${{ env.DEVELOP_BRANCH }}" \
+                --draft)
+            else
+              PR_URL=$(gh pr create \
+                --title "$PR_TITLE" \
+                --body "$PR_BODY" \
+                --head "$SYNC_BRANCH" \
+                --base "${{ env.DEVELOP_BRANCH }}")
+            fi
+            
+            echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+            echo "pr_action=created" >> $GITHUB_OUTPUT
+            echo "Created new PR: $PR_URL"
+          fi
+
+      - name: Back-merge Summary
+        run: |
+          RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
+          VERSION="${{ needs.rc-tagging.outputs.version }}"
+          SYNC_BRANCH="${{ steps.sync_branch.outputs.sync_branch }}"
+          PR_URL="${{ steps.create_pr.outputs.pr_url }}"
+          PR_ACTION="${{ steps.create_pr.outputs.pr_action }}"
+          MERGE_SUCCESS="${{ steps.merge_result.outputs.merge_success }}"
+          
+          echo "## Back-merge Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Branch** | \`${RELEASE_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Sync Branch** | \`${SYNC_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Target Branch** | \`${{ env.DEVELOP_BRANCH }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **PR Action** | ${PR_ACTION} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Back-merge PR** | ${PR_URL} |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$MERGE_SUCCESS" = "false" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
+            echo "> Merge conflicts detected. Manual resolution required." >> $GITHUB_STEP_SUMMARY
+          fi
