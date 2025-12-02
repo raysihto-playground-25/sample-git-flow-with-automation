@@ -1,5 +1,18 @@
 name: Mergebot
 
+# =============================================================================
+# Mergebot - PR Merge Automation Workflow
+# =============================================================================
+# This workflow provides automated PR merging for repositories where branch
+# protection rules are unavailable (e.g., GitHub Free plan) or when additional
+# merge controls are needed beyond what branch protection offers.
+#
+# LIMITATIONS:
+# - Fork PRs are NOT supported: GITHUB_TOKEN has limited write permissions for
+#   fork-originated PRs by default, which will cause merge operations to fail.
+# - Only OWNER, MEMBER, and COLLABORATOR can execute the merge command.
+# =============================================================================
+
 on:
   issue_comment:
     types: [created]
@@ -10,7 +23,8 @@ env:
   # Sync branches are used to back-merge changes from release branches to develop.
   # These branches use merge commits instead of squash to preserve full commit history.
   SYNC_BRANCH_PREFIX: "fix/sync/"
-  COMMAND_REGEX: '^\s*@mergebot\s+merge\s*$'
+  # Command regex using POSIX character classes for Bash ERE compatibility
+  COMMAND_REGEX: '^[[:space:]]*@mergebot[[:space:]]+merge[[:space:]]*$'
   # Retry configuration for waiting on GitHub to calculate mergeable status
   MERGEABLE_RETRY_COUNT: "5"
   MERGEABLE_RETRY_INTERVAL: "10"
@@ -29,6 +43,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     steps:
       - name: Check if comment is from a bot
         id: check_bot
@@ -60,8 +75,75 @@ jobs:
             echo "command_valid=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Add eyes reaction to acknowledge command
+      - name: Check author association
+        id: check_author
         if: steps.check_bot.outputs.is_bot == 'false' && steps.parse_command.outputs.command_valid == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          AUTHOR_ASSOCIATION="${{ github.event.comment.author_association }}"
+          PR_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+          
+          echo "Author association: $AUTHOR_ASSOCIATION"
+          
+          case "$AUTHOR_ASSOCIATION" in
+            OWNER|MEMBER|COLLABORATOR)
+              echo "Author has sufficient permissions"
+              echo "allowed=true" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "Author does not have sufficient permissions"
+              echo "allowed=false" >> $GITHUB_OUTPUT
+              
+              # Post comment about insufficient permissions
+              COMMENT_BODY="## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`@mergebot merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`"
+              
+              gh api repos/$REPO/issues/$PR_NUMBER/comments \
+                -f body="$COMMENT_BODY"
+              ;;
+          esac
+
+      - name: Check if fork PR
+        id: check_fork
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ github.event.issue.number }}"
+          REPO="${{ github.repository }}"
+          
+          # Get PR data to check if it's from a fork
+          PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
+          HEAD_REPO=$(echo "$PR_DATA" | jq -r '.head.repo.full_name // ""')
+          BASE_REPO=$(echo "$PR_DATA" | jq -r '.base.repo.full_name')
+          
+          echo "Head repo: $HEAD_REPO"
+          echo "Base repo: $BASE_REPO"
+          
+          if [ "$HEAD_REPO" != "$BASE_REPO" ] && [ -n "$HEAD_REPO" ]; then
+            echo "This is a fork PR - not supported"
+            echo "is_fork=true" >> $GITHUB_OUTPUT
+            
+            # Post comment about fork PR limitation
+            COMMENT_BODY="## Fork PR not supported\n\nThe \`@mergebot merge\` command is not supported for PRs from forked repositories.\n\nThis is because the GITHUB_TOKEN has limited write permissions for fork-originated PRs by default."
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+          else
+            echo "This is not a fork PR"
+            echo "is_fork=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add eyes reaction to acknowledge command
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -76,7 +158,11 @@ jobs:
 
       - name: Fetch PR data
         id: pr_data
-        if: steps.check_bot.outputs.is_bot == 'false' && steps.parse_command.outputs.command_valid == 'true'
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' &&
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -118,7 +204,11 @@ jobs:
 
       - name: Check if already merged
         id: check_merged
-        if: steps.check_bot.outputs.is_bot == 'false' && steps.parse_command.outputs.command_valid == 'true'
+        if: |
+          steps.check_bot.outputs.is_bot == 'false' && 
+          steps.parse_command.outputs.command_valid == 'true' &&
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -142,6 +232,8 @@ jobs:
         if: |
           steps.check_bot.outputs.is_bot == 'false' && 
           steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
           steps.check_merged.outputs.already_merged == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -177,6 +269,8 @@ jobs:
             ERRORS="${ERRORS}- PR is blocked by failing status checks or branch protection rules (mergeable_state: blocked)\n"
           elif [ "$MERGEABLE_STATE" = "unstable" ]; then
             ERRORS="${ERRORS}- PR has failing status checks (mergeable_state: unstable)\n"
+          elif [ "$MERGEABLE_STATE" = "behind" ]; then
+            ERRORS="${ERRORS}- PR branch is behind the base branch; please update the branch\n"
           fi
           
           if [ -n "$ERRORS" ]; then
@@ -198,6 +292,8 @@ jobs:
         if: |
           steps.check_bot.outputs.is_bot == 'false' && 
           steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
           steps.check_merged.outputs.already_merged == 'false' &&
           steps.check_pr_status.outputs.status_ok == 'true'
         env:
@@ -284,6 +380,8 @@ jobs:
         if: |
           steps.check_bot.outputs.is_bot == 'false' && 
           steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
           steps.check_merged.outputs.already_merged == 'false' &&
           steps.check_pr_status.outputs.status_ok == 'true' &&
           steps.check_approvals.outputs.approval_ok == 'true'
@@ -377,6 +475,8 @@ jobs:
         if: |
           steps.check_bot.outputs.is_bot == 'false' && 
           steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
           steps.check_merged.outputs.already_merged == 'false' &&
           steps.check_pr_status.outputs.status_ok == 'true' &&
           (steps.check_approvals.outputs.approval_ok == 'false' || steps.check_threads.outputs.threads_ok == 'false')
@@ -415,6 +515,8 @@ jobs:
         if: |
           steps.check_bot.outputs.is_bot == 'false' && 
           steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
           steps.check_merged.outputs.already_merged == 'false' &&
           steps.check_pr_status.outputs.status_ok == 'true' &&
           steps.check_approvals.outputs.approval_ok == 'true' &&
@@ -453,6 +555,8 @@ jobs:
         if: |
           steps.check_bot.outputs.is_bot == 'false' && 
           steps.parse_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
           steps.check_merged.outputs.already_merged == 'false' &&
           steps.check_pr_status.outputs.status_ok == 'true' &&
           steps.check_approvals.outputs.approval_ok == 'true' &&
