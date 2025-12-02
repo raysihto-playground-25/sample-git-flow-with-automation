@@ -23,6 +23,10 @@ on:
         type: string
         default: 'master'
 
+concurrency:
+  group: create-release-branch
+  cancel-in-progress: true
+
 jobs:
   create-release:
     runs-on: ubuntu-latest
@@ -92,6 +96,10 @@ jobs:
               NEW_PATCH=$((PATCH + 1))
               NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
               ;;
+            *)
+              echo "Error: Invalid bump type '$BUMP_TYPE'"
+              exit 1
+              ;;
           esac
 
           echo "New version: $NEW_VERSION"
@@ -127,7 +135,12 @@ jobs:
 
           git fetch origin "$SOURCE_BRANCH"
           git checkout -b "$RELEASE_BRANCH" "origin/$SOURCE_BRANCH"
-          git push origin "$RELEASE_BRANCH"
+          
+          # Push the branch with error handling
+          if ! git push origin "$RELEASE_BRANCH" 2>&1; then
+            echo "Error: Failed to push release branch '$RELEASE_BRANCH'. It may already exist due to a concurrent workflow run."
+            exit 1
+          fi
 
           echo "Created and pushed release branch: $RELEASE_BRANCH"
 
@@ -141,7 +154,12 @@ jobs:
 
           git commit --allow-empty -m "Release candidate ${RC_TAG}"
           git tag "$RC_TAG"
-          git push origin HEAD --tags
+          
+          # Use atomic push to prevent race conditions for both branch and tag
+          if ! git push --atomic origin HEAD "$RC_TAG" 2>&1; then
+            echo "Error: Failed to push commit and RC tag '$RC_TAG'. The tag may already exist due to a concurrent workflow run."
+            exit 1
+          fi
 
           echo "Created empty commit and pushed RC tag: $RC_TAG"
 
