@@ -1,0 +1,163 @@
+name: Create Release Branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+        default: 'minor'
+      source_branch:
+        description: 'Source branch to create release from'
+        required: true
+        type: string
+        default: 'develop'
+      target_branch:
+        description: 'Target branch for merge PR'
+        required: true
+        type: string
+        default: 'master'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Validate source branch exists
+        run: |
+          if ! git ls-remote --exit-code --heads origin "${{ inputs.source_branch }}" > /dev/null 2>&1; then
+            echo "Error: Source branch '${{ inputs.source_branch }}' does not exist"
+            exit 1
+          fi
+          echo "Source branch '${{ inputs.source_branch }}' exists"
+
+      - name: Validate target branch exists
+        run: |
+          if ! git ls-remote --exit-code --heads origin "${{ inputs.target_branch }}" > /dev/null 2>&1; then
+            echo "Error: Target branch '${{ inputs.target_branch }}' does not exist"
+            exit 1
+          fi
+          echo "Target branch '${{ inputs.target_branch }}' exists"
+
+      - name: Get latest version tag
+        id: get_version
+        run: |
+          # Get all vX.Y.Z tags (excluding those with "-" like rc tags)
+          # Use sort -V for proper version sorting (available on ubuntu-latest with GNU coreutils)
+          LATEST_VERSION=$(git tag -l 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -n 1)
+
+          if [ -z "$LATEST_VERSION" ]; then
+            LATEST_VERSION="0.0.0"
+            echo "No existing version tags found, using fallback: $LATEST_VERSION"
+          else
+            echo "Latest version found: $LATEST_VERSION"
+          fi
+
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          CURRENT_VERSION="${{ steps.get_version.outputs.version }}"
+          BUMP_TYPE="${{ inputs.bump_type }}"
+
+          # Parse version components
+          MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
+          MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
+          PATCH=$(echo "$CURRENT_VERSION" | cut -d. -f3)
+
+          case "$BUMP_TYPE" in
+            major)
+              NEW_MAJOR=$((MAJOR + 1))
+              NEW_VERSION="${NEW_MAJOR}.0.0"
+              ;;
+            minor)
+              NEW_MINOR=$((MINOR + 1))
+              NEW_VERSION="${MAJOR}.${NEW_MINOR}.0"
+              ;;
+            patch)
+              NEW_PATCH=$((PATCH + 1))
+              NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+              ;;
+          esac
+
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if release branch already exists
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          RELEASE_BRANCH="release/${NEW_VERSION}"
+
+          if git ls-remote --exit-code --heads origin "$RELEASE_BRANCH" > /dev/null 2>&1; then
+            echo "Error: Release branch '$RELEASE_BRANCH' already exists"
+            exit 1
+          fi
+          echo "Release branch '$RELEASE_BRANCH' does not exist, proceeding..."
+
+      - name: Check if RC tag already exists
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          RC_TAG="v${NEW_VERSION}-rc.1"
+
+          if [ -n "$(git tag -l "$RC_TAG")" ]; then
+            echo "Error: RC tag '$RC_TAG' already exists"
+            exit 1
+          fi
+          echo "RC tag '$RC_TAG' does not exist, proceeding..."
+
+      - name: Create release branch
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          SOURCE_BRANCH="${{ inputs.source_branch }}"
+          RELEASE_BRANCH="release/${NEW_VERSION}"
+
+          git fetch origin "$SOURCE_BRANCH"
+          git checkout -b "$RELEASE_BRANCH" "origin/$SOURCE_BRANCH"
+          git push origin "$RELEASE_BRANCH"
+
+          echo "Created and pushed release branch: $RELEASE_BRANCH"
+
+      - name: Create empty commit and RC tag
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          RC_TAG="v${NEW_VERSION}-rc.1"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git commit --allow-empty -m "Release candidate ${RC_TAG}"
+          git tag "$RC_TAG"
+          git push origin HEAD --tags
+
+          echo "Created empty commit and pushed RC tag: $RC_TAG"
+
+      - name: Create Draft Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          RELEASE_BRANCH="release/${NEW_VERSION}"
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+
+          gh pr create \
+            --title "[WIP] Release v${NEW_VERSION}" \
+            --body "Release v${NEW_VERSION} from ${RELEASE_BRANCH} to ${TARGET_BRANCH}" \
+            --head "$RELEASE_BRANCH" \
+            --base "$TARGET_BRANCH" \
+            --draft
+
+          echo "Created draft PR from $RELEASE_BRANCH to $TARGET_BRANCH"
