@@ -7,6 +7,8 @@ on:
 env:
   RELEASE_BRANCH_PREFIX: "release"
   DEVELOP_BRANCH: "develop"
+  # Sync branches are used to back-merge changes from release branches to develop.
+  # These branches use merge commits instead of squash to preserve full commit history.
   SYNC_BRANCH_PREFIX: "fix/sync/"
   COMMAND_REGEX: '^\s*@mergebot\s+merge\s*$'
 
@@ -45,10 +47,9 @@ jobs:
           COMMAND_REGEX: ${{ env.COMMAND_REGEX }}
         run: |
           echo "Checking if comment matches command regex..."
-          echo "Comment: $COMMENT_BODY"
           
           # Match the entire comment body against the command regex
-          if echo "$COMMENT_BODY" | grep -qE "$COMMAND_REGEX"; then
+          if [[ "$COMMENT_BODY" =~ $COMMAND_REGEX ]]; then
             echo "Command matched!"
             echo "command_valid=true" >> $GITHUB_OUTPUT
           else
@@ -219,34 +220,36 @@ jobs:
           VALID_APPROVALS=0
           
           # Check each approved review
-          for row in $(echo "$APPROVED_REVIEWS" | jq -r '.[] | @base64'); do
-            _jq() {
-              echo ${row} | base64 --decode | jq -r ${1}
-            }
-            
-            REVIEW_ID=$(_jq '.id')
-            COMMIT_ID=$(_jq '.commit_id')
-            USER=$(_jq '.user.login')
-            
-            echo "Review ID: $REVIEW_ID, Commit ID: $COMMIT_ID, User: $USER"
-            
-            if [ "$COMMIT_ID" != "$HEAD_SHA" ]; then
-              echo "Review $REVIEW_ID is stale (commit: $COMMIT_ID, current: $HEAD_SHA). Dismissing..."
+          if [ "$APPROVED_COUNT" -gt 0 ]; then
+            for row in $(echo "$APPROVED_REVIEWS" | jq -r '.[] | @base64'); do
+              _jq() {
+                echo "${row}" | base64 --decode 2>/dev/null | jq -r ${1} 2>/dev/null || echo ""
+              }
               
-              DISMISS_MESSAGE="Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${COMMIT_ID:0:7}, current HEAD: ${HEAD_SHA:0:7})."
+              REVIEW_ID=$(_jq '.id')
+              COMMIT_ID=$(_jq '.commit_id')
+              USER=$(_jq '.user.login')
               
-              # Dismiss the stale review
-              gh api repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/dismissals \
-                -f message="$DISMISS_MESSAGE" \
-                -f event="DISMISS" || true
+              echo "Review ID: $REVIEW_ID, Commit ID: $COMMIT_ID, User: $USER"
               
-              STALE_REVIEWS_DISMISSED=true
-              STALE_REVIEW_MESSAGES="${STALE_REVIEW_MESSAGES}- Dismissed approval from @$USER (reviewed commit: \`${COMMIT_ID:0:7}\`, current HEAD: \`${HEAD_SHA:0:7}\`)\n"
-            else
-              echo "Review $REVIEW_ID is valid (matches current HEAD SHA)"
-              VALID_APPROVALS=$((VALID_APPROVALS + 1))
-            fi
-          done
+              if [ "$COMMIT_ID" != "$HEAD_SHA" ]; then
+                echo "Review $REVIEW_ID is stale (commit: $COMMIT_ID, current: $HEAD_SHA). Dismissing..."
+                
+                DISMISS_MESSAGE="Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${COMMIT_ID:0:7}, current HEAD: ${HEAD_SHA:0:7})."
+                
+                # Dismiss the stale review
+                gh api repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/dismissals \
+                  -X PUT \
+                  -f message="$DISMISS_MESSAGE" || true
+                
+                STALE_REVIEWS_DISMISSED=true
+                STALE_REVIEW_MESSAGES="${STALE_REVIEW_MESSAGES}- Dismissed approval from @$USER (reviewed commit: \`${COMMIT_ID:0:7}\`, current HEAD: \`${HEAD_SHA:0:7}\`)\n"
+              else
+                echo "Review $REVIEW_ID is valid (matches current HEAD SHA)"
+                VALID_APPROVALS=$((VALID_APPROVALS + 1))
+              fi
+            done
+          fi
           
           echo "Valid approvals: $VALID_APPROVALS"
           echo "valid_approvals=$VALID_APPROVALS" >> $GITHUB_OUTPUT
@@ -254,9 +257,10 @@ jobs:
           # If stale reviews were dismissed, notify
           if [ "$STALE_REVIEWS_DISMISSED" = "true" ]; then
             echo "stale_dismissed=true" >> $GITHUB_OUTPUT
-            echo "stale_messages<<EOF" >> $GITHUB_OUTPUT
+            delimiter="$(openssl rand -hex 8)"
+            echo "stale_messages<<${delimiter}" >> $GITHUB_OUTPUT
             echo -e "$STALE_REVIEW_MESSAGES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            echo "${delimiter}" >> $GITHUB_OUTPUT
             
             STALE_COMMENT=$(printf '## Stale approvals dismissed\n\nThe following approvals were dismissed because new commits were pushed after the reviews:\n\n%b' "$STALE_REVIEW_MESSAGES")
             
@@ -273,7 +277,8 @@ jobs:
             echo "approval_ok=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check review threads are resolved (GraphQL)
+      # GraphQL is used because REST API doesn't provide review thread resolution status
+      - name: Check review threads are resolved
         id: check_threads
         if: |
           steps.check_bot.outputs.is_bot == 'false' && 
@@ -287,6 +292,7 @@ jobs:
           PR_NUMBER="${{ github.event.issue.number }}"
           OWNER="${{ github.repository_owner }}"
           REPO_NAME="${{ github.event.repository.name }}"
+          REPO="${{ github.repository }}"
           
           echo "Checking review threads for PR #$PR_NUMBER..."
           
@@ -294,39 +300,48 @@ jobs:
           HAS_NEXT_PAGE=true
           CURSOR=""
           
-          while [ "$HAS_NEXT_PAGE" = "true" ]; do
-            if [ -z "$CURSOR" ]; then
-              CURSOR_PARAM=""
-            else
-              CURSOR_PARAM=", after: \"$CURSOR\""
-            fi
-            
-            QUERY="query {
-              repository(owner: \"$OWNER\", name: \"$REPO_NAME\") {
-                pullRequest(number: $PR_NUMBER) {
-                  reviewThreads(first: 100$CURSOR_PARAM) {
-                    pageInfo {
-                      hasNextPage
-                      endCursor
-                    }
-                    nodes {
-                      isResolved
-                      isOutdated
-                    }
+          QUERY='query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+            repository(owner: $owner, name: $name) {
+              pullRequest(number: $number) {
+                reviewThreads(first: 100, after: $cursor) {
+                  pageInfo {
+                    hasNextPage
+                    endCursor
+                  }
+                  nodes {
+                    isResolved
+                    isOutdated
                   }
                 }
               }
-            }"
-            
-            RESPONSE=$(gh api graphql -f query="$QUERY")
+            }
+          }'
+          
+          while [ "$HAS_NEXT_PAGE" = "true" ]; do
+            if [ -z "$CURSOR" ]; then
+              RESPONSE=$(gh api graphql -f query="$QUERY" -F owner="$OWNER" -F name="$REPO_NAME" -F number="$PR_NUMBER") || {
+                echo "GraphQL query failed"
+                COMMENT_BODY=$(printf '## Merge checks failed\n\nFailed to fetch review threads status. Please try again.')
+                gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
+                exit 1
+              }
+            else
+              RESPONSE=$(gh api graphql -f query="$QUERY" -F owner="$OWNER" -F name="$REPO_NAME" -F number="$PR_NUMBER" -f cursor="$CURSOR") || {
+                echo "GraphQL query failed"
+                COMMENT_BODY=$(printf '## Merge checks failed\n\nFailed to fetch review threads status. Please try again.')
+                gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
+                exit 1
+              }
+            fi
             
             # Count unresolved threads (excluding outdated ones is optional, but we count all unresolved)
-            PAGE_UNRESOLVED=$(echo "$RESPONSE" | jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length')
+            PAGE_UNRESOLVED=$(echo "$RESPONSE" | jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' 2>/dev/null || echo "0")
+            PAGE_UNRESOLVED=${PAGE_UNRESOLVED:-0}
             UNRESOLVED_THREADS=$((UNRESOLVED_THREADS + PAGE_UNRESOLVED))
             
             # Check for next page
             HAS_NEXT_PAGE=$(echo "$RESPONSE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
-            CURSOR=$(echo "$RESPONSE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor')
+            CURSOR=$(echo "$RESPONSE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // ""')
             
             echo "Page processed. Unresolved in this page: $PAGE_UNRESOLVED, Has next page: $HAS_NEXT_PAGE"
           done
@@ -442,7 +457,7 @@ jobs:
           PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
           
           CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
-          MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable')
+          MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
           MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
           
           echo "Current HEAD SHA: $CURRENT_HEAD_SHA"
@@ -461,8 +476,8 @@ jobs:
             exit 1
           fi
           
-          # Check mergeability
-          if [ "$MERGEABLE" = "false" ] || [ "$MERGEABLE_STATE" = "dirty" ]; then
+          # Check mergeability (also handle null which means GitHub hasn't calculated it yet)
+          if [ "$MERGEABLE" = "false" ] || [ "$MERGEABLE" = "null" ] || [ "$MERGEABLE_STATE" = "dirty" ]; then
             echo "Mergeability check failed!"
             
             COMMENT_BODY=$(printf '## Merge checks failed\n\nThis PR cannot be merged:\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve any conflicts or issues before attempting to merge.' "$MERGEABLE" "$MERGEABLE_STATE")
@@ -478,6 +493,7 @@ jobs:
           echo "HEAD SHA: $ORIGINAL_HEAD_SHA"
           
           # Perform the merge
+          MERGE_FAILED=false
           MERGE_RESULT=$(gh api repos/$REPO/pulls/$PR_NUMBER/merge \
             -X PUT \
             -f merge_method="$MERGE_METHOD" \
@@ -502,7 +518,7 @@ jobs:
             echo "merge_success=true" >> $GITHUB_OUTPUT
             
             # Post success comment
-            COMMENT_BODY=$(printf '## Merged by mergebot\n\nThis PR has been successfully merged.\n\n| Field | Value |\n|-------|-------|\n| **Merge Method** | `%s` |\n| **Base Branch** | `%s` |\n| **Head Branch** | `%s` |\n| **HEAD SHA** | `%s` |' "$MERGE_METHOD" "$BASE_REF" "$HEAD_REF" "$ORIGINAL_HEAD_SHA")
+            COMMENT_BODY=$(printf '## Merged by mergebot\n\n✅ This PR has been successfully merged.\n\n**Details:**\n- **Merge Method:** `%s`\n- **Base Branch:** `%s`\n- **Head Branch:** `%s`\n- **HEAD SHA:** `%s`' "$MERGE_METHOD" "$BASE_REF" "$HEAD_REF" "${ORIGINAL_HEAD_SHA:0:7}")
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
