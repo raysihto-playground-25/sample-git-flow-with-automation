@@ -7,6 +7,7 @@ on:
 env:
   RELEASE_BRANCH_PREFIX: "release"
   DEVELOP_BRANCH: "develop"
+  SYNC_BRANCH_PREFIX: "fix/sync/"
   COMMAND_REGEX: '^\s*@mergebot\s+merge\s*$'
 
 # Concurrency per PR number to avoid parallel execution
@@ -41,53 +42,13 @@ jobs:
         if: steps.check_bot.outputs.is_bot == 'false'
         env:
           COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMAND_REGEX: ${{ env.COMMAND_REGEX }}
         run: |
-          # Function to normalize whitespace (full-width to half-width)
-          normalize_whitespace() {
-            # Replace full-width spaces with half-width spaces
-            echo "$1" | sed 's/　/ /g'
-          }
+          echo "Checking if comment matches command regex..."
+          echo "Comment: $COMMENT_BODY"
           
-          # Function to remove code blocks
-          remove_code_blocks() {
-            # Remove fenced code blocks (```...```)
-            echo "$1" | sed ':a;N;$!ba;s/```[^`]*```//g' | sed ':a;N;$!ba;s/`[^`]*`//g'
-          }
-          
-          # Function to remove quotes (lines starting with >)
-          remove_quotes() {
-            echo "$1" | grep -v '^[[:space:]]*>' || true
-          }
-          
-          # Process the comment
-          PROCESSED_COMMENT="$COMMENT_BODY"
-          
-          # Normalize whitespace
-          PROCESSED_COMMENT=$(normalize_whitespace "$PROCESSED_COMMENT")
-          
-          # Remove code blocks (simple approach - remove lines containing ```)
-          # For multi-line code blocks, we use a more robust approach
-          PROCESSED_COMMENT=$(echo "$PROCESSED_COMMENT" | awk '
-            BEGIN { in_code_block = 0 }
-            /^```/ { in_code_block = !in_code_block; next }
-            !in_code_block { print }
-          ')
-          
-          # Also remove inline code (text between single backticks)
-          PROCESSED_COMMENT=$(echo "$PROCESSED_COMMENT" | sed 's/`[^`]*`//g')
-          
-          # Remove quoted lines
-          PROCESSED_COMMENT=$(echo "$PROCESSED_COMMENT" | grep -v '^[[:space:]]*>' || true)
-          
-          # Trim and check for command match
-          TRIMMED_COMMENT=$(echo "$PROCESSED_COMMENT" | xargs)
-          
-          echo "Original comment: $COMMENT_BODY"
-          echo "Processed comment: $PROCESSED_COMMENT"
-          echo "Trimmed comment: $TRIMMED_COMMENT"
-          
-          # Check if the processed comment matches the command regex
-          if echo "$TRIMMED_COMMENT" | grep -qE '^[[:space:]]*@mergebot[[:space:]]+merge[[:space:]]*$'; then
+          # Match the entire comment body against the command regex
+          if echo "$COMMENT_BODY" | grep -qE "$COMMAND_REGEX"; then
             echo "Command matched!"
             echo "command_valid=true" >> $GITHUB_OUTPUT
           else
@@ -417,73 +378,6 @@ jobs:
           echo "Validation failed, exiting"
           exit 1
 
-      - name: Re-fetch PR data for TOCTOU check
-        id: pr_data_recheck
-        if: |
-          steps.check_bot.outputs.is_bot == 'false' && 
-          steps.parse_command.outputs.command_valid == 'true' && 
-          steps.check_merged.outputs.already_merged == 'false' &&
-          steps.check_pr_status.outputs.status_ok == 'true' &&
-          steps.check_approvals.outputs.approval_ok == 'true' &&
-          steps.check_threads.outputs.threads_ok == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_NUMBER="${{ github.event.issue.number }}"
-          REPO="${{ github.repository }}"
-          ORIGINAL_HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
-          
-          echo "Re-fetching PR data for TOCTOU check..."
-          echo "Original HEAD SHA: $ORIGINAL_HEAD_SHA"
-          
-          # Get fresh PR data
-          PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
-          
-          CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
-          MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable')
-          MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
-          MERGED=$(echo "$PR_DATA" | jq -r '.merged')
-          
-          echo "Current HEAD SHA: $CURRENT_HEAD_SHA"
-          echo "Mergeable: $MERGEABLE"
-          echo "Mergeable State: $MERGEABLE_STATE"
-          echo "Merged: $MERGED"
-          
-          echo "current_head_sha=$CURRENT_HEAD_SHA" >> $GITHUB_OUTPUT
-          echo "mergeable=$MERGEABLE" >> $GITHUB_OUTPUT
-          echo "mergeable_state=$MERGEABLE_STATE" >> $GITHUB_OUTPUT
-          echo "merged=$MERGED" >> $GITHUB_OUTPUT
-          
-          # Check for TOCTOU violation
-          if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
-            echo "toctou_ok=false" >> $GITHUB_OUTPUT
-            echo "TOCTOU violation detected!"
-            
-            COMMENT_BODY=$(printf '## Merge checks failed\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
-            
-            gh api repos/$REPO/issues/$PR_NUMBER/comments \
-              -f body="$COMMENT_BODY"
-            
-            exit 1
-          else
-            echo "toctou_ok=true" >> $GITHUB_OUTPUT
-          fi
-          
-          # Check mergeability
-          if [ "$MERGEABLE" = "false" ] || [ "$MERGEABLE_STATE" = "dirty" ]; then
-            echo "mergeability_ok=false" >> $GITHUB_OUTPUT
-            echo "Mergeability check failed!"
-            
-            COMMENT_BODY=$(printf '## Merge checks failed\n\nThis PR cannot be merged:\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve any conflicts or issues before attempting to merge.' "$MERGEABLE" "$MERGEABLE_STATE")
-            
-            gh api repos/$REPO/issues/$PR_NUMBER/comments \
-              -f body="$COMMENT_BODY"
-            
-            exit 1
-          else
-            echo "mergeability_ok=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Determine merge method
         id: merge_method
         if: |
@@ -492,29 +386,29 @@ jobs:
           steps.check_merged.outputs.already_merged == 'false' &&
           steps.check_pr_status.outputs.status_ok == 'true' &&
           steps.check_approvals.outputs.approval_ok == 'true' &&
-          steps.check_threads.outputs.threads_ok == 'true' &&
-          steps.pr_data_recheck.outputs.toctou_ok == 'true' &&
-          steps.pr_data_recheck.outputs.mergeability_ok == 'true'
+          steps.check_threads.outputs.threads_ok == 'true'
         run: |
           BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
           HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
           RELEASE_PREFIX="${{ env.RELEASE_BRANCH_PREFIX }}"
           DEVELOP_BRANCH="${{ env.DEVELOP_BRANCH }}"
+          SYNC_PREFIX="${{ env.SYNC_BRANCH_PREFIX }}"
           
           echo "Base ref: $BASE_REF"
           echo "Head ref: $HEAD_REF"
           echo "Release prefix: $RELEASE_PREFIX"
           echo "Develop branch: $DEVELOP_BRANCH"
+          echo "Sync prefix: $SYNC_PREFIX"
           
           # Determine merge method
           # 1. If base branch starts with RELEASE_BRANCH_PREFIX/ -> squash
-          # 2. If base branch is DEVELOP_BRANCH AND head branch does NOT start with fix/sync/ -> squash
+          # 2. If base branch is DEVELOP_BRANCH AND head branch does NOT start with SYNC_BRANCH_PREFIX -> squash
           # 3. Otherwise -> merge (merge commit)
           
           if [[ "$BASE_REF" == "${RELEASE_PREFIX}/"* ]]; then
             echo "Base branch is a release branch, using squash merge"
             echo "method=squash" >> $GITHUB_OUTPUT
-          elif [ "$BASE_REF" = "$DEVELOP_BRANCH" ] && [[ "$HEAD_REF" != "fix/sync/"* ]]; then
+          elif [ "$BASE_REF" = "$DEVELOP_BRANCH" ] && [[ "$HEAD_REF" != "${SYNC_PREFIX}"* ]]; then
             echo "Base branch is develop and head is not a sync branch, using squash merge"
             echo "method=squash" >> $GITHUB_OUTPUT
           else
@@ -530,27 +424,64 @@ jobs:
           steps.check_merged.outputs.already_merged == 'false' &&
           steps.check_pr_status.outputs.status_ok == 'true' &&
           steps.check_approvals.outputs.approval_ok == 'true' &&
-          steps.check_threads.outputs.threads_ok == 'true' &&
-          steps.pr_data_recheck.outputs.toctou_ok == 'true' &&
-          steps.pr_data_recheck.outputs.mergeability_ok == 'true'
+          steps.check_threads.outputs.threads_ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
           MERGE_METHOD="${{ steps.merge_method.outputs.method }}"
-          HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
+          ORIGINAL_HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
           HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
           BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
           
+          # TOCTOU check: Re-fetch PR data immediately before merge
+          echo "Performing TOCTOU check before merge..."
+          echo "Original HEAD SHA: $ORIGINAL_HEAD_SHA"
+          
+          PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
+          
+          CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+          MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable')
+          MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
+          
+          echo "Current HEAD SHA: $CURRENT_HEAD_SHA"
+          echo "Mergeable: $MERGEABLE"
+          echo "Mergeable State: $MERGEABLE_STATE"
+          
+          # Check for TOCTOU violation
+          if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
+            echo "TOCTOU violation detected!"
+            
+            COMMENT_BODY=$(printf '## Merge checks failed\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+            
+            exit 1
+          fi
+          
+          # Check mergeability
+          if [ "$MERGEABLE" = "false" ] || [ "$MERGEABLE_STATE" = "dirty" ]; then
+            echo "Mergeability check failed!"
+            
+            COMMENT_BODY=$(printf '## Merge checks failed\n\nThis PR cannot be merged:\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve any conflicts or issues before attempting to merge.' "$MERGEABLE" "$MERGEABLE_STATE")
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+            
+            exit 1
+          fi
+          
+          echo "TOCTOU check passed. Proceeding with merge..."
           echo "Merging PR #$PR_NUMBER with method: $MERGE_METHOD"
-          echo "HEAD SHA: $HEAD_SHA"
+          echo "HEAD SHA: $ORIGINAL_HEAD_SHA"
           
           # Perform the merge
           MERGE_RESULT=$(gh api repos/$REPO/pulls/$PR_NUMBER/merge \
             -X PUT \
             -f merge_method="$MERGE_METHOD" \
-            -f sha="$HEAD_SHA" 2>&1) || MERGE_FAILED=true
+            -f sha="$ORIGINAL_HEAD_SHA" 2>&1) || MERGE_FAILED=true
           
           if [ "$MERGE_FAILED" = "true" ]; then
             echo "Merge failed!"
@@ -571,7 +502,7 @@ jobs:
             echo "merge_success=true" >> $GITHUB_OUTPUT
             
             # Post success comment
-            COMMENT_BODY=$(printf '## Merged by mergebot\n\nThis PR has been successfully merged.\n\n| Field | Value |\n|-------|-------|\n| **Merge Method** | `%s` |\n| **Base Branch** | `%s` |\n| **Head Branch** | `%s` |\n| **HEAD SHA** | `%s` |' "$MERGE_METHOD" "$BASE_REF" "$HEAD_REF" "$HEAD_SHA")
+            COMMENT_BODY=$(printf '## Merged by mergebot\n\nThis PR has been successfully merged.\n\n| Field | Value |\n|-------|-------|\n| **Merge Method** | `%s` |\n| **Base Branch** | `%s` |\n| **Head Branch** | `%s` |\n| **HEAD SHA** | `%s` |' "$MERGE_METHOD" "$BASE_REF" "$HEAD_REF" "$ORIGINAL_HEAD_SHA")
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
