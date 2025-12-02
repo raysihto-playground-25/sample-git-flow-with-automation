@@ -349,6 +349,11 @@ jobs:
             
             # Check for next page
             HAS_NEXT_PAGE=$(echo "$RESPONSE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
+            # Explicitly validate HAS_NEXT_PAGE to avoid infinite loops or unexpected behavior
+            if [ "$HAS_NEXT_PAGE" != "true" ] && [ "$HAS_NEXT_PAGE" != "false" ]; then
+              echo "Unexpected value for hasNextPage: '$HAS_NEXT_PAGE'. Failing for safety."
+              fail_with_comment "Unexpected response from GitHub API (hasNextPage=$HAS_NEXT_PAGE). Please try again or contact support."
+            fi
             CURSOR=$(echo "$RESPONSE" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // ""')
             
             echo "Page processed. Unresolved in this page: $PAGE_UNRESOLVED, Has next page: $HAS_NEXT_PAGE"
@@ -485,7 +490,9 @@ jobs:
           fi
           
           # Check mergeability (handle null which means GitHub hasn't calculated it yet)
-          # Retry up to 5 times with 10 second intervals if mergeable is null
+          # Retry configuration: up to 5 attempts with 10 second intervals (max ~50 seconds wait)
+          # Note: If new commits are pushed during this wait period, the TOCTOU check below will fail
+          # and the user will need to run @mergebot merge again after the new commits are reviewed.
           for i in {1..5}; do
             if [ "$MERGEABLE" != "null" ]; then
               break
@@ -499,6 +506,21 @@ jobs:
             MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
             MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
           done
+          
+          # TOCTOU check after retry loop: ensure HEAD SHA hasn't changed during waiting
+          # Re-fetch PR data and compare HEAD SHA
+          PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
+          CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
+          if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
+            echo "TOCTOU violation detected after retry loop!"
+            
+            COMMENT_BODY=$(printf '## Merge checks failed\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
+            
+            gh api repos/$REPO/issues/$PR_NUMBER/comments \
+              -f body="$COMMENT_BODY"
+            
+            exit 1
+          fi
           
           if [ "$MERGEABLE" = "false" ] || [ "$MERGEABLE" = "null" ] || [ "$MERGEABLE_STATE" = "dirty" ]; then
             echo "Mergeability check failed!"
