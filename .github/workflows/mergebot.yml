@@ -230,6 +230,12 @@ jobs:
               COMMIT_ID=$(_jq '.commit_id')
               USER=$(_jq '.user.login')
               
+              # Validate parsed values - skip if critical fields are empty
+              if [ -z "$REVIEW_ID" ] || [ -z "$COMMIT_ID" ]; then
+                echo "Warning: Could not parse review ID or commit ID from review object. Skipping."
+                continue
+              fi
+              
               echo "Review ID: $REVIEW_ID, Commit ID: $COMMIT_ID, User: $USER"
               
               if [ "$COMMIT_ID" != "$HEAD_SHA" ]; then
@@ -482,7 +488,22 @@ jobs:
             exit 1
           fi
           
-          # Check mergeability (also handle null which means GitHub hasn't calculated it yet)
+          # Check mergeability (handle null which means GitHub hasn't calculated it yet)
+          # Retry up to 5 times with 10 second intervals if mergeable is null
+          for i in {1..5}; do
+            if [ "$MERGEABLE" != "null" ]; then
+              break
+            fi
+            if [ $i -eq 1 ]; then
+              echo "Mergeable status is not yet available (is null). Waiting..."
+            fi
+            sleep 10
+            echo "Re-fetching PR data (Attempt $i/5)"
+            PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
+            MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
+            MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
+          done
+          
           if [ "$MERGEABLE" = "false" ] || [ "$MERGEABLE" = "null" ] || [ "$MERGEABLE_STATE" = "dirty" ]; then
             echo "Mergeability check failed!"
             
