@@ -48,6 +48,7 @@ jobs:
       - name: Check if comment is from a bot
         id: check_bot
         run: |
+          set -Eeuo pipefail
           USER_TYPE="${{ github.event.comment.user.type }}"
           if [ "$USER_TYPE" = "Bot" ]; then
             echo "Comment is from a bot, skipping"
@@ -64,6 +65,7 @@ jobs:
           COMMENT_BODY: ${{ github.event.comment.body }}
           COMMAND_REGEX: ${{ env.COMMAND_REGEX }}
         run: |
+          set -Eeuo pipefail
           echo "Checking if comment matches command regex..."
           
           # Match the entire comment body against the command regex
@@ -81,6 +83,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
           AUTHOR_ASSOCIATION="${{ github.event.comment.author_association }}"
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
@@ -113,6 +116,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
           
@@ -147,6 +151,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
           COMMENT_ID="${{ github.event.comment.id }}"
           REPO="${{ github.repository }}"
           
@@ -166,6 +171,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
           
@@ -212,6 +218,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
           MERGED="${{ steps.pr_data.outputs.merged }}"
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
@@ -238,6 +245,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
           STATE="${{ steps.pr_data.outputs.state }}"
           LOCKED="${{ steps.pr_data.outputs.locked }}"
           DRAFT="${{ steps.pr_data.outputs.draft }}"
@@ -263,14 +271,35 @@ jobs:
           fi
           
           # Check mergeable state
+          COMMENT_TITLE=""
           if [ "$MERGEABLE_STATE" = "dirty" ]; then
+            COMMENT_TITLE="## Conflicts detected"
             ERRORS="${ERRORS}- PR has unresolved conflicts (mergeable_state: dirty)\n"
           elif [ "$MERGEABLE_STATE" = "blocked" ]; then
+            COMMENT_TITLE="## Blocked by checks"
             ERRORS="${ERRORS}- PR is blocked by failing status checks or branch protection rules (mergeable_state: blocked)\n"
           elif [ "$MERGEABLE_STATE" = "unstable" ]; then
+            COMMENT_TITLE="## Failing checks"
             ERRORS="${ERRORS}- PR has failing status checks (mergeable_state: unstable)\n"
           elif [ "$MERGEABLE_STATE" = "behind" ]; then
+            COMMENT_TITLE="## Update branch required"
             ERRORS="${ERRORS}- PR branch is behind the base branch; please update the branch\n"
+          fi
+          
+          # Check other conditions and set title
+          if [ "$STATE" = "closed" ] || [ "$LOCKED" = "true" ] || [ "$DRAFT" = "true" ]; then
+            if [ "$STATE" = "closed" ]; then
+              COMMENT_TITLE="## PR is closed"
+            elif [ "$LOCKED" = "true" ]; then
+              COMMENT_TITLE="## PR is locked"
+            elif [ "$DRAFT" = "true" ]; then
+              COMMENT_TITLE="## PR is a draft"
+            fi
+          fi
+          
+          # Use generic title if multiple issues or no specific title
+          if [ -z "$COMMENT_TITLE" ] && [ -n "$ERRORS" ]; then
+            COMMENT_TITLE="## Merge checks failed"
           fi
           
           if [ -n "$ERRORS" ]; then
@@ -278,7 +307,7 @@ jobs:
             echo "status_ok=false" >> $GITHUB_OUTPUT
             
             # Post comment with errors - use printf to handle newlines
-            COMMENT_BODY=$(printf '## Merge checks failed\n\nThe following issues must be resolved before merging:\n\n%b' "$ERRORS")
+            COMMENT_BODY=$(printf '%s\n\nThe following issues must be resolved before merging:\n\n%b' "$COMMENT_TITLE" "$ERRORS")
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
@@ -299,11 +328,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
           HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
           
+          # Get PR author to exclude self-approvals
+          PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
+          PR_AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login')
+          
           echo "Checking approvals for PR #$PR_NUMBER (head SHA: $HEAD_SHA)..."
+          echo "PR Author: $PR_AUTHOR (self-approvals will be excluded)"
           
           # Get all reviews
           REVIEWS=$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews --paginate)
@@ -316,6 +351,7 @@ jobs:
           
           STALE_REVIEWS_DISMISSED=false
           STALE_REVIEW_MESSAGES=""
+          DISMISS_FAILED_MESSAGES=""
           VALID_APPROVALS=0
           
           # Check each approved review using TSV format for better readability
@@ -329,18 +365,28 @@ jobs:
               
               echo "Review ID: $REVIEW_ID, Commit ID: $COMMIT_ID, User: $USER"
               
+              # Exclude PR author's own approval (self-approval)
+              if [ "$USER" = "$PR_AUTHOR" ]; then
+                echo "Skipping self-approval from PR author @$USER"
+                continue
+              fi
+              
               if [ "$COMMIT_ID" != "$HEAD_SHA" ]; then
                 echo "Review $REVIEW_ID is stale (commit: $COMMIT_ID, current: $HEAD_SHA). Dismissing..."
                 
                 DISMISS_MESSAGE="Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${COMMIT_ID:0:7}, current HEAD: ${HEAD_SHA:0:7})."
                 
-                # Dismiss the stale review
-                gh api repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/dismissals \
+                # Dismiss the stale review and capture failure
+                DISMISS_RESULT=""
+                if ! DISMISS_RESULT=$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/dismissals \
                   -X PUT \
-                  -f message="$DISMISS_MESSAGE" || true
-                
-                STALE_REVIEWS_DISMISSED=true
-                STALE_REVIEW_MESSAGES="${STALE_REVIEW_MESSAGES}- Dismissed approval from @$USER (reviewed commit: \`${COMMIT_ID:0:7}\`, current HEAD: \`${HEAD_SHA:0:7}\`)\n"
+                  -f message="$DISMISS_MESSAGE" 2>&1); then
+                  echo "Warning: Failed to dismiss review $REVIEW_ID: $DISMISS_RESULT"
+                  DISMISS_FAILED_MESSAGES="${DISMISS_FAILED_MESSAGES}- Failed to dismiss approval from @$USER (insufficient permissions or branch protection settings)\n"
+                else
+                  STALE_REVIEWS_DISMISSED=true
+                  STALE_REVIEW_MESSAGES="${STALE_REVIEW_MESSAGES}- Dismissed approval from @$USER (reviewed commit: \`${COMMIT_ID:0:7}\`, current HEAD: \`${HEAD_SHA:0:7}\`)\n"
+                fi
               else
                 echo "Review $REVIEW_ID is valid (matches current HEAD SHA)"
                 VALID_APPROVALS=$((VALID_APPROVALS + 1))
@@ -352,14 +398,26 @@ jobs:
           echo "valid_approvals=$VALID_APPROVALS" >> $GITHUB_OUTPUT
           
           # If stale reviews were dismissed, notify
-          if [ "$STALE_REVIEWS_DISMISSED" = "true" ]; then
+          if [ "$STALE_REVIEWS_DISMISSED" = "true" ] || [ -n "$DISMISS_FAILED_MESSAGES" ]; then
             echo "stale_dismissed=true" >> $GITHUB_OUTPUT
             delimiter="$(openssl rand -hex 8)"
             echo "stale_messages<<${delimiter}" >> $GITHUB_OUTPUT
             echo -e "$STALE_REVIEW_MESSAGES" >> $GITHUB_OUTPUT
             echo "${delimiter}" >> $GITHUB_OUTPUT
             
-            STALE_COMMENT=$(printf '## Stale approvals dismissed\n\nThe following approvals were dismissed because new commits were pushed after the reviews:\n\n%b' "$STALE_REVIEW_MESSAGES")
+            STALE_COMMENT=""
+            if [ -n "$STALE_REVIEW_MESSAGES" ]; then
+              STALE_COMMENT=$(printf '## Stale approvals dismissed\n\nThe following approvals were dismissed because new commits were pushed after the reviews:\n\n%b' "$STALE_REVIEW_MESSAGES")
+            fi
+            
+            # Report dismiss failures if any
+            if [ -n "$DISMISS_FAILED_MESSAGES" ]; then
+              if [ -n "$STALE_COMMENT" ]; then
+                STALE_COMMENT=$(printf '%s\n\n### Dismiss failures\n\nThe following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n\n%b' "$STALE_COMMENT" "$DISMISS_FAILED_MESSAGES")
+              else
+                STALE_COMMENT=$(printf '## Stale approval dismiss failures\n\nThe following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n\n%b' "$DISMISS_FAILED_MESSAGES")
+              fi
+            fi
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$STALE_COMMENT"
@@ -388,6 +446,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
           PR_NUMBER="${{ github.event.issue.number }}"
           OWNER="${{ github.repository_owner }}"
           REPO_NAME="${{ github.event.repository.name }}"
@@ -483,26 +542,36 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
           
           ERRORS=""
+          COMMENT_TITLE=""
           
           # Check approval status
           APPROVAL_OK="${{ steps.check_approvals.outputs.approval_ok }}"
           VALID_APPROVALS="${{ steps.check_approvals.outputs.valid_approvals }}"
           if [ "$APPROVAL_OK" = "false" ]; then
-            ERRORS="${ERRORS}- No valid approvals found for the current HEAD SHA. At least one approval is required.\n"
+            if [ -z "$COMMENT_TITLE" ]; then
+              COMMENT_TITLE="## Approvals required"
+            fi
+            ERRORS="${ERRORS}- No valid approvals found for the current HEAD SHA. At least one approval (from someone other than the PR author) is required.\n"
           fi
           
           # Check threads status
           THREADS_OK="${{ steps.check_threads.outputs.threads_ok }}"
           UNRESOLVED_COUNT="${{ steps.check_threads.outputs.unresolved_count }}"
           if [ "$THREADS_OK" = "false" ]; then
+            if [ -z "$COMMENT_TITLE" ]; then
+              COMMENT_TITLE="## Unresolved conversations"
+            elif [ "$COMMENT_TITLE" != "## Merge checks failed" ]; then
+              COMMENT_TITLE="## Merge checks failed"
+            fi
             ERRORS="${ERRORS}- $UNRESOLVED_COUNT unresolved review thread(s). All conversations must be resolved before merging.\n"
           fi
           
-          COMMENT_BODY=$(printf '## Merge checks failed\n\nThe following issues must be resolved before merging:\n\n%b' "$ERRORS")
+          COMMENT_BODY=$(printf '%s\n\nThe following issues must be resolved before merging:\n\n%b' "$COMMENT_TITLE" "$ERRORS")
           
           gh api repos/$REPO/issues/$PR_NUMBER/comments \
             -f body="$COMMENT_BODY"
@@ -522,6 +591,7 @@ jobs:
           steps.check_approvals.outputs.approval_ok == 'true' &&
           steps.check_threads.outputs.threads_ok == 'true'
         run: |
+          set -Eeuo pipefail
           BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
           HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
           RELEASE_PREFIX="${{ env.RELEASE_BRANCH_PREFIX }}"
@@ -564,6 +634,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -Eeuo pipefail
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
           MERGE_METHOD="${{ steps.merge_method.outputs.method }}"
@@ -589,7 +660,7 @@ jobs:
           if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
             echo "TOCTOU violation detected!"
             
-            COMMENT_BODY=$(printf '## Merge checks failed\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
+            COMMENT_BODY=$(printf '## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
@@ -623,7 +694,7 @@ jobs:
           if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
             echo "TOCTOU violation detected after retry loop!"
             
-            COMMENT_BODY=$(printf '## Merge checks failed\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
+            COMMENT_BODY=$(printf '## New commits detected\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: `%s`\n- Current HEAD SHA: `%s`\n\nPlease run `@mergebot merge` again after the new commits are reviewed and approved.' "${ORIGINAL_HEAD_SHA:0:7}" "${CURRENT_HEAD_SHA:0:7}")
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
@@ -635,9 +706,11 @@ jobs:
             echo "Mergeability check failed!"
             
             if [ "$MERGEABLE" = "null" ]; then
-              COMMENT_BODY=$(printf '## Merge checks failed\n\nThis PR'\''s mergeability status has not been determined by GitHub yet.\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease wait a moment and then run `@mergebot merge` again.' "$MERGEABLE" "$MERGEABLE_STATE")
+              COMMENT_BODY=$(printf '## Mergeability status pending\n\nThis PR'\''s mergeability status has not been determined by GitHub yet.\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease wait a moment and then run `@mergebot merge` again.' "$MERGEABLE" "$MERGEABLE_STATE")
+            elif [ "$MERGEABLE_STATE" = "dirty" ]; then
+              COMMENT_BODY=$(printf '## Conflicts detected\n\nThis PR has merge conflicts that must be resolved before merging.\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve the conflicts and try again.' "$MERGEABLE" "$MERGEABLE_STATE")
             else
-              COMMENT_BODY=$(printf '## Merge checks failed\n\nThis PR cannot be merged:\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve any conflicts or issues before attempting to merge.' "$MERGEABLE" "$MERGEABLE_STATE")
+              COMMENT_BODY=$(printf '## Cannot merge\n\nThis PR cannot be merged:\n\n- Mergeable: `%s`\n- Mergeable State: `%s`\n\nPlease resolve any conflicts or issues before attempting to merge.' "$MERGEABLE" "$MERGEABLE_STATE")
             fi
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
@@ -665,7 +738,7 @@ jobs:
             # Extract error message
             ERROR_MSG=$(echo "$MERGE_RESULT" | jq -r '.message // "Unknown error"' 2>/dev/null || echo "$MERGE_RESULT")
             
-            COMMENT_BODY=$(printf '## Merge checks failed\n\nFailed to merge PR:\n\n- Error: %s\n\nPlease check the PR status and try again.' "$ERROR_MSG")
+            COMMENT_BODY=$(printf '## Merge failed\n\nFailed to merge PR:\n\n- Error: %s\n\nPlease check the PR status and try again.' "$ERROR_MSG")
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
