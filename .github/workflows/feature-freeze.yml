@@ -12,16 +12,10 @@ on:
           - minor
           - patch
         default: 'minor'
-      source_branch:
-        description: 'Source branch to create release from'
-        required: true
-        type: string
-        default: 'develop'
-      target_branch:
-        description: 'Target branch used as the base of the generated PR'
-        required: true
-        type: string
-        default: 'master'
+
+env:
+  MASTER_BRANCH: master
+  DEVELOP_BRANCH: develop
 
 jobs:
   feature-freeze:
@@ -38,19 +32,19 @@ jobs:
 
       - name: Validate source branch exists
         run: |
-          if ! git ls-remote --exit-code --heads origin "${{ inputs.source_branch }}" > /dev/null 2>&1; then
-            echo "Error: Source branch '${{ inputs.source_branch }}' does not exist"
+          if ! git ls-remote --exit-code --heads origin "${{ env.DEVELOP_BRANCH }}" > /dev/null 2>&1; then
+            echo "Error: Source branch '${{ env.DEVELOP_BRANCH }}' does not exist"
             exit 1
           fi
-          echo "Source branch '${{ inputs.source_branch }}' exists"
+          echo "Source branch '${{ env.DEVELOP_BRANCH }}' exists"
 
       - name: Validate target branch exists
         run: |
-          if ! git ls-remote --exit-code --heads origin "${{ inputs.target_branch }}" > /dev/null 2>&1; then
-            echo "Error: Target branch '${{ inputs.target_branch }}' does not exist"
+          if ! git ls-remote --exit-code --heads origin "${{ env.MASTER_BRANCH }}" > /dev/null 2>&1; then
+            echo "Error: Target branch '${{ env.MASTER_BRANCH }}' does not exist"
             exit 1
           fi
-          echo "Target branch '${{ inputs.target_branch }}' exists"
+          echo "Target branch '${{ env.MASTER_BRANCH }}' exists"
 
       - name: Get latest version tag
         id: get_version
@@ -115,7 +109,7 @@ jobs:
       - name: Create release branch and empty commit
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
-          SOURCE_BRANCH="${{ inputs.source_branch }}"
+          SOURCE_BRANCH="${{ env.DEVELOP_BRANCH }}"
           RELEASE_BRANCH="release/${NEW_VERSION}"
 
           git config user.name "github-actions[bot]"
@@ -141,7 +135,7 @@ jobs:
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
           RELEASE_BRANCH="release/${NEW_VERSION}"
-          TARGET_BRANCH="${{ inputs.target_branch }}"
+          TARGET_BRANCH="${{ env.MASTER_BRANCH }}"
 
           PR_URL=$(gh pr create \
             --title "[WIP] chore(release): Release v${NEW_VERSION}" \
