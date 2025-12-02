@@ -213,7 +213,7 @@ jobs:
           REVIEWS=$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews --paginate)
           
           # Find approved reviews
-          APPROVED_REVIEWS=$(echo "$REVIEWS" | jq -r '[.[] | select(.state == "APPROVED")]')
+          APPROVED_REVIEWS=$(echo "$REVIEWS" | jq '[.[] | select(.state == "APPROVED")]')
           APPROVED_COUNT=$(echo "$APPROVED_REVIEWS" | jq 'length')
           
           echo "Found $APPROVED_COUNT approved reviews"
@@ -499,7 +499,6 @@ jobs:
           # and the user will need to run @mergebot merge again after the new commits are reviewed.
           MERGEABLE_RETRY_COUNT=${MERGEABLE_RETRY_COUNT:-5}
           MERGEABLE_RETRY_INTERVAL=${MERGEABLE_RETRY_INTERVAL:-10}
-          RETRY_EXECUTED=false
           for i in $(seq 1 $MERGEABLE_RETRY_COUNT); do
             if [ "$MERGEABLE" != "null" ]; then
               break
@@ -513,18 +512,10 @@ jobs:
             MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
             MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
             CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
-            RETRY_EXECUTED=true
           done
           
-          # TOCTOU check after retry loop: ensure HEAD SHA hasn't changed during waiting
-          # Only re-fetch if the retry loop didn't execute (to avoid redundant API call)
-          if [ "$RETRY_EXECUTED" = "false" ]; then
-            PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
-            CURRENT_HEAD_SHA=$(echo "$PR_DATA" | jq -r '.head.sha')
-            MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
-            MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
-          fi
-
+          # TOCTOU check: ensure HEAD SHA hasn't changed during waiting
+          # Uses CURRENT_HEAD_SHA from the initial fetch or the last retry loop iteration
           if [ "$CURRENT_HEAD_SHA" != "$ORIGINAL_HEAD_SHA" ]; then
             echo "TOCTOU violation detected after retry loop!"
             
