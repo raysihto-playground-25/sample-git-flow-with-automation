@@ -531,7 +531,8 @@ jobs:
           
           while [ "$HAS_NEXT_PAGE" = "true" ]; do
             # Build GraphQL arguments dynamically to avoid code duplication
-            GRAPHQL_ARGS=("-f" "query=$QUERY" "-f" "owner=$OWNER" "-f" "name=$REPO_NAME" "-f" "number=$PR_NUMBER")
+            # Use -F for number to pass it as an integer (Int! in GraphQL), -f for strings
+            GRAPHQL_ARGS=("-f" "query=$QUERY" "-f" "owner=$OWNER" "-f" "name=$REPO_NAME" "-F" "number=$PR_NUMBER")
             if [ -n "$CURSOR" ]; then
               GRAPHQL_ARGS+=("-f" "cursor=$CURSOR")
             fi
