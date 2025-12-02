@@ -11,6 +11,9 @@ env:
   # These branches use merge commits instead of squash to preserve full commit history.
   SYNC_BRANCH_PREFIX: "fix/sync/"
   COMMAND_REGEX: '^\s*@mergebot\s+merge\s*$'
+  # Retry configuration for waiting on GitHub to calculate mergeable status
+  MERGEABLE_RETRY_COUNT: "5"
+  MERGEABLE_RETRY_INTERVAL: "10"
 
 # Concurrency per PR number to avoid parallel execution
 concurrency:
@@ -176,6 +179,8 @@ jobs:
             ERRORS="${ERRORS}- PR has unresolved conflicts (mergeable_state: dirty)\n"
           elif [ "$MERGEABLE_STATE" = "blocked" ]; then
             ERRORS="${ERRORS}- PR is blocked by failing status checks or branch protection rules (mergeable_state: blocked)\n"
+          elif [ "$MERGEABLE_STATE" = "unstable" ]; then
+            ERRORS="${ERRORS}- PR has failing status checks (mergeable_state: unstable)\n"
           fi
           
           if [ -n "$ERRORS" ]; then
@@ -492,18 +497,20 @@ jobs:
           fi
           
           # Check mergeability (handle null which means GitHub hasn't calculated it yet)
-          # Retry configuration: up to 5 attempts with 10 second intervals (max ~50 seconds wait)
+          # Retry configuration is controlled by MERGEABLE_RETRY_COUNT and MERGEABLE_RETRY_INTERVAL env vars
           # Note: If new commits are pushed during this wait period, the TOCTOU check below will fail
           # and the user will need to run @mergebot merge again after the new commits are reviewed.
-          for i in {1..5}; do
+          MERGEABLE_RETRY_COUNT=${MERGEABLE_RETRY_COUNT:-5}
+          MERGEABLE_RETRY_INTERVAL=${MERGEABLE_RETRY_INTERVAL:-10}
+          for i in $(seq 1 $MERGEABLE_RETRY_COUNT); do
             if [ "$MERGEABLE" != "null" ]; then
               break
             fi
             if [ $i -eq 1 ]; then
               echo "Mergeable status is not yet available (is null). Waiting..."
             fi
-            sleep 10
-            echo "Re-fetching PR data (Attempt $i/5)"
+            sleep $MERGEABLE_RETRY_INTERVAL
+            echo "Re-fetching PR data (Attempt $i/$MERGEABLE_RETRY_COUNT)"
             PR_DATA=$(gh api repos/$REPO/pulls/$PR_NUMBER)
             MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "null"')
             MERGEABLE_STATE=$(echo "$PR_DATA" | jq -r '.mergeable_state')
