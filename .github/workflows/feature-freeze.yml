@@ -112,40 +112,27 @@ jobs:
           fi
           echo "Release branch '$RELEASE_BRANCH' does not exist, proceeding..."
 
-      - name: Check if RC tag already exists
-        run: |
-          NEW_VERSION="${{ steps.new_version.outputs.version }}"
-          RC_TAG="v${NEW_VERSION}-rc.1"
-
-          if [ -n "$(git tag -l "$RC_TAG")" ]; then
-            echo "Error: RC tag '$RC_TAG' already exists"
-            exit 1
-          fi
-          echo "RC tag '$RC_TAG' does not exist, proceeding..."
-
-      - name: Create release branch and empty commit with RC tag
+      - name: Create release branch and empty commit
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
           SOURCE_BRANCH="${{ inputs.source_branch }}"
           RELEASE_BRANCH="release/${NEW_VERSION}"
-          RC_TAG="v${NEW_VERSION}-rc.1"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git fetch origin "$SOURCE_BRANCH"
           git checkout -b "$RELEASE_BRANCH" "origin/$SOURCE_BRANCH"
-          git commit --allow-empty -m "chore(release): Release candidate ${RC_TAG}"
-          git tag "$RC_TAG"
+          git commit --allow-empty -m "chore(release): Release candidate v${NEW_VERSION}-rc.1"
           
-          # Use atomic push for branch, commit, and tag together
-          if ! git push --atomic origin "$RELEASE_BRANCH" "$RC_TAG" 2>&1; then
-            echo "Error: Failed to push release branch or RC tag. One of these may already exist."
+          # Push the branch (RC tag will be created by the Release Branch Automation workflow)
+          if ! git push origin "$RELEASE_BRANCH" 2>&1; then
+            echo "Error: Failed to push release branch. It may already exist."
             exit 1
           fi
 
           echo "Created and pushed release branch: $RELEASE_BRANCH"
-          echo "Created empty commit and pushed RC tag: $RC_TAG"
+          echo "RC tag will be created automatically by the Release Branch Automation workflow"
 
       - name: Create Draft Pull Request
         id: create_pr
@@ -170,7 +157,6 @@ jobs:
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
           RELEASE_BRANCH="release/${NEW_VERSION}"
-          RC_TAG="v${NEW_VERSION}-rc.1"
           PR_URL="${{ steps.create_pr.outputs.pr_url }}"
 
           echo "## Feature Freeze Summary" >> $GITHUB_STEP_SUMMARY
@@ -179,5 +165,6 @@ jobs:
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| **New Version** | \`${NEW_VERSION}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Release Branch** | \`${RELEASE_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **RC Tag** | \`${RC_TAG}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Pull Request** | ${PR_URL} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "*Note: RC tag will be created automatically by the Release Branch Automation workflow.*" >> $GITHUB_STEP_SUMMARY

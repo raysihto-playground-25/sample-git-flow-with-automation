@@ -1,4 +1,4 @@
-name: Back-merge Release to Develop
+name: Release Branch Automation
 
 on:
   push:
@@ -6,16 +6,97 @@ on:
       - 'release/**'
 
 jobs:
-  back-merge:
+  rc-tagging:
+    name: Create RC Tag
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
+    outputs:
+      version: ${{ steps.branch_info.outputs.version }}
+      rc_tag: ${{ steps.create_rc.outputs.rc_tag }}
+      branch: ${{ steps.branch_info.outputs.branch }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Extract release branch info
+        id: branch_info
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          
+          # Extract version from release/X.Y.Z
+          VERSION=$(echo "$BRANCH_NAME" | sed 's|release/||')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Calculate next RC tag number
+        id: rc_number
+        run: |
+          VERSION="${{ steps.branch_info.outputs.version }}"
+          
+          # Get existing RC tags for this version and find the highest number
+          EXISTING_RC_TAGS=$(git tag -l "v${VERSION}-rc.*" | sort -V)
+          
+          if [ -z "$EXISTING_RC_TAGS" ]; then
+            NEXT_RC=1
+          else
+            # Extract the highest RC number and increment
+            HIGHEST_RC=$(echo "$EXISTING_RC_TAGS" | tail -n 1 | sed "s/v${VERSION}-rc\.//")
+            NEXT_RC=$((HIGHEST_RC + 1))
+          fi
+          
+          echo "next_rc=$NEXT_RC" >> $GITHUB_OUTPUT
+          echo "Next RC number: $NEXT_RC"
+
+      - name: Create and push RC tag
+        id: create_rc
+        run: |
+          VERSION="${{ steps.branch_info.outputs.version }}"
+          RC_NUMBER="${{ steps.rc_number.outputs.next_rc }}"
+          RC_TAG="v${VERSION}-rc.${RC_NUMBER}"
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git tag "$RC_TAG"
+          
+          if ! git push origin "$RC_TAG" 2>&1; then
+            echo "Error: Failed to push RC tag '$RC_TAG'. It may already exist."
+            exit 1
+          fi
+          
+          echo "rc_tag=$RC_TAG" >> $GITHUB_OUTPUT
+          echo "Created and pushed RC tag: $RC_TAG"
+
+      - name: RC Tagging Summary
+        run: |
+          VERSION="${{ steps.branch_info.outputs.version }}"
+          RC_TAG="${{ steps.create_rc.outputs.rc_tag }}"
+          BRANCH_NAME="${{ steps.branch_info.outputs.branch }}"
+          
+          echo "## RC Tagging Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Branch** | \`${BRANCH_NAME}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **RC Tag** | \`${RC_TAG}\` |" >> $GITHUB_STEP_SUMMARY
+
+  back-merge:
+    name: Create Back-merge PR
+    runs-on: ubuntu-latest
+    needs: rc-tagging
+    permissions:
+      contents: write
       pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Check if commit is a dummy release commit
         id: check_commit
@@ -32,90 +113,125 @@ jobs:
             echo "This is a regular commit, proceeding with back-merge PR creation"
           fi
 
-      - name: Extract release branch info
+      - name: Get commit summary for branch name
         if: steps.check_commit.outputs.skip == 'false'
-        id: branch_info
+        id: commit_info
         run: |
-          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          # Get the first line of commit message and convert to kebab-case
+          COMMIT_MSG=$(git log -1 --pretty=%s)
           
-          # Extract version from release/X.Y.Z
-          VERSION=$(echo "$BRANCH_NAME" | sed 's|release/||')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Convert to kebab-case: lowercase, replace spaces/special chars with hyphens
+          KEBAB_SUMMARY=$(echo "$COMMIT_MSG" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//' | cut -c1-50)
+          
+          echo "kebab_summary=$KEBAB_SUMMARY" >> $GITHUB_OUTPUT
+          echo "Kebab-case summary: $KEBAB_SUMMARY"
 
-      - name: Check if back-merge PR already exists
+      - name: Detect parent branch
         if: steps.check_commit.outputs.skip == 'false'
-        id: check_pr
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        id: parent_branch
         run: |
-          BRANCH_NAME="${{ steps.branch_info.outputs.branch }}"
+          RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
           
-          # Check if PR from this release branch to develop already exists
-          EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --base "develop" --state open --json number --jq '.[0].number // empty')
+          # Try to find the parent branch by looking at merge-base with common branches
+          # Priority: develop, main, master
+          for CANDIDATE in develop main master; do
+            if git ls-remote --exit-code --heads origin "$CANDIDATE" > /dev/null 2>&1; then
+              # Check if this branch is an ancestor
+              git fetch origin "$CANDIDATE"
+              if git merge-base --is-ancestor "origin/$CANDIDATE" HEAD 2>/dev/null || \
+                 git merge-base "origin/$CANDIDATE" HEAD > /dev/null 2>&1; then
+                echo "parent_branch=$CANDIDATE" >> $GITHUB_OUTPUT
+                echo "Detected parent branch: $CANDIDATE"
+                exit 0
+              fi
+            fi
+          done
           
-          if [ -n "$EXISTING_PR" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "pr_number=$EXISTING_PR" >> $GITHUB_OUTPUT
-            echo "Back-merge PR #$EXISTING_PR already exists"
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "No existing back-merge PR found"
+          # Fallback to develop if no parent detected
+          echo "parent_branch=develop" >> $GITHUB_OUTPUT
+          echo "No parent branch detected, using fallback: develop"
+
+      - name: Create sync branch
+        if: steps.check_commit.outputs.skip == 'false'
+        id: sync_branch
+        run: |
+          KEBAB_SUMMARY="${{ steps.commit_info.outputs.kebab_summary }}"
+          SYNC_BRANCH="fix/sync/${KEBAB_SUMMARY}"
+          RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create the sync branch from release branch
+          git checkout -b "$SYNC_BRANCH"
+          
+          if ! git push origin "$SYNC_BRANCH" 2>&1; then
+            echo "Error: Failed to push sync branch '$SYNC_BRANCH'. It may already exist."
+            exit 1
           fi
+          
+          echo "sync_branch=$SYNC_BRANCH" >> $GITHUB_OUTPUT
+          echo "Created and pushed sync branch: $SYNC_BRANCH"
 
       - name: Create back-merge PR
-        if: steps.check_commit.outputs.skip == 'false' && steps.check_pr.outputs.exists == 'false'
+        if: steps.check_commit.outputs.skip == 'false'
         id: create_pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH_NAME="${{ steps.branch_info.outputs.branch }}"
-          VERSION="${{ steps.branch_info.outputs.version }}"
+          SYNC_BRANCH="${{ steps.sync_branch.outputs.sync_branch }}"
+          PARENT_BRANCH="${{ steps.parent_branch.outputs.parent_branch }}"
+          RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
+          VERSION="${{ needs.rc-tagging.outputs.version }}"
+          RC_TAG="${{ needs.rc-tagging.outputs.rc_tag }}"
           COMMIT_SHA="${{ github.sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
           
-          PR_BODY="Automatic back-merge PR to sync release changes to develop branch.
+          PR_BODY="Automatic back-merge PR to sync release changes to ${PARENT_BRANCH} branch.
 
-          ## Release Branch
-          \`${BRANCH_NAME}\`
+          **Release Branch:** \`${RELEASE_BRANCH}\`
 
-          ## Trigger Commit
-          \`${SHORT_SHA}\`
+          **Sync Branch:** \`${SYNC_BRANCH}\`
+
+          **RC Tag:** \`${RC_TAG}\`
+
+          **Trigger Commit:** \`${SHORT_SHA}\`
 
           ---
-          *This PR was automatically created by the back-merge workflow.*"
+          *This PR was automatically created by the release branch automation workflow.*"
           
           PR_URL=$(gh pr create \
-            --title "fix(sync): Back-merge ${BRANCH_NAME} to develop" \
+            --title "fix(sync): Back-merge ${RELEASE_BRANCH} to ${PARENT_BRANCH}" \
             --body "$PR_BODY" \
-            --head "$BRANCH_NAME" \
-            --base "develop")
+            --head "$SYNC_BRANCH" \
+            --base "$PARENT_BRANCH")
           
           echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
           echo "Created back-merge PR: $PR_URL"
 
-      - name: Workflow Summary
+      - name: Back-merge Summary
         if: steps.check_commit.outputs.skip == 'false'
         run: |
-          BRANCH_NAME="${{ steps.branch_info.outputs.branch }}"
-          VERSION="${{ steps.branch_info.outputs.version }}"
+          RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
+          VERSION="${{ needs.rc-tagging.outputs.version }}"
+          SYNC_BRANCH="${{ steps.sync_branch.outputs.sync_branch }}"
+          PARENT_BRANCH="${{ steps.parent_branch.outputs.parent_branch }}"
+          PR_URL="${{ steps.create_pr.outputs.pr_url }}"
           
-          echo "## Back-merge Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Back-merge Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Release Branch** | \`${BRANCH_NAME}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Version** | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ steps.check_pr.outputs.exists }}" == "true" ]; then
-            echo "| **Status** | PR already exists (#${{ steps.check_pr.outputs.pr_number }}) |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| **Back-merge PR** | ${{ steps.create_pr.outputs.pr_url }} |" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "| **Release Branch** | \`${RELEASE_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Sync Branch** | \`${SYNC_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Parent Branch** | \`${PARENT_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Back-merge PR** | ${PR_URL} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Skip Summary
         if: steps.check_commit.outputs.skip == 'true'
         run: |
-          echo "## Back-merge Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Back-merge Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "⏭️ **Skipped**: This is a dummy release commit from the feature-freeze workflow." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "RC tag was still created: \`${{ needs.rc-tagging.outputs.rc_tag }}\`" >> $GITHUB_STEP_SUMMARY
