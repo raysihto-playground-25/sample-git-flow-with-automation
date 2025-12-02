@@ -1,0 +1,121 @@
+name: Back-merge Release to Develop
+
+on:
+  push:
+    branches:
+      - 'release/**'
+
+jobs:
+  back-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if commit is a dummy release commit
+        id: check_commit
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+          
+          # Skip if this is the dummy commit from feature-freeze workflow
+          if echo "$COMMIT_MSG" | grep -qE '^chore\(release\): Release candidate v'; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "This is a dummy release commit, skipping back-merge PR creation"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "This is a regular commit, proceeding with back-merge PR creation"
+          fi
+
+      - name: Extract release branch info
+        if: steps.check_commit.outputs.skip == 'false'
+        id: branch_info
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          
+          # Extract version from release/X.Y.Z
+          VERSION=$(echo "$BRANCH_NAME" | sed 's|release/||')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if back-merge PR already exists
+        if: steps.check_commit.outputs.skip == 'false'
+        id: check_pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="${{ steps.branch_info.outputs.branch }}"
+          
+          # Check if PR from this release branch to develop already exists
+          EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --base "develop" --state open --json number --jq '.[0].number // empty')
+          
+          if [ -n "$EXISTING_PR" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "pr_number=$EXISTING_PR" >> $GITHUB_OUTPUT
+            echo "Back-merge PR #$EXISTING_PR already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "No existing back-merge PR found"
+          fi
+
+      - name: Create back-merge PR
+        if: steps.check_commit.outputs.skip == 'false' && steps.check_pr.outputs.exists == 'false'
+        id: create_pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="${{ steps.branch_info.outputs.branch }}"
+          VERSION="${{ steps.branch_info.outputs.version }}"
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+          
+          PR_BODY="Automatic back-merge PR to sync release changes to develop branch.
+
+          ## Release Branch
+          \`${BRANCH_NAME}\`
+
+          ## Trigger Commit
+          \`${SHORT_SHA}\`
+
+          ---
+          *This PR was automatically created by the back-merge workflow.*"
+          
+          PR_URL=$(gh pr create \
+            --title "fix(sync): Back-merge ${BRANCH_NAME} to develop" \
+            --body "$PR_BODY" \
+            --head "$BRANCH_NAME" \
+            --base "develop")
+          
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "Created back-merge PR: $PR_URL"
+
+      - name: Workflow Summary
+        if: steps.check_commit.outputs.skip == 'false'
+        run: |
+          BRANCH_NAME="${{ steps.branch_info.outputs.branch }}"
+          VERSION="${{ steps.branch_info.outputs.version }}"
+          
+          echo "## Back-merge Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Branch** | \`${BRANCH_NAME}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check_pr.outputs.exists }}" == "true" ]; then
+            echo "| **Status** | PR already exists (#${{ steps.check_pr.outputs.pr_number }}) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| **Back-merge PR** | ${{ steps.create_pr.outputs.pr_url }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Skip Summary
+        if: steps.check_commit.outputs.skip == 'true'
+        run: |
+          echo "## Back-merge Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⏭️ **Skipped**: This is a dummy release commit from the feature-freeze workflow." >> $GITHUB_STEP_SUMMARY
