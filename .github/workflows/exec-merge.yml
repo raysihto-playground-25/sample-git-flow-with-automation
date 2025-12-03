@@ -108,19 +108,13 @@ jobs:
           echo "Author association: $AUTHOR_ASSOCIATION"
           echo "Actor: $ACTOR"
           
-          # Output actor and association for check results
-          echo "actor=$ACTOR" >> $GITHUB_OUTPUT
-          echo "author_association=$AUTHOR_ASSOCIATION" >> $GITHUB_OUTPUT
-          
           # Check 1: author_association must be OWNER, MEMBER, or COLLABORATOR
           case "$AUTHOR_ASSOCIATION" in
             OWNER|MEMBER|COLLABORATOR)
               echo "Author association check passed"
-              echo "association_ok=true" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "Author association check failed"
-              echo "association_ok=false" >> $GITHUB_OUTPUT
               
               COMMENT_BODY="## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`/exec merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`"
               
@@ -137,8 +131,6 @@ jobs:
           # Fetch collaborator permission for the actor
           PERM_RESPONSE=$(gh api repos/$REPO/collaborators/$ACTOR/permission 2>&1) || {
             echo "Failed to fetch permission: $PERM_RESPONSE"
-            echo "permission=none" >> $GITHUB_OUTPUT
-            echo "permission_ok=false" >> $GITHUB_OUTPUT
             
             COMMENT_BODY="## Permission check failed\n\nUnable to verify your repository permissions. This may occur if:\n- You are not a collaborator on this repository\n- The API call failed\n\nPlease ensure you have write access to this repository."
             
@@ -150,17 +142,14 @@ jobs:
           
           PERMISSION=$(echo "$PERM_RESPONSE" | jq -r '.permission // "none"')
           echo "Repository permission level: $PERMISSION"
-          echo "permission=$PERMISSION" >> $GITHUB_OUTPUT
           
           case "$PERMISSION" in
             admin|maintain|write)
               echo "Repository permission check passed"
-              echo "permission_ok=true" >> $GITHUB_OUTPUT
               echo "allowed=true" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "Insufficient repository permissions"
-              echo "permission_ok=false" >> $GITHUB_OUTPUT
               echo "allowed=false" >> $GITHUB_OUTPUT
               
               COMMENT_BODY="## Permission denied\n\nYou need at least **write** permission on this repository to use the \`/exec merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`\nYour permission level: \`$PERMISSION\`"
@@ -559,6 +548,44 @@ jobs:
             echo "threads_ok=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Determine merge method
+        id: merge_method
+        if: |
+          steps.validate_command.outputs.is_bot == 'false' && 
+          steps.validate_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
+          steps.check_merged.outputs.already_merged == 'false'
+        run: |
+          set -Eeuo pipefail
+          BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
+          HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
+          RELEASE_PREFIX="${{ env.RELEASE_BRANCH_PREFIX }}"
+          DEVELOP_BRANCH="${{ env.DEVELOP_BRANCH }}"
+          SYNC_PREFIX="${{ env.SYNC_BRANCH_PREFIX }}"
+          
+          echo "Base ref: $BASE_REF"
+          echo "Head ref: $HEAD_REF"
+          echo "Release prefix: $RELEASE_PREFIX"
+          echo "Develop branch: $DEVELOP_BRANCH"
+          echo "Sync prefix: $SYNC_PREFIX"
+          
+          # Determine merge method
+          # 1. If base branch starts with RELEASE_BRANCH_PREFIX -> squash
+          # 2. If base branch is DEVELOP_BRANCH AND head branch does NOT start with SYNC_BRANCH_PREFIX -> squash
+          # 3. Otherwise -> merge (merge commit)
+          
+          if [[ "$BASE_REF" == "${RELEASE_PREFIX}"* ]]; then
+            echo "method=squash" >> $GITHUB_OUTPUT
+            echo "reason=Base branch \`$BASE_REF\` is a release branch" >> $GITHUB_OUTPUT
+          elif [ "$BASE_REF" = "$DEVELOP_BRANCH" ] && [[ "$HEAD_REF" != "${SYNC_PREFIX}"* ]]; then
+            echo "method=squash" >> $GITHUB_OUTPUT
+            echo "reason=Base branch is \`$BASE_REF\` and head branch \`$HEAD_REF\` is not a sync branch" >> $GITHUB_OUTPUT
+          else
+            echo "method=merge" >> $GITHUB_OUTPUT
+            echo "reason=Default merge commit for \`$HEAD_REF\` into \`$BASE_REF\`" >> $GITHUB_OUTPUT
+          fi
+
       # Unified check result reporting - aggregates all validation results into a single comment
       - name: Report check results
         id: report_results
@@ -577,14 +604,7 @@ jobs:
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
           
-          # Collect permission check results (these have already passed if we reach here)
-          ACTOR="${{ steps.check_author.outputs.actor }}"
-          AUTHOR_ASSOCIATION="${{ steps.check_author.outputs.author_association }}"
-          PERMISSION="${{ steps.check_author.outputs.permission }}"
-          
           # Collect all check results
-          PR_OPEN_OK="${{ steps.check_pr_status.outputs.pr_open_ok }}"
-          PR_UNLOCKED_OK="${{ steps.check_pr_status.outputs.pr_unlocked_ok }}"
           PR_NOT_DRAFT_OK="${{ steps.check_pr_status.outputs.pr_not_draft_ok }}"
           NO_CONFLICTS_OK="${{ steps.check_pr_status.outputs.no_conflicts_ok }}"
           MERGEABLE_STATE="${{ steps.check_pr_status.outputs.mergeable_state }}"
@@ -593,41 +613,18 @@ jobs:
           UNRESOLVED_COUNT="${{ steps.check_threads.outputs.unresolved_count }}"
           VALID_APPROVALS="${{ steps.check_approvals.outputs.valid_approvals }}"
           
+          # Merge method info
+          MERGE_METHOD="${{ steps.merge_method.outputs.method }}"
+          MERGE_REASON="${{ steps.merge_method.outputs.reason }}"
+          
           # Build check result list using twemoji images for cross-browser compatibility
           # Format: OK = "{check_icon} {desired status}"
           #         NG = "{cross_icon} {desired status} ({current status})"
+          # Order matches actual development workflow: ready for review → approvals → resolved threads → conflicts
           RESULTS=""
           ALL_PASSED=true
           
-          # User is repository member check (OWNER, MEMBER, or COLLABORATOR)
-          # This check has already passed if we reach here, so always show as passed
-          RESULTS="${RESULTS}- ${TWEMOJI_CHECK} User is a repository member (@${ACTOR}, ${AUTHOR_ASSOCIATION})\n"
-          
-          # User has write permission check (admin, maintain, or write)
-          # This check has already passed if we reach here, so always show as passed
-          RESULTS="${RESULTS}- ${TWEMOJI_CHECK} User has write permission (${PERMISSION})\n"
-          
-          # Not a fork PR check
-          # This check has already passed if we reach here, so always show as passed
-          RESULTS="${RESULTS}- ${TWEMOJI_CHECK} PR is from the same repository (not a fork)\n"
-          
-          # PR is open check
-          if [ "$PR_OPEN_OK" = "true" ]; then
-            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} PR is open\n"
-          else
-            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} PR is open (currently closed)\n"
-            ALL_PASSED=false
-          fi
-          
-          # PR is unlocked check
-          if [ "$PR_UNLOCKED_OK" = "true" ]; then
-            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} PR is not locked\n"
-          else
-            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} PR is not locked (currently locked)\n"
-            ALL_PASSED=false
-          fi
-          
-          # PR is not draft check
+          # PR is not draft check (first - PR must be ready for review)
           if [ "$PR_NOT_DRAFT_OK" = "true" ]; then
             RESULTS="${RESULTS}- ${TWEMOJI_CHECK} PR is ready for review\n"
           else
@@ -635,7 +632,23 @@ jobs:
             ALL_PASSED=false
           fi
           
-          # No conflicts check
+          # Approval check (second - need approvals after review)
+          if [ "$APPROVAL_OK" = "true" ]; then
+            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} At least one valid approval from another user\n"
+          else
+            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} At least one valid approval from another user (no valid approvals found)\n"
+            ALL_PASSED=false
+          fi
+          
+          # Threads resolved check (third - resolve review conversations)
+          if [ "$THREADS_OK" = "true" ]; then
+            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} All review conversations are resolved\n"
+          else
+            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} All review conversations are resolved (${UNRESOLVED_COUNT} unresolved)\n"
+            ALL_PASSED=false
+          fi
+          
+          # No conflicts check (fourth - final check before merge)
           if [ "$NO_CONFLICTS_OK" = "true" ]; then
             RESULTS="${RESULTS}- ${TWEMOJI_CHECK} No merge conflicts\n"
           else
@@ -659,22 +672,6 @@ jobs:
             ALL_PASSED=false
           fi
           
-          # Approval check
-          if [ "$APPROVAL_OK" = "true" ]; then
-            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} At least one valid approval from another user\n"
-          else
-            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} At least one valid approval from another user (no valid approvals found)\n"
-            ALL_PASSED=false
-          fi
-          
-          # Threads resolved check
-          if [ "$THREADS_OK" = "true" ]; then
-            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} All review conversations are resolved\n"
-          else
-            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} All review conversations are resolved (${UNRESOLVED_COUNT} unresolved)\n"
-            ALL_PASSED=false
-          fi
-          
           # Output overall result
           echo "all_checks_passed=$ALL_PASSED" >> $GITHUB_OUTPUT
           
@@ -684,56 +681,17 @@ jobs:
           echo -e "$RESULTS" >> $GITHUB_OUTPUT
           echo "${delimiter}" >> $GITHUB_OUTPUT
           
-          # Post check results comment
+          # Post check results comment with merge method info
           if [ "$ALL_PASSED" = "false" ]; then
             # If any check failed, post failure comment and exit
-            COMMENT_BODY=$(printf '## Merge checks failed\n\nThe following checks must pass before merging:\n\n%b' "$RESULTS")
+            COMMENT_BODY=$(printf '## Merge checks failed\n\nThe following checks must pass before merging:\n\n%b\n### Merge Method\n\n- **Method:** `%s`\n- **Reason:** %s' "$RESULTS" "$MERGE_METHOD" "$MERGE_REASON")
             gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
             echo "Validation failed, exiting"
             exit 1
           else
             # All checks passed - post check results comment before proceeding to merge
-            COMMENT_BODY=$(printf '## Merge checks passed\n\nAll checks passed. Proceeding to merge...\n\n%b' "$RESULTS")
+            COMMENT_BODY=$(printf '## Merge checks passed\n\nAll checks passed. Proceeding to merge...\n\n%b\n### Merge Method\n\n- **Method:** `%s`\n- **Reason:** %s' "$RESULTS" "$MERGE_METHOD" "$MERGE_REASON")
             gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
-          fi
-
-      - name: Determine merge method
-        id: merge_method
-        if: |
-          steps.validate_command.outputs.is_bot == 'false' && 
-          steps.validate_command.outputs.command_valid == 'true' && 
-          steps.check_author.outputs.allowed == 'true' &&
-          steps.check_fork.outputs.is_fork == 'false' &&
-          steps.check_merged.outputs.already_merged == 'false' &&
-          steps.report_results.outputs.all_checks_passed == 'true'
-        run: |
-          set -Eeuo pipefail
-          BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
-          HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
-          RELEASE_PREFIX="${{ env.RELEASE_BRANCH_PREFIX }}"
-          DEVELOP_BRANCH="${{ env.DEVELOP_BRANCH }}"
-          SYNC_PREFIX="${{ env.SYNC_BRANCH_PREFIX }}"
-          
-          echo "Base ref: $BASE_REF"
-          echo "Head ref: $HEAD_REF"
-          echo "Release prefix: $RELEASE_PREFIX"
-          echo "Develop branch: $DEVELOP_BRANCH"
-          echo "Sync prefix: $SYNC_PREFIX"
-          
-          # Determine merge method
-          # 1. If base branch starts with RELEASE_BRANCH_PREFIX -> squash
-          # 2. If base branch is DEVELOP_BRANCH AND head branch does NOT start with SYNC_BRANCH_PREFIX -> squash
-          # 3. Otherwise -> merge (merge commit)
-          
-          if [[ "$BASE_REF" == "${RELEASE_PREFIX}"* ]]; then
-            echo "Base branch is a release branch, using squash merge"
-            echo "method=squash" >> $GITHUB_OUTPUT
-          elif [ "$BASE_REF" = "$DEVELOP_BRANCH" ] && [[ "$HEAD_REF" != "${SYNC_PREFIX}"* ]]; then
-            echo "Base branch is develop and head is not a sync branch, using squash merge"
-            echo "method=squash" >> $GITHUB_OUTPUT
-          else
-            echo "Using merge commit"
-            echo "method=merge" >> $GITHUB_OUTPUT
           fi
 
       - name: Perform merge
