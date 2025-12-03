@@ -10,9 +10,6 @@ name: exec-merge-action-test
 # =============================================================================
 
 on:
-  push:
-    paths:
-      - '.github/actions/exec-merge/**'
   pull_request:
     paths:
       - '.github/actions/exec-merge/**'
