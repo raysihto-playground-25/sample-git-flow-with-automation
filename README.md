@@ -38,7 +38,7 @@ on:
     types: [created]
 
 concurrency:
-  group: exec-merge-pr-${{ github.event.issue.number }}
+  group: exec-commands-pr-${{ github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
