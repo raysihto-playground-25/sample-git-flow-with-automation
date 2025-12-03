@@ -14,24 +14,24 @@ The `exec-merge` workflow provides automated PR merging triggered by the `/exec 
 
 The workflow is split into two files for maximum reusability:
 
-1. **`exec-merge-shared.yml`** (Reusable Workflow)
+1. **`exec-merge.yml`** (Reusable Workflow)
    - Contains all the core merge logic
    - Can be shared across multiple projects
    - Accepts project-specific configuration via inputs
 
-2. **`exec-merge.yml`** (Project-Specific Caller)
+2. **`exec-commands.yml`** (Project-Specific Caller)
    - Minimal configuration file for each project
-   - Calls the shared workflow with project-specific settings
+   - Calls exec-related reusable workflows with project-specific settings
    - Defines branch naming conventions
 
 #### Usage
 
 ##### Using the Shared Workflow
 
-To use the shared workflow in your project, create an `exec-merge.yml` file:
+To use the shared workflow in your project, create an `exec-commands.yml` file:
 
 ```yaml
-name: exec-merge
+name: exec-commands
 
 on:
   issue_comment:
@@ -44,7 +44,7 @@ concurrency:
 jobs:
   exec-merge:
     if: github.event.issue.pull_request
-    uses: <owner>/<repo>/.github/workflows/exec-merge-shared.yml@<ref>
+    uses: <owner>/<repo>/.github/workflows/exec-merge.yml@<ref>
     with:
       # Required: Configure your branch naming conventions
       release_branch_prefix: "release/"
