@@ -19,15 +19,8 @@ on:
   issue_comment:
     types: [created]
 
-# Concurrency per PR number to avoid parallel execution
-concurrency:
-  group: exec-commands-pr-${{ github.event.issue.number }}
-  cancel-in-progress: false
-
 jobs:
   exec-merge:
-    # Only run if this is a PR comment (not an issue)
-    if: github.event.issue.pull_request
     uses: ./.github/workflows/exec-merge.yml
     with:
       # Project-specific branch naming configuration
@@ -40,7 +33,3 @@ jobs:
       # mergeable_retry_count: 5
       # mergeable_retry_interval: 10
     secrets: inherit
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write

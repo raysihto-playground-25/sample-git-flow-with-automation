@@ -37,24 +37,15 @@ on:
   issue_comment:
     types: [created]
 
-concurrency:
-  group: exec-commands-pr-${{ github.event.issue.number }}
-  cancel-in-progress: false
-
 jobs:
   exec-merge:
-    if: github.event.issue.pull_request
     uses: <owner>/<repo>/.github/workflows/exec-merge.yml@<ref>
     with:
-      # Required: Configure your branch naming conventions
+      # Configure your branch naming conventions
       release_branch_prefix: "release/"
       develop_branch: "develop"
       sync_branch_prefix: "fix/sync/"
     secrets: inherit
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
 ```
 
 ##### Available Inputs

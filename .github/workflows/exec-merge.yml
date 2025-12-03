@@ -71,6 +71,11 @@ on:
         type: number
         default: 10
 
+# Concurrency per PR number to avoid parallel execution
+concurrency:
+  group: exec-merge-pr-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 env:
   RELEASE_BRANCH_PREFIX: ${{ inputs.release_branch_prefix }}
   DEVELOP_BRANCH: ${{ inputs.develop_branch }}
