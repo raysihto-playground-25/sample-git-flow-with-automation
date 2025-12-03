@@ -687,11 +687,13 @@ jobs:
           
           # Post check results comment with merge method info
           if [ "$ALL_PASSED" = "false" ]; then
-            # If any check failed, post failure comment and exit
+            # If any check failed, post failure comment
+            # Note: We exit with 0 here because failing merge checks is an expected outcome,
+            # not a workflow error. The user has been notified via comment.
             COMMENT_BODY=$(printf '## Merge checks failed\n\nThe following checks must pass before merging:\n\n%b\n### Merge Method\n\n- **Method:** `%s`\n- **Reason:** %s' "$RESULTS" "$MERGE_METHOD" "$MERGE_REASON")
             gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
-            echo "Validation failed, exiting"
-            exit 1
+            echo "Validation failed, user notified via comment"
+            exit 0  # Explicitly exit with success
           else
             # All checks passed - post check results comment before proceeding to merge
             COMMENT_BODY=$(printf '## Merge checks passed\n\nAll checks passed. Proceeding to merge...\n\n%b\n### Merge Method\n\n- **Method:** `%s`\n- **Reason:** %s' "$RESULTS" "$MERGE_METHOD" "$MERGE_REASON")
