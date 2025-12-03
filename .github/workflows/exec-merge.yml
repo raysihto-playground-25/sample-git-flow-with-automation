@@ -548,6 +548,44 @@ jobs:
             echo "threads_ok=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Determine merge method
+        id: merge_method
+        if: |
+          steps.validate_command.outputs.is_bot == 'false' && 
+          steps.validate_command.outputs.command_valid == 'true' && 
+          steps.check_author.outputs.allowed == 'true' &&
+          steps.check_fork.outputs.is_fork == 'false' &&
+          steps.check_merged.outputs.already_merged == 'false'
+        run: |
+          set -Eeuo pipefail
+          BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
+          HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
+          RELEASE_PREFIX="${{ env.RELEASE_BRANCH_PREFIX }}"
+          DEVELOP_BRANCH="${{ env.DEVELOP_BRANCH }}"
+          SYNC_PREFIX="${{ env.SYNC_BRANCH_PREFIX }}"
+          
+          echo "Base ref: $BASE_REF"
+          echo "Head ref: $HEAD_REF"
+          echo "Release prefix: $RELEASE_PREFIX"
+          echo "Develop branch: $DEVELOP_BRANCH"
+          echo "Sync prefix: $SYNC_PREFIX"
+          
+          # Determine merge method
+          # 1. If base branch starts with RELEASE_BRANCH_PREFIX -> squash
+          # 2. If base branch is DEVELOP_BRANCH AND head branch does NOT start with SYNC_BRANCH_PREFIX -> squash
+          # 3. Otherwise -> merge (merge commit)
+          
+          if [[ "$BASE_REF" == "${RELEASE_PREFIX}"* ]]; then
+            echo "method=squash" >> $GITHUB_OUTPUT
+            echo "reason=Base branch \`$BASE_REF\` is a release branch" >> $GITHUB_OUTPUT
+          elif [ "$BASE_REF" = "$DEVELOP_BRANCH" ] && [[ "$HEAD_REF" != "${SYNC_PREFIX}"* ]]; then
+            echo "method=squash" >> $GITHUB_OUTPUT
+            echo "reason=Base branch is \`$BASE_REF\` and head branch \`$HEAD_REF\` is not a sync branch" >> $GITHUB_OUTPUT
+          else
+            echo "method=merge" >> $GITHUB_OUTPUT
+            echo "reason=Default merge commit for \`$HEAD_REF\` into \`$BASE_REF\`" >> $GITHUB_OUTPUT
+          fi
+
       # Unified check result reporting - aggregates all validation results into a single comment
       - name: Report check results
         id: report_results
@@ -567,8 +605,6 @@ jobs:
           REPO="${{ github.repository }}"
           
           # Collect all check results
-          PR_OPEN_OK="${{ steps.check_pr_status.outputs.pr_open_ok }}"
-          PR_UNLOCKED_OK="${{ steps.check_pr_status.outputs.pr_unlocked_ok }}"
           PR_NOT_DRAFT_OK="${{ steps.check_pr_status.outputs.pr_not_draft_ok }}"
           NO_CONFLICTS_OK="${{ steps.check_pr_status.outputs.no_conflicts_ok }}"
           MERGEABLE_STATE="${{ steps.check_pr_status.outputs.mergeable_state }}"
@@ -577,29 +613,18 @@ jobs:
           UNRESOLVED_COUNT="${{ steps.check_threads.outputs.unresolved_count }}"
           VALID_APPROVALS="${{ steps.check_approvals.outputs.valid_approvals }}"
           
+          # Merge method info
+          MERGE_METHOD="${{ steps.merge_method.outputs.method }}"
+          MERGE_REASON="${{ steps.merge_method.outputs.reason }}"
+          
           # Build check result list using twemoji images for cross-browser compatibility
           # Format: OK = "{check_icon} {desired status}"
           #         NG = "{cross_icon} {desired status} ({current status})"
+          # Order matches actual development workflow: ready for review → resolved threads → approvals → conflicts
           RESULTS=""
           ALL_PASSED=true
           
-          # PR is open check
-          if [ "$PR_OPEN_OK" = "true" ]; then
-            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} PR is open\n"
-          else
-            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} PR is open (currently closed)\n"
-            ALL_PASSED=false
-          fi
-          
-          # PR is unlocked check
-          if [ "$PR_UNLOCKED_OK" = "true" ]; then
-            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} PR is not locked\n"
-          else
-            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} PR is not locked (currently locked)\n"
-            ALL_PASSED=false
-          fi
-          
-          # PR is not draft check
+          # PR is not draft check (first - PR must be ready for review)
           if [ "$PR_NOT_DRAFT_OK" = "true" ]; then
             RESULTS="${RESULTS}- ${TWEMOJI_CHECK} PR is ready for review\n"
           else
@@ -607,7 +632,23 @@ jobs:
             ALL_PASSED=false
           fi
           
-          # No conflicts check
+          # Threads resolved check (second - resolve review conversations before approval)
+          if [ "$THREADS_OK" = "true" ]; then
+            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} All review conversations are resolved\n"
+          else
+            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} All review conversations are resolved (${UNRESOLVED_COUNT} unresolved)\n"
+            ALL_PASSED=false
+          fi
+          
+          # Approval check (third - get approval after resolving conversations)
+          if [ "$APPROVAL_OK" = "true" ]; then
+            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} At least one valid approval from another user\n"
+          else
+            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} At least one valid approval from another user (no valid approvals found)\n"
+            ALL_PASSED=false
+          fi
+          
+          # No conflicts check (fourth - final check before merge)
           if [ "$NO_CONFLICTS_OK" = "true" ]; then
             RESULTS="${RESULTS}- ${TWEMOJI_CHECK} No merge conflicts\n"
           else
@@ -631,22 +672,6 @@ jobs:
             ALL_PASSED=false
           fi
           
-          # Approval check
-          if [ "$APPROVAL_OK" = "true" ]; then
-            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} At least one valid approval from another user\n"
-          else
-            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} At least one valid approval from another user (no valid approvals found)\n"
-            ALL_PASSED=false
-          fi
-          
-          # Threads resolved check
-          if [ "$THREADS_OK" = "true" ]; then
-            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} All review conversations are resolved\n"
-          else
-            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} All review conversations are resolved (${UNRESOLVED_COUNT} unresolved)\n"
-            ALL_PASSED=false
-          fi
-          
           # Output overall result
           echo "all_checks_passed=$ALL_PASSED" >> $GITHUB_OUTPUT
           
@@ -656,51 +681,17 @@ jobs:
           echo -e "$RESULTS" >> $GITHUB_OUTPUT
           echo "${delimiter}" >> $GITHUB_OUTPUT
           
-          # If any check failed, post failure comment and exit
+          # Post check results comment with merge method info
           if [ "$ALL_PASSED" = "false" ]; then
-            COMMENT_BODY=$(printf '## Merge checks failed\n\nThe following checks must pass before merging:\n\n%b' "$RESULTS")
+            # If any check failed, post failure comment and exit
+            COMMENT_BODY=$(printf '## Merge checks failed\n\nThe following checks must pass before merging:\n\n%b\n### Merge Method\n\n- **Method:** `%s`\n- **Reason:** %s' "$RESULTS" "$MERGE_METHOD" "$MERGE_REASON")
             gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
             echo "Validation failed, exiting"
             exit 1
-          fi
-
-      - name: Determine merge method
-        id: merge_method
-        if: |
-          steps.validate_command.outputs.is_bot == 'false' && 
-          steps.validate_command.outputs.command_valid == 'true' && 
-          steps.check_author.outputs.allowed == 'true' &&
-          steps.check_fork.outputs.is_fork == 'false' &&
-          steps.check_merged.outputs.already_merged == 'false' &&
-          steps.report_results.outputs.all_checks_passed == 'true'
-        run: |
-          set -Eeuo pipefail
-          BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
-          HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
-          RELEASE_PREFIX="${{ env.RELEASE_BRANCH_PREFIX }}"
-          DEVELOP_BRANCH="${{ env.DEVELOP_BRANCH }}"
-          SYNC_PREFIX="${{ env.SYNC_BRANCH_PREFIX }}"
-          
-          echo "Base ref: $BASE_REF"
-          echo "Head ref: $HEAD_REF"
-          echo "Release prefix: $RELEASE_PREFIX"
-          echo "Develop branch: $DEVELOP_BRANCH"
-          echo "Sync prefix: $SYNC_PREFIX"
-          
-          # Determine merge method
-          # 1. If base branch starts with RELEASE_BRANCH_PREFIX -> squash
-          # 2. If base branch is DEVELOP_BRANCH AND head branch does NOT start with SYNC_BRANCH_PREFIX -> squash
-          # 3. Otherwise -> merge (merge commit)
-          
-          if [[ "$BASE_REF" == "${RELEASE_PREFIX}"* ]]; then
-            echo "Base branch is a release branch, using squash merge"
-            echo "method=squash" >> $GITHUB_OUTPUT
-          elif [ "$BASE_REF" = "$DEVELOP_BRANCH" ] && [[ "$HEAD_REF" != "${SYNC_PREFIX}"* ]]; then
-            echo "Base branch is develop and head is not a sync branch, using squash merge"
-            echo "method=squash" >> $GITHUB_OUTPUT
           else
-            echo "Using merge commit"
-            echo "method=merge" >> $GITHUB_OUTPUT
+            # All checks passed - post check results comment before proceeding to merge
+            COMMENT_BODY=$(printf '## Merge checks passed\n\nAll checks passed. Proceeding to merge...\n\n%b\n### Merge Method\n\n- **Method:** `%s`\n- **Reason:** %s' "$RESULTS" "$MERGE_METHOD" "$MERGE_REASON")
+            gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
           fi
 
       - name: Perform merge
@@ -723,7 +714,6 @@ jobs:
           ORIGINAL_HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
           HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
           BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
-          CHECK_RESULTS="${{ steps.report_results.outputs.check_results }}"
           
           # TOCTOU check: Re-fetch PR data immediately before merge
           echo "Performing TOCTOU check before merge..."
@@ -836,8 +826,8 @@ jobs:
             echo "Merge successful!"
             echo "merge_success=true" >> $GITHUB_OUTPUT
             
-            # Post success comment with all check results
-            COMMENT_BODY=$(printf '## Merged by exec-merge\n\n%s This PR has been successfully merged.\n\n### Check Results\n\n%b\n### Details\n\n- **Merge Method:** `%s`\n- **Base Branch:** `%s`\n- **Head Branch:** `%s`\n- **HEAD SHA:** `%s`' "$TWEMOJI_CHECK" "$CHECK_RESULTS" "$MERGE_METHOD" "$BASE_REF" "$HEAD_REF" "${ORIGINAL_HEAD_SHA:0:7}")
+            # Post merge result comment (check results already posted in previous step)
+            COMMENT_BODY=$(printf '## Merged by exec-merge\n\n%s This PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** `%s`\n- **Base Branch:** `%s`\n- **Head Branch:** `%s`\n- **HEAD SHA:** `%s`' "$TWEMOJI_CHECK" "$MERGE_METHOD" "$BASE_REF" "$HEAD_REF" "${ORIGINAL_HEAD_SHA:0:7}")
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
