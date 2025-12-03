@@ -20,7 +20,7 @@ defaults:
 
 jobs:
   test:
-    name: exec-merge TS Action - Build and Test
+    name: exec-merge - Build and Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
