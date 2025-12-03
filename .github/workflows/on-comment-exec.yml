@@ -27,8 +27,6 @@ jobs:
       release_branch_prefix: "release/"
       develop_branch: "develop"
       sync_branch_prefix: "fix/sync/"
-      # Optional: customize the command pattern (default: /exec merge)
-      # command_regex: '^[[:space:]]*/exec[[:space:]]+merge[[:space:]]*$'
       # Optional: customize retry behavior for mergeable status
       # mergeable_retry_count: 5
       # mergeable_retry_interval: 10

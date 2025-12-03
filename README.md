@@ -55,7 +55,6 @@ jobs:
 | `release_branch_prefix` | Prefix for release branches | `release/` |
 | `develop_branch` | Name of the develop branch | `develop` |
 | `sync_branch_prefix` | Prefix for sync branches (back-merges) | `fix/sync/` |
-| `command_regex` | Regex pattern for the merge command | `^[[:space:]]*/exec[[:space:]]+merge[[:space:]]*$` |
 | `mergeable_retry_count` | Number of retries for mergeable status | `5` |
 | `mergeable_retry_interval` | Interval between retries (seconds) | `10` |
 

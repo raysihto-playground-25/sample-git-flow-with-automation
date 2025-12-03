@@ -45,7 +45,6 @@ Replace `<owner>/<repo>` with the repository containing the reusable workflow an
 | `release_branch_prefix` | string | No | `release/` | Prefix for release branches |
 | `develop_branch` | string | No | `develop` | Name of the develop branch |
 | `sync_branch_prefix` | string | No | `fix/sync/` | Prefix for sync branches (back-merges) |
-| `command_regex` | string | No | `^[[:space:]]*/exec[[:space:]]+merge[[:space:]]*$` | Regex pattern for the merge command (POSIX ERE) |
 | `mergeable_retry_count` | number | No | `5` | Number of retries for mergeable status calculation |
 | `mergeable_retry_interval` | number | No | `10` | Interval in seconds between retries |
 

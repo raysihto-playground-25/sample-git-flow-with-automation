@@ -55,11 +55,6 @@ on:
         required: false
         type: string
         default: "fix/sync/"
-      command_regex:
-        description: 'Regex pattern for the merge command (POSIX ERE)'
-        required: false
-        type: string
-        default: '^[[:space:]]*/exec[[:space:]]+merge[[:space:]]*$'
       mergeable_retry_count:
         description: 'Number of retries for waiting on GitHub to calculate mergeable status'
         required: false
@@ -80,7 +75,8 @@ env:
   RELEASE_BRANCH_PREFIX: ${{ inputs.release_branch_prefix }}
   DEVELOP_BRANCH: ${{ inputs.develop_branch }}
   SYNC_BRANCH_PREFIX: ${{ inputs.sync_branch_prefix }}
-  COMMAND_REGEX: ${{ inputs.command_regex }}
+  # Command regex using POSIX character classes for Bash ERE compatibility
+  COMMAND_REGEX: '^[[:space:]]*/exec[[:space:]]+merge[[:space:]]*$'
   MERGEABLE_RETRY_COUNT: ${{ inputs.mergeable_retry_count }}
   MERGEABLE_RETRY_INTERVAL: ${{ inputs.mergeable_retry_interval }}
   # Twemoji images for cross-browser emoji compatibility (CC-BY 4.0 licensed)
@@ -555,7 +551,7 @@ jobs:
             }
             
             # Check for GraphQL errors in the response
-            if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+            if echo "$RESPONSE" | jq -e 'has("errors") and (.errors | length > 0)' > /dev/null 2>&1; then
               echo "GraphQL query returned errors:"
               echo "$RESPONSE" | jq '.errors'
               fail_with_comment "An error occurred while fetching review threads status. Please try again."
