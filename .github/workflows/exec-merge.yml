@@ -599,6 +599,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TWEMOJI_CHECK: ${{ env.TWEMOJI_CHECK }}
           TWEMOJI_CROSS: ${{ env.TWEMOJI_CROSS }}
+          # Pass MERGE_REASON via env to avoid bash command substitution on backticks
+          MERGE_REASON: ${{ steps.merge_method.outputs.reason }}
         run: |
           set -Eeuo pipefail
           PR_NUMBER="${{ github.event.issue.number }}"
@@ -615,7 +617,7 @@ jobs:
           
           # Merge method info
           MERGE_METHOD="${{ steps.merge_method.outputs.method }}"
-          MERGE_REASON="${{ steps.merge_method.outputs.reason }}"
+          # MERGE_REASON is passed via env to avoid command substitution
           
           # Build check result list using twemoji images for cross-browser compatibility
           # Format: OK = "{check_icon} {desired status}"
