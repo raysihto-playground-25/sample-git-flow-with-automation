@@ -879,6 +879,7 @@ jobs:
           BASE_REF: ${{ steps.pr_data.outputs.base_ref }}
           HEAD_SHA: ${{ steps.pr_data.outputs.head_sha }}
         run: |
+          set -Eeuo pipefail
           echo "## exec-merge Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
