@@ -860,3 +860,65 @@ jobs:
           
           gh api repos/$REPO/issues/$PR_NUMBER/comments \
             -f body="$COMMENT_BODY"
+
+      - name: Workflow Summary
+        if: always()
+        env:
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          IS_BOT: ${{ steps.validate_command.outputs.is_bot }}
+          COMMAND_VALID: ${{ steps.validate_command.outputs.command_valid }}
+          AUTHOR_ALLOWED: ${{ steps.check_author.outputs.allowed }}
+          IS_FORK: ${{ steps.check_fork.outputs.is_fork }}
+          ALREADY_MERGED: ${{ steps.check_merged.outputs.already_merged }}
+          ALL_CHECKS_PASSED: ${{ steps.report_results.outputs.all_checks_passed }}
+          MERGE_SUCCESS: ${{ steps.perform_merge.outputs.merge_success }}
+          MERGE_METHOD: ${{ steps.merge_method.outputs.method }}
+          HEAD_REF: ${{ steps.pr_data.outputs.head_ref }}
+          BASE_REF: ${{ steps.pr_data.outputs.base_ref }}
+          HEAD_SHA: ${{ steps.pr_data.outputs.head_sha }}
+        run: |
+          echo "## exec-merge Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Determine overall result
+          if [ "$IS_BOT" = "true" ]; then
+            RESULT="⏭️ Skipped (bot comment)"
+          elif [ "$COMMAND_VALID" != "true" ]; then
+            RESULT="⏭️ Skipped (command not matched)"
+          elif [ "$AUTHOR_ALLOWED" != "true" ]; then
+            RESULT="❌ Failed (permission denied)"
+          elif [ "$IS_FORK" = "true" ]; then
+            RESULT="❌ Failed (fork PR not supported)"
+          elif [ "$ALREADY_MERGED" = "true" ]; then
+            RESULT="ℹ️ Already merged"
+          elif [ "$ALL_CHECKS_PASSED" != "true" ]; then
+            RESULT="❌ Failed (merge checks failed)"
+          elif [ "$MERGE_SUCCESS" = "true" ]; then
+            RESULT="✅ Merged successfully"
+          elif [ "$MERGE_SUCCESS" = "false" ]; then
+            RESULT="❌ Failed (merge operation failed)"
+          else
+            RESULT="❓ Unknown"
+          fi
+          
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Result** | ${RESULT} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **PR** | #${PR_NUMBER} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Triggered by** | @${ACTOR} |" >> $GITHUB_STEP_SUMMARY
+          
+          # Add merge details if available
+          if [ -n "$HEAD_REF" ] && [ -n "$BASE_REF" ]; then
+            echo "| **Head Branch** | \`${HEAD_REF}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Base Branch** | \`${BASE_REF}\` |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "$MERGE_METHOD" ]; then
+            echo "| **Merge Method** | \`${MERGE_METHOD}\` |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "$HEAD_SHA" ]; then
+            echo "| **HEAD SHA** | \`${HEAD_SHA:0:7}\` |" >> $GITHUB_STEP_SUMMARY
+          fi
