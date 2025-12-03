@@ -1,12 +1,8 @@
-# Reusable Workflows
+# exec-merge Action
 
-This directory contains reusable GitHub Actions workflows that can be shared across multiple projects.
+A TypeScript-based GitHub Action that provides automated PR merging via the `/exec merge` command in PR comments.
 
-## exec-merge.yml - PR Merge Automation
-
-A reusable workflow that provides automated PR merging via the `/exec merge` command in PR comments.
-
-### Features
+## Features
 
 - 🔐 **Permission validation** - Only authorized users can trigger merges
 - ✅ **PR status checks** - Validates PR is open, unlocked, and not a draft
@@ -14,8 +10,9 @@ A reusable workflow that provides automated PR merging via the `/exec merge` com
 - 🔀 **Smart merge method** - Automatically selects squash or merge commit based on branch patterns
 - 🔒 **Stale approval handling** - Dismisses approvals on outdated commits
 - 📊 **Detailed feedback** - Posts clear status messages to PR comments
+- ✅ **Unit tested** - Comprehensive test suite with 60+ test cases
 
-### Quick Start
+## Quick Start
 
 Create a caller workflow in your project (e.g., `.github/workflows/on-comment-exec.yml`):
 
@@ -26,35 +23,53 @@ on:
   issue_comment:
     types: [created]
 
+concurrency:
+  group: exec-merge-pr-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
   exec-merge:
-    uses: <owner>/<repo>/.github/workflows/exec-merge.yml@<ref>
-    with:
-      release_branch_prefix: "release/"
-      develop_branch: "develop"
-      sync_branch_prefix: "fix/sync/"
-    secrets: inherit
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/exec-merge
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          release_branch_prefix: "release/"
+          develop_branch: "develop"
+          sync_branch_prefix: "fix/sync/"
 ```
 
-Replace `<owner>/<repo>` with the repository containing the reusable workflow and `<ref>` with a branch, tag, or commit SHA.
-
-### Inputs
+## Inputs
 
 | Input | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
+| `github-token` | string | Yes | - | GitHub token for API authentication |
 | `release_branch_prefix` | string | No | `release/` | Prefix for release branches |
 | `develop_branch` | string | No | `develop` | Name of the develop branch |
 | `sync_branch_prefix` | string | No | `fix/sync/` | Prefix for sync branches (back-merges) |
 | `mergeable_retry_count` | number | No | `5` | Number of retries for mergeable status calculation |
 | `mergeable_retry_interval` | number | No | `10` | Interval in seconds between retries |
 
-### Usage
+## Outputs
 
-Comment `/exec merge` on any PR to trigger the merge workflow.
+| Output | Description |
+|--------|-------------|
+| `result` | Result of the operation: `merged`, `skipped`, `failed`, or `already_merged` |
+| `merge_method` | Merge method used: `squash` or `merge` (only set when merged) |
 
-### Merge Method Selection
+## Usage
 
-The workflow automatically selects the appropriate merge method:
+Comment `/exec merge` on any PR to trigger the merge action.
+
+## Merge Method Selection
+
+The action automatically selects the appropriate merge method:
 
 | Condition | Merge Method | Reason |
 |-----------|--------------|--------|
@@ -64,9 +79,9 @@ The workflow automatically selects the appropriate merge method:
 | Base branch is `develop` | Squash | Clean develop branch history |
 | Otherwise | Merge commit | Default behavior |
 
-### Pre-merge Checks
+## Pre-merge Checks
 
-Before merging, the workflow validates:
+Before merging, the action validates:
 
 1. ✅ PR is open (not closed)
 2. ✅ PR is unlocked
@@ -75,25 +90,31 @@ Before merging, the workflow validates:
 5. ✅ At least one valid approval from another user
 6. ✅ No merge conflicts
 
-### Permissions Required
+## Permissions Required
 
-The caller workflow must use `secrets: inherit` to pass the `GITHUB_TOKEN`. The reusable workflow internally requests:
+The workflow must have the following permissions:
 
 - `contents: write` - For performing merges
 - `pull-requests: write` - For posting comments and dismissing reviews
 - `issues: write` - For adding reactions to comments
 
-### Limitations
+## Limitations
 
 - **Fork PRs are NOT supported**: `GITHUB_TOKEN` has limited write permissions for fork-originated PRs
 - **Authorization required**: Only organization owners, members, or collaborators with write access can use the command
 
-### Third-Party Licenses
+## Development
+
+To work on the exec-merge action:
+
+```bash
+cd .github/actions/exec-merge
+npm install
+npm test        # Run unit tests
+npm run lint    # Run ESLint
+npm run build   # Build with ncc
+```
+
+## Third-Party Licenses
 
 - **Twemoji graphics** ([github.com/twitter/twemoji](https://github.com/twitter/twemoji)) are used for emoji display compatibility. Licensed under CC-BY 4.0. Copyright 2020 Twitter, Inc and other contributors.
-
----
-
-## Other Files
-
-Other workflow files in this directory are project-specific and are not intended to be reused across projects.
