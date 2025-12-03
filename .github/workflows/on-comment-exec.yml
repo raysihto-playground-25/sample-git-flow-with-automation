@@ -21,6 +21,10 @@ on:
 
 jobs:
   exec-merge:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     uses: ./.github/workflows/exec-merge.yml
     with:
       # Project-specific branch naming configuration
