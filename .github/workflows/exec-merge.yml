@@ -564,16 +564,24 @@ jobs:
           echo "Sync prefix: $SYNC_PREFIX"
           
           # Determine merge method
-          # 1. If base branch starts with RELEASE_BRANCH_PREFIX -> squash
-          # 2. If base branch is DEVELOP_BRANCH AND head branch does NOT start with SYNC_BRANCH_PREFIX -> squash
-          # 3. Otherwise -> merge (merge commit)
+          # 1. If head branch starts with RELEASE_BRANCH_PREFIX -> merge
+          # 2. If head branch starts with SYNC_BRANCH_PREFIX -> merge
+          # 3. If base branch starts with RELEASE_BRANCH_PREFIX -> squash
+          # 4. If base branch is DEVELOP_BRANCH -> squash
+          # 5. Otherwise -> merge (merge commit)
           
-          if [[ "$BASE_REF" == "${RELEASE_PREFIX}"* ]]; then
+          if [[ "$HEAD_REF" == "${RELEASE_PREFIX}"* ]]; then
+            echo "method=merge" >> $GITHUB_OUTPUT
+            echo "reason=Head branch \`$HEAD_REF\` is a release branch (merge commit to preserve release history)" >> $GITHUB_OUTPUT
+          elif [[ "$HEAD_REF" == "${SYNC_PREFIX}"* ]]; then
+            echo "method=merge" >> $GITHUB_OUTPUT
+            echo "reason=Head branch \`$HEAD_REF\` is a sync branch (merge commit to preserve back-merge history)" >> $GITHUB_OUTPUT
+          elif [[ "$BASE_REF" == "${RELEASE_PREFIX}"* ]]; then
             echo "method=squash" >> $GITHUB_OUTPUT
             echo "reason=Base branch \`$BASE_REF\` is a release branch" >> $GITHUB_OUTPUT
-          elif [ "$BASE_REF" = "$DEVELOP_BRANCH" ] && [[ "$HEAD_REF" != "${SYNC_PREFIX}"* ]]; then
+          elif [ "$BASE_REF" = "$DEVELOP_BRANCH" ]; then
             echo "method=squash" >> $GITHUB_OUTPUT
-            echo "reason=Base branch is \`$BASE_REF\` and head branch \`$HEAD_REF\` is not a sync branch" >> $GITHUB_OUTPUT
+            echo "reason=Base branch is \`$BASE_REF\`" >> $GITHUB_OUTPUT
           else
             echo "method=merge" >> $GITHUB_OUTPUT
             echo "reason=Default merge commit for \`$HEAD_REF\` into \`$BASE_REF\`" >> $GITHUB_OUTPUT
