@@ -108,13 +108,19 @@ jobs:
           echo "Author association: $AUTHOR_ASSOCIATION"
           echo "Actor: $ACTOR"
           
+          # Output actor and association for check results
+          echo "actor=$ACTOR" >> $GITHUB_OUTPUT
+          echo "author_association=$AUTHOR_ASSOCIATION" >> $GITHUB_OUTPUT
+          
           # Check 1: author_association must be OWNER, MEMBER, or COLLABORATOR
           case "$AUTHOR_ASSOCIATION" in
             OWNER|MEMBER|COLLABORATOR)
               echo "Author association check passed"
+              echo "association_ok=true" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "Author association check failed"
+              echo "association_ok=false" >> $GITHUB_OUTPUT
               
               COMMENT_BODY="## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`/exec merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`"
               
@@ -131,6 +137,8 @@ jobs:
           # Fetch collaborator permission for the actor
           PERM_RESPONSE=$(gh api repos/$REPO/collaborators/$ACTOR/permission 2>&1) || {
             echo "Failed to fetch permission: $PERM_RESPONSE"
+            echo "permission=none" >> $GITHUB_OUTPUT
+            echo "permission_ok=false" >> $GITHUB_OUTPUT
             
             COMMENT_BODY="## Permission check failed\n\nUnable to verify your repository permissions. This may occur if:\n- You are not a collaborator on this repository\n- The API call failed\n\nPlease ensure you have write access to this repository."
             
@@ -142,14 +150,17 @@ jobs:
           
           PERMISSION=$(echo "$PERM_RESPONSE" | jq -r '.permission // "none"')
           echo "Repository permission level: $PERMISSION"
+          echo "permission=$PERMISSION" >> $GITHUB_OUTPUT
           
           case "$PERMISSION" in
             admin|maintain|write)
               echo "Repository permission check passed"
+              echo "permission_ok=true" >> $GITHUB_OUTPUT
               echo "allowed=true" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "Insufficient repository permissions"
+              echo "permission_ok=false" >> $GITHUB_OUTPUT
               echo "allowed=false" >> $GITHUB_OUTPUT
               
               COMMENT_BODY="## Permission denied\n\nYou need at least **write** permission on this repository to use the \`/exec merge\` command.\n\nYour association: \`$AUTHOR_ASSOCIATION\`\nYour permission level: \`$PERMISSION\`"
@@ -566,6 +577,11 @@ jobs:
           PR_NUMBER="${{ github.event.issue.number }}"
           REPO="${{ github.repository }}"
           
+          # Collect permission check results (these have already passed if we reach here)
+          ACTOR="${{ steps.check_author.outputs.actor }}"
+          AUTHOR_ASSOCIATION="${{ steps.check_author.outputs.author_association }}"
+          PERMISSION="${{ steps.check_author.outputs.permission }}"
+          
           # Collect all check results
           PR_OPEN_OK="${{ steps.check_pr_status.outputs.pr_open_ok }}"
           PR_UNLOCKED_OK="${{ steps.check_pr_status.outputs.pr_unlocked_ok }}"
@@ -582,6 +598,18 @@ jobs:
           #         NG = "{cross_icon} {desired status} ({current status})"
           RESULTS=""
           ALL_PASSED=true
+          
+          # User is repository member check (OWNER, MEMBER, or COLLABORATOR)
+          # This check has already passed if we reach here, so always show as passed
+          RESULTS="${RESULTS}- ${TWEMOJI_CHECK} User is a repository member (@${ACTOR}, ${AUTHOR_ASSOCIATION})\n"
+          
+          # User has write permission check (admin, maintain, or write)
+          # This check has already passed if we reach here, so always show as passed
+          RESULTS="${RESULTS}- ${TWEMOJI_CHECK} User has write permission (${PERMISSION})\n"
+          
+          # Not a fork PR check
+          # This check has already passed if we reach here, so always show as passed
+          RESULTS="${RESULTS}- ${TWEMOJI_CHECK} PR is from the same repository (not a fork)\n"
           
           # PR is open check
           if [ "$PR_OPEN_OK" = "true" ]; then
