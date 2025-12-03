@@ -280,12 +280,7 @@ jobs:
 
       - name: Check PR status (closed/locked/draft)
         id: check_pr_status
-        if: |
-          steps.validate_command.outputs.is_bot == 'false' && 
-          steps.validate_command.outputs.command_valid == 'true' && 
-          steps.check_author.outputs.allowed == 'true' &&
-          steps.check_fork.outputs.is_fork == 'false' &&
-          steps.check_merged.outputs.already_merged == 'false'
+        if: steps.check_merged.outputs.already_merged == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           STATE: ${{ steps.pr_data.outputs.state }}
@@ -347,12 +342,7 @@ jobs:
       # This step runs regardless of PR status to collect all validation errors at once
       - name: Check approvals and dismiss stale ones
         id: check_approvals
-        if: |
-          steps.validate_command.outputs.is_bot == 'false' && 
-          steps.validate_command.outputs.command_valid == 'true' && 
-          steps.check_author.outputs.allowed == 'true' &&
-          steps.check_fork.outputs.is_fork == 'false' &&
-          steps.check_merged.outputs.already_merged == 'false'
+        if: steps.check_merged.outputs.already_merged == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.issue.number }}
@@ -402,10 +392,11 @@ jobs:
                 DISMISS_MESSAGE="Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${COMMIT_ID:0:7}, current HEAD: ${HEAD_SHA:0:7})."
                 
                 # Dismiss the stale review and capture failure
-                DISMISS_RESULT=""
-                if ! DISMISS_RESULT=$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/dismissals \
+                DISMISS_FAILED=false
+                DISMISS_RESULT=$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/dismissals \
                   -X PUT \
-                  -f message="$DISMISS_MESSAGE" 2>&1); then
+                  -f message="$DISMISS_MESSAGE" 2>&1) || DISMISS_FAILED=true
+                if [ "$DISMISS_FAILED" = "true" ]; then
                   echo "Warning: Failed to dismiss review $REVIEW_ID: $DISMISS_RESULT"
                   DISMISS_FAILED_MESSAGES="${DISMISS_FAILED_MESSAGES}- Failed to dismiss approval from @$USER (insufficient permissions or branch protection settings)\n"
                 else
@@ -461,12 +452,7 @@ jobs:
       # This step runs regardless of PR status or approval status to collect all validation errors at once
       - name: Check review threads are resolved
         id: check_threads
-        if: |
-          steps.validate_command.outputs.is_bot == 'false' && 
-          steps.validate_command.outputs.command_valid == 'true' && 
-          steps.check_author.outputs.allowed == 'true' &&
-          steps.check_fork.outputs.is_fork == 'false' &&
-          steps.check_merged.outputs.already_merged == 'false'
+        if: steps.check_merged.outputs.already_merged == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.issue.number }}
@@ -556,12 +542,7 @@ jobs:
 
       - name: Determine merge method
         id: merge_method
-        if: |
-          steps.validate_command.outputs.is_bot == 'false' && 
-          steps.validate_command.outputs.command_valid == 'true' && 
-          steps.check_author.outputs.allowed == 'true' &&
-          steps.check_fork.outputs.is_fork == 'false' &&
-          steps.check_merged.outputs.already_merged == 'false'
+        if: steps.check_merged.outputs.already_merged == 'false'
         env:
           BASE_REF: ${{ steps.pr_data.outputs.base_ref }}
           HEAD_REF: ${{ steps.pr_data.outputs.head_ref }}
@@ -596,12 +577,7 @@ jobs:
       # Unified check result reporting - aggregates all validation results into a single comment
       - name: Report check results
         id: report_results
-        if: |
-          steps.validate_command.outputs.is_bot == 'false' && 
-          steps.validate_command.outputs.command_valid == 'true' && 
-          steps.check_author.outputs.allowed == 'true' &&
-          steps.check_fork.outputs.is_fork == 'false' &&
-          steps.check_merged.outputs.already_merged == 'false'
+        if: steps.check_merged.outputs.already_merged == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TWEMOJI_CHECK: ${{ env.TWEMOJI_CHECK }}
@@ -724,13 +700,7 @@ jobs:
 
       - name: Perform merge
         id: perform_merge
-        if: |
-          steps.validate_command.outputs.is_bot == 'false' && 
-          steps.validate_command.outputs.command_valid == 'true' && 
-          steps.check_author.outputs.allowed == 'true' &&
-          steps.check_fork.outputs.is_fork == 'false' &&
-          steps.check_merged.outputs.already_merged == 'false' &&
-          steps.report_results.outputs.all_checks_passed == 'true'
+        if: steps.report_results.outputs.all_checks_passed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.issue.number }}
