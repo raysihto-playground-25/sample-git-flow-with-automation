@@ -6,85 +6,9 @@ Automated Git Flow workflow implementation for GitHub repositories.
 
 This repository provides reusable GitHub Actions workflows for automating Git Flow operations.
 
-### exec-merge: PR Merge Automation
+### Reusable Workflows
 
-The `exec-merge` workflow provides automated PR merging triggered by the `/exec merge` command in PR comments. This is particularly useful for repositories where branch protection rules are unavailable (e.g., GitHub Free plan) or when additional merge controls are needed.
-
-#### Architecture
-
-The workflow is split into two files for maximum reusability:
-
-1. **`exec-merge.yml`** (Reusable Workflow)
-   - Contains all the core merge logic
-   - Can be shared across multiple projects
-   - Accepts project-specific configuration via inputs
-
-2. **`on-comment-exec.yml`** (Project-Specific Caller)
-   - Minimal configuration file for each project
-   - Calls exec-related reusable workflows with project-specific settings
-   - Defines branch naming conventions
-
-#### Usage
-
-##### Using the Shared Workflow
-
-To use the shared workflow in your project, create an `on-comment-exec.yml` file:
-
-```yaml
-name: on-comment-exec
-
-on:
-  issue_comment:
-    types: [created]
-
-jobs:
-  exec-merge:
-    uses: <owner>/<repo>/.github/workflows/exec-merge.yml@<ref>
-    with:
-      # Configure your branch naming conventions
-      release_branch_prefix: "release/"
-      develop_branch: "develop"
-      sync_branch_prefix: "fix/sync/"
-    secrets: inherit
-```
-
-##### Available Inputs
-
-| Input | Description | Default |
-|-------|-------------|---------|
-| `release_branch_prefix` | Prefix for release branches | `release/` |
-| `develop_branch` | Name of the develop branch | `develop` |
-| `sync_branch_prefix` | Prefix for sync branches (back-merges) | `fix/sync/` |
-| `mergeable_retry_count` | Number of retries for mergeable status | `5` |
-| `mergeable_retry_interval` | Interval between retries (seconds) | `10` |
-
-##### Triggering a Merge
-
-Comment `/exec merge` on any PR to trigger the merge workflow. The workflow will:
-
-1. ✅ Validate the command and user permissions
-2. ✅ Check that the PR is open, unlocked, and not a draft
-3. ✅ Verify all review conversations are resolved
-4. ✅ Ensure at least one valid approval from another user
-5. ✅ Confirm there are no merge conflicts
-6. ✅ Perform the merge with the appropriate method (squash or merge commit)
-
-##### Merge Method Selection
-
-The workflow automatically selects the merge method based on branch patterns:
-
-| Condition | Merge Method | Reason |
-|-----------|--------------|--------|
-| Head is `release/*` | Merge commit | Preserve release history |
-| Head is `fix/sync/*` | Merge commit | Preserve back-merge history |
-| Base is `release/*` | Squash | Clean release branch history |
-| Base is `develop` | Squash | Clean develop branch history |
-| Otherwise | Merge commit | Default behavior |
-
-#### Limitations
-
-- **Fork PRs are NOT supported**: GITHUB_TOKEN has limited write permissions for fork-originated PRs
-- **Permission required**: Only organization owners, members, or collaborators with write access can use the command
+For documentation on reusable workflows that can be shared across projects, see [`.github/workflows/README.md`](.github/workflows/README.md).
 
 ### feature-freeze: Release Branch Creation
 

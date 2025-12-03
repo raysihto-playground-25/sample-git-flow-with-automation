@@ -94,16 +94,6 @@ The caller workflow must use `secrets: inherit` to pass the `GITHUB_TOKEN`. The 
 
 ---
 
-## Other Workflows
+## Other Files
 
-### on-comment-exec.yml
-
-Project-specific caller workflow that invokes exec-related reusable workflows. This is the entry point triggered by `issue_comment` events.
-
-### feature-freeze.yml
-
-Creates a new release branch from develop and initiates the release process.
-
-### release-automation.yml
-
-Handles automatic RC (Release Candidate) tagging and back-merge PR creation when changes are pushed to release branches.
+Other workflow files in this directory are project-specific and are not intended to be reused across projects.
