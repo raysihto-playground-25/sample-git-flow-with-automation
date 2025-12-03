@@ -1,11 +1,28 @@
 name: exec-merge
 
 # =============================================================================
-# exec-merge - PR Merge Automation Workflow
+# exec-merge - Reusable PR Merge Automation Workflow
 # =============================================================================
-# This workflow provides automated PR merging for repositories where branch
-# protection rules are unavailable (e.g., GitHub Free plan) or when additional
-# merge controls are needed beyond what branch protection offers.
+# This is a reusable workflow that provides automated PR merging logic.
+# It should be called from a project-specific workflow that provides the
+# necessary configuration via inputs.
+#
+# USAGE:
+# Create a project-specific workflow (e.g., exec-commands.yml) that calls
+# this reusable workflow:
+#
+#   name: exec-commands
+#   on:
+#     issue_comment:
+#       types: [created]
+#   jobs:
+#     exec-merge:
+#       uses: <owner>/<repo>/.github/workflows/exec-merge.yml@<ref>
+#       with:
+#         release_branch_prefix: "release/"
+#         develop_branch: "develop"
+#         sync_branch_prefix: "fix/sync/"
+#       secrets: inherit
 #
 # LIMITATIONS:
 # - Fork PRs are NOT supported: GITHUB_TOKEN has limited write permissions for
@@ -21,29 +38,51 @@ name: exec-merge
 # =============================================================================
 
 on:
-  issue_comment:
-    types: [created]
-
-env:
-  RELEASE_BRANCH_PREFIX: "release/"
-  DEVELOP_BRANCH: "develop"
-  # Sync branches are used to back-merge changes from release branches to develop.
-  # These branches use merge commits instead of squash to preserve full commit history.
-  SYNC_BRANCH_PREFIX: "fix/sync/"
-  # Command regex using POSIX character classes for Bash ERE compatibility
-  COMMAND_REGEX: '^[[:space:]]*/exec[[:space:]]+merge[[:space:]]*$'
-  # Retry configuration for waiting on GitHub to calculate mergeable status
-  MERGEABLE_RETRY_COUNT: "5"
-  MERGEABLE_RETRY_INTERVAL: "10"
-  # Twemoji images for cross-browser emoji compatibility (CC-BY 4.0 licensed)
-  # https://github.com/twitter/twemoji
-  TWEMOJI_CHECK: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg" width="20" height="20" alt="OK">'
-  TWEMOJI_CROSS: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg" width="20" height="20" alt="NG">'
+  workflow_call:
+    inputs:
+      release_branch_prefix:
+        description: 'Prefix for release branches (e.g., "release/")'
+        required: false
+        type: string
+        default: "release/"
+      develop_branch:
+        description: 'Name of the develop branch'
+        required: false
+        type: string
+        default: "develop"
+      sync_branch_prefix:
+        description: 'Prefix for sync branches used in back-merges (e.g., "fix/sync/")'
+        required: false
+        type: string
+        default: "fix/sync/"
+      mergeable_retry_count:
+        description: 'Number of retries for waiting on GitHub to calculate mergeable status'
+        required: false
+        type: number
+        default: 5
+      mergeable_retry_interval:
+        description: 'Interval in seconds between retries'
+        required: false
+        type: number
+        default: 10
 
 # Concurrency per PR number to avoid parallel execution
 concurrency:
   group: exec-merge-pr-${{ github.event.issue.number }}
   cancel-in-progress: false
+
+env:
+  RELEASE_BRANCH_PREFIX: ${{ inputs.release_branch_prefix }}
+  DEVELOP_BRANCH: ${{ inputs.develop_branch }}
+  SYNC_BRANCH_PREFIX: ${{ inputs.sync_branch_prefix }}
+  # Command regex using POSIX character classes for Bash ERE compatibility
+  COMMAND_REGEX: '^[[:space:]]*/exec[[:space:]]+merge[[:space:]]*$'
+  MERGEABLE_RETRY_COUNT: ${{ inputs.mergeable_retry_count }}
+  MERGEABLE_RETRY_INTERVAL: ${{ inputs.mergeable_retry_interval }}
+  # Twemoji images for cross-browser emoji compatibility (CC-BY 4.0 licensed)
+  # https://github.com/twitter/twemoji
+  TWEMOJI_CHECK: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg" width="20" height="20" alt="OK">'
+  TWEMOJI_CROSS: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg" width="20" height="20" alt="NG">'
 
 jobs:
   exec-merge:
@@ -512,7 +551,7 @@ jobs:
             }
             
             # Check for GraphQL errors in the response
-            if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+            if echo "$RESPONSE" | jq -e 'has("errors") and (.errors | length > 0)' > /dev/null 2>&1; then
               echo "GraphQL query returned errors:"
               echo "$RESPONSE" | jq '.errors'
               fail_with_comment "An error occurred while fetching review threads status. Please try again."
@@ -725,6 +764,8 @@ jobs:
           HEAD_REF: ${{ steps.pr_data.outputs.head_ref }}
           BASE_REF: ${{ steps.pr_data.outputs.base_ref }}
           COMMAND_ISSUER: ${{ github.actor }}
+          MERGEABLE_RETRY_COUNT: ${{ env.MERGEABLE_RETRY_COUNT }}
+          MERGEABLE_RETRY_INTERVAL: ${{ env.MERGEABLE_RETRY_INTERVAL }}
         run: |
           set -Eeuo pipefail
           
