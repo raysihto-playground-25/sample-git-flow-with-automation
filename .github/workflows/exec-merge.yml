@@ -62,11 +62,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           COMMAND_REGEX: ${{ env.COMMAND_REGEX }}
+          USER_TYPE: ${{ github.event.comment.user.type }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          REPO: ${{ github.repository }}
         run: |
           set -Eeuo pipefail
           
           # Check if comment is from a bot
-          USER_TYPE="${{ github.event.comment.user.type }}"
           if [ "$USER_TYPE" = "Bot" ]; then
             echo "Comment is from a bot, skipping"
             echo "is_bot=true" >> $GITHUB_OUTPUT
@@ -82,8 +84,6 @@ jobs:
             echo "command_valid=true" >> $GITHUB_OUTPUT
             
             # Add eyes reaction immediately for fastest feedback
-            COMMENT_ID="${{ github.event.comment.id }}"
-            REPO="${{ github.repository }}"
             echo "Adding :eyes: reaction to comment $COMMENT_ID"
             gh api repos/$REPO/issues/comments/$COMMENT_ID/reactions \
               -X POST \
@@ -98,12 +98,12 @@ jobs:
         if: steps.validate_command.outputs.is_bot == 'false' && steps.validate_command.outputs.command_valid == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AUTHOR_ASSOCIATION: ${{ github.event.comment.author_association }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
         run: |
           set -Eeuo pipefail
-          AUTHOR_ASSOCIATION="${{ github.event.comment.author_association }}"
-          PR_NUMBER="${{ github.event.issue.number }}"
-          REPO="${{ github.repository }}"
-          ACTOR="${{ github.actor }}"
           
           echo "Author association: $AUTHOR_ASSOCIATION"
           echo "Actor: $ACTOR"
@@ -169,10 +169,10 @@ jobs:
           steps.check_author.outputs.allowed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
         run: |
           set -Eeuo pipefail
-          PR_NUMBER="${{ github.event.issue.number }}"
-          REPO="${{ github.repository }}"
           
           # Get PR data to check if it's from a fork
           # Use robust detection: check head.repo.fork flag OR compare owner IDs
@@ -211,10 +211,10 @@ jobs:
           steps.check_fork.outputs.is_fork == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
         run: |
           set -Eeuo pipefail
-          PR_NUMBER="${{ github.event.issue.number }}"
-          REPO="${{ github.repository }}"
           
           echo "Fetching PR #$PR_NUMBER data..."
           
@@ -260,11 +260,11 @@ jobs:
           steps.check_fork.outputs.is_fork == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGED: ${{ steps.pr_data.outputs.merged }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
         run: |
           set -Eeuo pipefail
-          MERGED="${{ steps.pr_data.outputs.merged }}"
-          PR_NUMBER="${{ github.event.issue.number }}"
-          REPO="${{ github.repository }}"
           
           if [ "$MERGED" = "true" ]; then
             echo "PR is already merged"
@@ -287,12 +287,12 @@ jobs:
           steps.check_merged.outputs.already_merged == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATE: ${{ steps.pr_data.outputs.state }}
+          LOCKED: ${{ steps.pr_data.outputs.locked }}
+          DRAFT: ${{ steps.pr_data.outputs.draft }}
+          MERGEABLE_STATE: ${{ steps.pr_data.outputs.mergeable_state }}
         run: |
           set -Eeuo pipefail
-          STATE="${{ steps.pr_data.outputs.state }}"
-          LOCKED="${{ steps.pr_data.outputs.locked }}"
-          DRAFT="${{ steps.pr_data.outputs.draft }}"
-          MERGEABLE_STATE="${{ steps.pr_data.outputs.mergeable_state }}"
           
           # Initialize check results
           PR_OPEN_OK="true"
@@ -347,14 +347,12 @@ jobs:
           steps.check_merged.outputs.already_merged == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ steps.pr_data.outputs.head_sha }}
+          PR_AUTHOR: ${{ steps.pr_data.outputs.author }}
         run: |
           set -Eeuo pipefail
-          PR_NUMBER="${{ github.event.issue.number }}"
-          REPO="${{ github.repository }}"
-          HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
-          
-          # Get PR author from pr_data step output to exclude self-approvals
-          PR_AUTHOR="${{ steps.pr_data.outputs.author }}"
           
           echo "Checking approvals for PR #$PR_NUMBER (head SHA: $HEAD_SHA)..."
           echo "PR Author: $PR_AUTHOR (self-approvals will be excluded)"
@@ -463,12 +461,12 @@ jobs:
           steps.check_merged.outputs.already_merged == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          REPO: ${{ github.repository }}
         run: |
           set -Eeuo pipefail
-          PR_NUMBER="${{ github.event.issue.number }}"
-          OWNER="${{ github.repository_owner }}"
-          REPO_NAME="${{ github.event.repository.name }}"
-          REPO="${{ github.repository }}"
           
           # Helper function to post failure comment and exit
           fail_with_comment() {
@@ -556,13 +554,14 @@ jobs:
           steps.check_author.outputs.allowed == 'true' &&
           steps.check_fork.outputs.is_fork == 'false' &&
           steps.check_merged.outputs.already_merged == 'false'
+        env:
+          BASE_REF: ${{ steps.pr_data.outputs.base_ref }}
+          HEAD_REF: ${{ steps.pr_data.outputs.head_ref }}
+          RELEASE_PREFIX: ${{ env.RELEASE_BRANCH_PREFIX }}
+          DEVELOP_BRANCH: ${{ env.DEVELOP_BRANCH }}
+          SYNC_PREFIX: ${{ env.SYNC_BRANCH_PREFIX }}
         run: |
           set -Eeuo pipefail
-          BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
-          HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
-          RELEASE_PREFIX="${{ env.RELEASE_BRANCH_PREFIX }}"
-          DEVELOP_BRANCH="${{ env.DEVELOP_BRANCH }}"
-          SYNC_PREFIX="${{ env.SYNC_BRANCH_PREFIX }}"
           
           echo "Base ref: $BASE_REF"
           echo "Head ref: $HEAD_REF"
@@ -599,25 +598,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TWEMOJI_CHECK: ${{ env.TWEMOJI_CHECK }}
           TWEMOJI_CROSS: ${{ env.TWEMOJI_CROSS }}
-          # Pass MERGE_REASON via env to avoid bash command substitution on backticks
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          PR_NOT_DRAFT_OK: ${{ steps.check_pr_status.outputs.pr_not_draft_ok }}
+          NO_CONFLICTS_OK: ${{ steps.check_pr_status.outputs.no_conflicts_ok }}
+          MERGEABLE_STATE: ${{ steps.check_pr_status.outputs.mergeable_state }}
+          APPROVAL_OK: ${{ steps.check_approvals.outputs.approval_ok }}
+          THREADS_OK: ${{ steps.check_threads.outputs.threads_ok }}
+          UNRESOLVED_COUNT: ${{ steps.check_threads.outputs.unresolved_count }}
+          VALID_APPROVALS: ${{ steps.check_approvals.outputs.valid_approvals }}
+          MERGE_METHOD: ${{ steps.merge_method.outputs.method }}
           MERGE_REASON: ${{ steps.merge_method.outputs.reason }}
         run: |
           set -Eeuo pipefail
-          PR_NUMBER="${{ github.event.issue.number }}"
-          REPO="${{ github.repository }}"
-          
-          # Collect all check results
-          PR_NOT_DRAFT_OK="${{ steps.check_pr_status.outputs.pr_not_draft_ok }}"
-          NO_CONFLICTS_OK="${{ steps.check_pr_status.outputs.no_conflicts_ok }}"
-          MERGEABLE_STATE="${{ steps.check_pr_status.outputs.mergeable_state }}"
-          APPROVAL_OK="${{ steps.check_approvals.outputs.approval_ok }}"
-          THREADS_OK="${{ steps.check_threads.outputs.threads_ok }}"
-          UNRESOLVED_COUNT="${{ steps.check_threads.outputs.unresolved_count }}"
-          VALID_APPROVALS="${{ steps.check_approvals.outputs.valid_approvals }}"
-          
-          # Merge method info
-          MERGE_METHOD="${{ steps.merge_method.outputs.method }}"
-          # MERGE_REASON is passed via env to avoid command substitution
           
           # Build check result list using twemoji images for cross-browser compatibility
           # Format: OK = "{check_icon} {desired status}"
@@ -708,14 +701,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TWEMOJI_CHECK: ${{ env.TWEMOJI_CHECK }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          MERGE_METHOD: ${{ steps.merge_method.outputs.method }}
+          ORIGINAL_HEAD_SHA: ${{ steps.pr_data.outputs.head_sha }}
+          HEAD_REF: ${{ steps.pr_data.outputs.head_ref }}
+          BASE_REF: ${{ steps.pr_data.outputs.base_ref }}
+          COMMAND_ISSUER: ${{ github.actor }}
         run: |
           set -Eeuo pipefail
-          PR_NUMBER="${{ github.event.issue.number }}"
-          REPO="${{ github.repository }}"
-          MERGE_METHOD="${{ steps.merge_method.outputs.method }}"
-          ORIGINAL_HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
-          HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
-          BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
           
           # TOCTOU check: Re-fetch PR data immediately before merge
           echo "Performing TOCTOU check before merge..."
@@ -799,7 +793,6 @@ jobs:
           echo "HEAD SHA: $ORIGINAL_HEAD_SHA"
           
           # Prepare commit message body with traceability info
-          COMMAND_ISSUER="${{ github.actor }}"
           COMMIT_MESSAGE_BODY="Merged-by: exec-merge (on behalf of @${COMMAND_ISSUER})"
           
           # Perform the merge
@@ -834,3 +827,36 @@ jobs:
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
           fi
+
+      # Notify user of unexpected errors that occur during the workflow
+      # This step runs when the workflow fails but no specific error comment was posted
+      # Uses conclusion check to handle cases where validate_command itself fails
+      - name: Notify on unexpected error
+        if: |
+          failure() && 
+          steps.validate_command.conclusion == 'success' &&
+          steps.validate_command.outputs.is_bot == 'false' && 
+          steps.validate_command.outputs.command_valid == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TWEMOJI_CROSS: ${{ env.TWEMOJI_CROSS }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          set -Eeuo pipefail
+          
+          RUN_URL="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
+          
+          COMMENT_BODY=$(cat <<EOF
+          ## ${TWEMOJI_CROSS} Unexpected error
+
+          An unexpected error occurred while processing the \`/exec merge\` command.
+
+          Please check the [workflow run logs](${RUN_URL}) for details.
+          EOF
+          )
+          
+          gh api repos/$REPO/issues/$PR_NUMBER/comments \
+            -f body="$COMMENT_BODY"
