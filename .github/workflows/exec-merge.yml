@@ -36,8 +36,8 @@ env:
   MERGEABLE_RETRY_INTERVAL: "10"
   # Twemoji images for cross-browser emoji compatibility (CC-BY 4.0 licensed)
   # https://github.com/twitter/twemoji
-  TWEMOJI_CHECK: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg" width="20" height="20" alt="✓">'
-  TWEMOJI_CROSS: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg" width="20" height="20" alt="✗">'
+  TWEMOJI_CHECK: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg" width="20" height="20" alt="OK">'
+  TWEMOJI_CROSS: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg" width="20" height="20" alt="NG">'
 
 # Concurrency per PR number to avoid parallel execution
 concurrency:
