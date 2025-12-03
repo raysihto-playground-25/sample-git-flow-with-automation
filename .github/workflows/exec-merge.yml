@@ -620,7 +620,7 @@ jobs:
           # Build check result list using twemoji images for cross-browser compatibility
           # Format: OK = "{check_icon} {desired status}"
           #         NG = "{cross_icon} {desired status} ({current status})"
-          # Order matches actual development workflow: ready for review → approvals → resolved threads → conflicts
+          # Order matches actual development workflow: ready for review → resolved threads → approvals → conflicts
           RESULTS=""
           ALL_PASSED=true
           
@@ -632,19 +632,19 @@ jobs:
             ALL_PASSED=false
           fi
           
-          # Approval check (second - need approvals after review)
-          if [ "$APPROVAL_OK" = "true" ]; then
-            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} At least one valid approval from another user\n"
-          else
-            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} At least one valid approval from another user (no valid approvals found)\n"
-            ALL_PASSED=false
-          fi
-          
-          # Threads resolved check (third - resolve review conversations)
+          # Threads resolved check (second - resolve review conversations before approval)
           if [ "$THREADS_OK" = "true" ]; then
             RESULTS="${RESULTS}- ${TWEMOJI_CHECK} All review conversations are resolved\n"
           else
             RESULTS="${RESULTS}- ${TWEMOJI_CROSS} All review conversations are resolved (${UNRESOLVED_COUNT} unresolved)\n"
+            ALL_PASSED=false
+          fi
+          
+          # Approval check (third - get approval after resolving conversations)
+          if [ "$APPROVAL_OK" = "true" ]; then
+            RESULTS="${RESULTS}- ${TWEMOJI_CHECK} At least one valid approval from another user\n"
+          else
+            RESULTS="${RESULTS}- ${TWEMOJI_CROSS} At least one valid approval from another user (no valid approvals found)\n"
             ALL_PASSED=false
           fi
           
