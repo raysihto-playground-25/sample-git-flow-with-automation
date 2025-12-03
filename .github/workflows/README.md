@@ -17,10 +17,10 @@ A reusable workflow that provides automated PR merging via the `/exec merge` com
 
 ### Quick Start
 
-Create a caller workflow in your project (e.g., `.github/workflows/exec-commands.yml`):
+Create a caller workflow in your project (e.g., `.github/workflows/on-comment-exec.yml`):
 
 ```yaml
-name: exec-commands
+name: on-comment-exec
 
 on:
   issue_comment:
@@ -97,7 +97,7 @@ The caller workflow must use `secrets: inherit` to pass the `GITHUB_TOKEN`. The 
 
 ## Other Workflows
 
-### exec-commands.yml
+### on-comment-exec.yml
 
 Project-specific caller workflow that invokes exec-related reusable workflows. This is the entry point triggered by `issue_comment` events.
 

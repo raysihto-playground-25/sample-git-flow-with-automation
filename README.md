@@ -19,7 +19,7 @@ The workflow is split into two files for maximum reusability:
    - Can be shared across multiple projects
    - Accepts project-specific configuration via inputs
 
-2. **`exec-commands.yml`** (Project-Specific Caller)
+2. **`on-comment-exec.yml`** (Project-Specific Caller)
    - Minimal configuration file for each project
    - Calls exec-related reusable workflows with project-specific settings
    - Defines branch naming conventions
@@ -28,10 +28,10 @@ The workflow is split into two files for maximum reusability:
 
 ##### Using the Shared Workflow
 
-To use the shared workflow in your project, create an `exec-commands.yml` file:
+To use the shared workflow in your project, create an `on-comment-exec.yml` file:
 
 ```yaml
-name: exec-commands
+name: on-comment-exec
 
 on:
   issue_comment:

@@ -1,7 +1,7 @@
-name: exec-commands
+name: on-comment-exec
 
 # =============================================================================
-# exec-commands - Project-Specific Exec Commands Caller
+# on-comment-exec - Project-Specific Exec Commands Caller
 # =============================================================================
 # This is the project-specific caller workflow that invokes exec-related
 # reusable workflows with project-specific configuration.
