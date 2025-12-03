@@ -656,12 +656,17 @@ jobs:
           echo -e "$RESULTS" >> $GITHUB_OUTPUT
           echo "${delimiter}" >> $GITHUB_OUTPUT
           
-          # If any check failed, post failure comment and exit
+          # Post check results comment
           if [ "$ALL_PASSED" = "false" ]; then
+            # If any check failed, post failure comment and exit
             COMMENT_BODY=$(printf '## Merge checks failed\n\nThe following checks must pass before merging:\n\n%b' "$RESULTS")
             gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
             echo "Validation failed, exiting"
             exit 1
+          else
+            # All checks passed - post check results comment before proceeding to merge
+            COMMENT_BODY=$(printf '## Merge checks passed\n\nAll checks passed. Proceeding to merge...\n\n%b' "$RESULTS")
+            gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
           fi
 
       - name: Determine merge method
@@ -723,7 +728,6 @@ jobs:
           ORIGINAL_HEAD_SHA="${{ steps.pr_data.outputs.head_sha }}"
           HEAD_REF="${{ steps.pr_data.outputs.head_ref }}"
           BASE_REF="${{ steps.pr_data.outputs.base_ref }}"
-          CHECK_RESULTS="${{ steps.report_results.outputs.check_results }}"
           
           # TOCTOU check: Re-fetch PR data immediately before merge
           echo "Performing TOCTOU check before merge..."
@@ -836,8 +840,8 @@ jobs:
             echo "Merge successful!"
             echo "merge_success=true" >> $GITHUB_OUTPUT
             
-            # Post success comment with all check results
-            COMMENT_BODY=$(printf '## Merged by exec-merge\n\n%s This PR has been successfully merged.\n\n### Check Results\n\n%b\n### Details\n\n- **Merge Method:** `%s`\n- **Base Branch:** `%s`\n- **Head Branch:** `%s`\n- **HEAD SHA:** `%s`' "$TWEMOJI_CHECK" "$CHECK_RESULTS" "$MERGE_METHOD" "$BASE_REF" "$HEAD_REF" "${ORIGINAL_HEAD_SHA:0:7}")
+            # Post merge result comment (check results already posted in previous step)
+            COMMENT_BODY=$(printf '## Merged by exec-merge\n\n%s This PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** `%s`\n- **Base Branch:** `%s`\n- **Head Branch:** `%s`\n- **HEAD SHA:** `%s`' "$TWEMOJI_CHECK" "$MERGE_METHOD" "$BASE_REF" "$HEAD_REF" "${ORIGINAL_HEAD_SHA:0:7}")
             
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
