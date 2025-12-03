@@ -4,14 +4,14 @@ name: on-comment-exec
 # on-comment-exec - Project-Specific Exec Commands Caller
 # =============================================================================
 # This is the project-specific caller workflow that invokes exec-related
-# reusable workflows with project-specific configuration.
+# actions with project-specific configuration.
 #
 # Currently supported commands:
-# - /exec merge - See exec-merge.yml for details
+# - /exec merge - See .github/actions/exec-merge/action.yml for details
 #
 # CUSTOMIZATION:
 # - Modify the `with` inputs below to match your project's branching strategy
-# - The reusable workflows handle all the logic, so you only need to
+# - The actions handle all the logic, so you only need to
 #   configure the branch naming conventions here
 # =============================================================================
 
@@ -19,19 +19,33 @@ on:
   issue_comment:
     types: [created]
 
+# Concurrency per PR number to avoid parallel execution
+concurrency:
+  group: exec-merge-pr-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
   exec-merge:
+    name: exec-merge
+    # Only run if this is a PR comment (not an issue)
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
       issues: write
-    uses: ./.github/workflows/exec-merge.yml
-    with:
-      # Project-specific branch naming configuration
-      release_branch_prefix: "release/"
-      develop_branch: "develop"
-      sync_branch_prefix: "fix/sync/"
-      # Optional: customize retry behavior for mergeable status
-      # mergeable_retry_count: 5
-      # mergeable_retry_interval: 10
-    secrets: inherit
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run exec-merge action
+        uses: ./.github/actions/exec-merge
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Project-specific branch naming configuration
+          release_branch_prefix: "release/"
+          develop_branch: "develop"
+          sync_branch_prefix: "fix/sync/"
+          # Optional: customize retry behavior for mergeable status
+          # mergeable_retry_count: 5
+          # mergeable_retry_interval: 10

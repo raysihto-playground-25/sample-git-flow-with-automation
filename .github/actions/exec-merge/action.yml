@@ -1,0 +1,78 @@
+# =============================================================================
+# exec-merge - PR Merge Automation Action
+# =============================================================================
+# A composite action that provides automated PR merging via the `/exec merge`
+# command in PR comments. This action encapsulates all the validation and
+# merge logic previously in the reusable workflow.
+#
+# USAGE:
+# This action is called from a workflow triggered by issue_comment events.
+#
+#   on:
+#     issue_comment:
+#       types: [created]
+#
+#   jobs:
+#     exec-merge:
+#       runs-on: ubuntu-latest
+#       permissions:
+#         contents: write
+#         pull-requests: write
+#         issues: write
+#       steps:
+#         - uses: actions/checkout@v4
+#         - uses: ./.github/actions/exec-merge
+#           with:
+#             github-token: ${{ secrets.GITHUB_TOKEN }}
+#             release_branch_prefix: "release/"
+#             develop_branch: "develop"
+#             sync_branch_prefix: "fix/sync/"
+#
+# LIMITATIONS:
+# - Fork PRs are NOT supported (GITHUB_TOKEN has limited permissions)
+# - Only organization owners, members, or collaborators with write access
+#   can use the `/exec merge` command
+#
+# THIRD-PARTY LICENSES:
+# - Twemoji graphics (https://github.com/twitter/twemoji) are used for emoji
+#   display compatibility. Licensed under CC-BY 4.0.
+# =============================================================================
+
+name: 'exec-merge'
+description: 'Automated PR merging with validation checks via /exec merge command'
+author: 'GitHub Copilot'
+
+inputs:
+  github-token:
+    description: 'GitHub token for API authentication'
+    required: true
+  release_branch_prefix:
+    description: 'Prefix for release branches (e.g., "release/")'
+    required: false
+    default: 'release/'
+  develop_branch:
+    description: 'Name of the develop branch'
+    required: false
+    default: 'develop'
+  sync_branch_prefix:
+    description: 'Prefix for sync branches used in back-merges (e.g., "fix/sync/")'
+    required: false
+    default: 'fix/sync/'
+  mergeable_retry_count:
+    description: 'Number of retries for waiting on GitHub to calculate mergeable status'
+    required: false
+    default: '5'
+  mergeable_retry_interval:
+    description: 'Interval in seconds between retries'
+    required: false
+    default: '10'
+
+outputs:
+  result:
+    description: 'Result of the merge operation (merged, skipped, failed)'
+  merge_method:
+    description: 'Merge method used (squash or merge)'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
