@@ -121,7 +121,8 @@ jobs:
               
               gh api repos/$REPO/issues/$PR_NUMBER/comments \
                 -f body="$COMMENT_BODY"
-
+              
+              echo "ERROR_COMMENT_POSTED=true" >> $GITHUB_ENV
               exit 1
               ;;
           esac
@@ -138,6 +139,7 @@ jobs:
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
             
+            echo "ERROR_COMMENT_POSTED=true" >> $GITHUB_ENV
             exit 1
           }
           
@@ -157,7 +159,8 @@ jobs:
               
               gh api repos/$REPO/issues/$PR_NUMBER/comments \
                 -f body="$COMMENT_BODY"
-
+              
+              echo "ERROR_COMMENT_POSTED=true" >> $GITHUB_ENV
               exit 1
               ;;
           esac
@@ -197,6 +200,7 @@ jobs:
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
             
+            echo "ERROR_COMMENT_POSTED=true" >> $GITHUB_ENV
             exit 1
           else
             echo "This is not a fork PR"
@@ -468,6 +472,7 @@ jobs:
             echo "$message"
             COMMENT_BODY=$(printf '## Merge checks failed\n\n%s' "$message")
             gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
+            echo "ERROR_COMMENT_POSTED=true" >> $GITHUB_ENV
             exit 1
           }
           
@@ -675,9 +680,8 @@ jobs:
             ALL_PASSED=false
           fi
           
-          # Output overall result and flag that error comment was posted
+          # Output overall result
           echo "all_checks_passed=$ALL_PASSED" >> $GITHUB_OUTPUT
-          echo "error_comment_posted=true" >> $GITHUB_OUTPUT
           
           # Save results for later steps (use heredoc delimiter for multiline)
           delimiter="$(openssl rand -hex 8)"
@@ -692,6 +696,7 @@ jobs:
             # not a workflow error. The user has been notified via comment.
             COMMENT_BODY=$(printf '## Merge checks failed\n\nThe following checks must pass before merging:\n\n%b\n### Merge Method\n\n- **Method:** `%s`\n- **Reason:** %s' "$RESULTS" "$MERGE_METHOD" "$MERGE_REASON")
             gh api repos/$REPO/issues/$PR_NUMBER/comments -f body="$COMMENT_BODY"
+            echo "ERROR_COMMENT_POSTED=true" >> $GITHUB_ENV
             echo "Validation failed, user notified via comment"
             exit 0  # Explicitly exit with success
           else
@@ -738,6 +743,7 @@ jobs:
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
             
+            echo "ERROR_COMMENT_POSTED=true" >> $GITHUB_ENV
             exit 1
           fi
           
@@ -772,6 +778,7 @@ jobs:
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
             
+            echo "ERROR_COMMENT_POSTED=true" >> $GITHUB_ENV
             exit 1
           fi
           
@@ -789,6 +796,7 @@ jobs:
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
             
+            echo "ERROR_COMMENT_POSTED=true" >> $GITHUB_ENV
             exit 1
           fi
           
@@ -811,7 +819,6 @@ jobs:
             echo "Merge failed!"
             echo "Result: $MERGE_RESULT"
             echo "merge_success=false" >> $GITHUB_OUTPUT
-            echo "error_comment_posted=true" >> $GITHUB_OUTPUT
             
             # Extract error message
             ERROR_MSG=$(echo "$MERGE_RESULT" | jq -r '.message // "Unknown error"' 2>/dev/null || echo "$MERGE_RESULT")
@@ -821,6 +828,7 @@ jobs:
             gh api repos/$REPO/issues/$PR_NUMBER/comments \
               -f body="$COMMENT_BODY"
             
+            echo "ERROR_COMMENT_POSTED=true" >> $GITHUB_ENV
             exit 1
           else
             echo "Merge successful!"
@@ -836,15 +844,14 @@ jobs:
       # Notify user of unexpected errors that occur during the workflow
       # This step runs when the workflow fails but no specific error comment was posted
       # Uses conclusion check to handle cases where validate_command itself fails
-      # Skip if any step already posted an error comment (error_comment_posted flag)
+      # Skip if any step already posted an error comment (ERROR_COMMENT_POSTED env flag)
       - name: Notify on unexpected error
         if: |
           failure() && 
           steps.validate_command.conclusion == 'success' &&
           steps.validate_command.outputs.is_bot == 'false' && 
           steps.validate_command.outputs.command_valid == 'true' &&
-          steps.report_results.outputs.error_comment_posted != 'true' &&
-          steps.perform_merge.outputs.error_comment_posted != 'true'
+          env.ERROR_COMMENT_POSTED != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.issue.number }}
@@ -860,3 +867,66 @@ jobs:
           
           gh api repos/$REPO/issues/$PR_NUMBER/comments \
             -f body="$COMMENT_BODY"
+
+      - name: Workflow Summary
+        if: always()
+        env:
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          IS_BOT: ${{ steps.validate_command.outputs.is_bot }}
+          COMMAND_VALID: ${{ steps.validate_command.outputs.command_valid }}
+          AUTHOR_ALLOWED: ${{ steps.check_author.outputs.allowed }}
+          IS_FORK: ${{ steps.check_fork.outputs.is_fork }}
+          ALREADY_MERGED: ${{ steps.check_merged.outputs.already_merged }}
+          ALL_CHECKS_PASSED: ${{ steps.report_results.outputs.all_checks_passed }}
+          MERGE_SUCCESS: ${{ steps.perform_merge.outputs.merge_success }}
+          MERGE_METHOD: ${{ steps.merge_method.outputs.method }}
+          HEAD_REF: ${{ steps.pr_data.outputs.head_ref }}
+          BASE_REF: ${{ steps.pr_data.outputs.base_ref }}
+          HEAD_SHA: ${{ steps.pr_data.outputs.head_sha }}
+        run: |
+          set -Eeuo pipefail
+          echo "## exec-merge Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Determine overall result
+          if [ "$IS_BOT" = "true" ]; then
+            RESULT="⏭️ Skipped (bot comment)"
+          elif [ "$COMMAND_VALID" != "true" ]; then
+            RESULT="⏭️ Skipped (command not matched)"
+          elif [ "$AUTHOR_ALLOWED" != "true" ]; then
+            RESULT="❌ Failed (permission denied)"
+          elif [ "$IS_FORK" = "true" ]; then
+            RESULT="❌ Failed (fork PR not supported)"
+          elif [ "$ALREADY_MERGED" = "true" ]; then
+            RESULT="ℹ️ Already merged"
+          elif [ "$ALL_CHECKS_PASSED" != "true" ]; then
+            RESULT="❌ Failed (merge checks failed)"
+          elif [ "$MERGE_SUCCESS" = "true" ]; then
+            RESULT="✅ Merged successfully"
+          elif [ "$MERGE_SUCCESS" = "false" ]; then
+            RESULT="❌ Failed (merge operation failed)"
+          else
+            RESULT="❓ Unknown"
+          fi
+          
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Result** | ${RESULT} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **PR** | #${PR_NUMBER} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Triggered by** | @${ACTOR} |" >> $GITHUB_STEP_SUMMARY
+          
+          # Add merge details if available
+          if [ -n "$HEAD_REF" ] && [ -n "$BASE_REF" ]; then
+            echo "| **Head Branch** | \`${HEAD_REF}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Base Branch** | \`${BASE_REF}\` |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "$MERGE_METHOD" ]; then
+            echo "| **Merge Method** | \`${MERGE_METHOD}\` |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "$HEAD_SHA" ]; then
+            echo "| **HEAD SHA** | \`${HEAD_SHA:0:7}\` |" >> $GITHUB_STEP_SUMMARY
+          fi
