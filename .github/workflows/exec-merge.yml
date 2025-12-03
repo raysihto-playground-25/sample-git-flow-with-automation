@@ -566,6 +566,8 @@ jobs:
           VALID_APPROVALS="${{ steps.check_approvals.outputs.valid_approvals }}"
           
           # Build check result list
+          # Format: OK = ":white_check_mark: {desired status}"
+          #         NG = ":x: {desired status} ({current status})"
           RESULTS=""
           ALL_PASSED=true
           
@@ -573,7 +575,7 @@ jobs:
           if [ "$PR_OPEN_OK" = "true" ]; then
             RESULTS="${RESULTS}- :white_check_mark: PR is open\n"
           else
-            RESULTS="${RESULTS}- :x: PR is closed\n"
+            RESULTS="${RESULTS}- :x: PR is open (currently closed)\n"
             ALL_PASSED=false
           fi
           
@@ -581,15 +583,15 @@ jobs:
           if [ "$PR_UNLOCKED_OK" = "true" ]; then
             RESULTS="${RESULTS}- :white_check_mark: PR is not locked\n"
           else
-            RESULTS="${RESULTS}- :x: PR is locked\n"
+            RESULTS="${RESULTS}- :x: PR is not locked (currently locked)\n"
             ALL_PASSED=false
           fi
           
           # PR is not draft check
           if [ "$PR_NOT_DRAFT_OK" = "true" ]; then
-            RESULTS="${RESULTS}- :white_check_mark: PR is ready for review (not a draft)\n"
+            RESULTS="${RESULTS}- :white_check_mark: PR is ready for review\n"
           else
-            RESULTS="${RESULTS}- :x: PR is a draft - please mark as ready for review before merging\n"
+            RESULTS="${RESULTS}- :x: PR is ready for review (currently a draft)\n"
             ALL_PASSED=false
           fi
           
@@ -599,19 +601,19 @@ jobs:
           else
             case "$MERGEABLE_STATE" in
               dirty)
-                RESULTS="${RESULTS}- :x: PR has unresolved merge conflicts\n"
+                RESULTS="${RESULTS}- :x: No merge conflicts (has unresolved conflicts)\n"
                 ;;
               blocked)
-                RESULTS="${RESULTS}- :x: PR is blocked by failing status checks or branch protection rules\n"
+                RESULTS="${RESULTS}- :x: No merge conflicts (blocked by status checks or branch protection)\n"
                 ;;
               unstable)
-                RESULTS="${RESULTS}- :x: PR has failing status checks\n"
+                RESULTS="${RESULTS}- :x: No merge conflicts (has failing status checks)\n"
                 ;;
               behind)
-                RESULTS="${RESULTS}- :x: PR branch is behind the base branch - please update the branch\n"
+                RESULTS="${RESULTS}- :x: No merge conflicts (branch is behind base branch)\n"
                 ;;
               *)
-                RESULTS="${RESULTS}- :x: PR has mergeable state: ${MERGEABLE_STATE}\n"
+                RESULTS="${RESULTS}- :x: No merge conflicts (mergeable_state: ${MERGEABLE_STATE})\n"
                 ;;
             esac
             ALL_PASSED=false
@@ -619,9 +621,9 @@ jobs:
           
           # Approval check
           if [ "$APPROVAL_OK" = "true" ]; then
-            RESULTS="${RESULTS}- :white_check_mark: At least one valid approval from another user (${VALID_APPROVALS} approval(s))\n"
+            RESULTS="${RESULTS}- :white_check_mark: At least one valid approval from another user\n"
           else
-            RESULTS="${RESULTS}- :x: No valid approvals found - at least one approval from someone other than the PR author is required\n"
+            RESULTS="${RESULTS}- :x: At least one valid approval from another user (no valid approvals found)\n"
             ALL_PASSED=false
           fi
           
@@ -629,7 +631,7 @@ jobs:
           if [ "$THREADS_OK" = "true" ]; then
             RESULTS="${RESULTS}- :white_check_mark: All review conversations are resolved\n"
           else
-            RESULTS="${RESULTS}- :x: ${UNRESOLVED_COUNT} unresolved review conversation(s) - all must be resolved before merging\n"
+            RESULTS="${RESULTS}- :x: All review conversations are resolved (${UNRESOLVED_COUNT} unresolved)\n"
             ALL_PASSED=false
           fi
           
