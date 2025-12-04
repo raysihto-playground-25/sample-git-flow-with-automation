@@ -53,7 +53,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           if [ -f /tmp/coverage-${{ github.run_id }}.txt ] && grep -q "Coverage report" /tmp/coverage-${{ github.run_id }}.txt; then
-            awk '/Coverage report/{found=1} found; found && /^-----------/ && ++count==3{exit}' /tmp/coverage-${{ github.run_id }}.txt >> $GITHUB_STEP_SUMMARY
+            # Extract coverage table and strip ANSI escape sequences
+            awk '/Coverage report/{found=1} found; found && /^-----------/ && ++count==3{exit}' /tmp/coverage-${{ github.run_id }}.txt | sed 's/\x1b\[[0-9;]*m//g' >> $GITHUB_STEP_SUMMARY
           else
             echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
           fi
