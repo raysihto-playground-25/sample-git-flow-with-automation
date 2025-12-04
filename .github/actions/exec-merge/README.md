@@ -116,6 +116,29 @@ npm run lint    # Run ESLint
 npm run build   # Build with ncc
 ```
 
+## Testing
+
+This action uses **Vitest** for unit testing. The test suite focuses on testing pure logic functions and mocking GitHub API interactions for isolation.
+
+| Test Type | Status | Description |
+|-----------|--------|-------------|
+| **Unit Tests** | ✅ Implemented | Covers command parsing, permissions, merge logic, and API interactions |
+| **Integration Tests** | ❌ Not implemented | Would test GitHub API interactions with real tokens |
+| **E2E Tests** | ❌ Not implemented | Would test full workflow execution on real PRs |
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm test -- --coverage
+```
+
 ## Third-Party Licenses
 
 - **Twemoji graphics** ([github.com/twitter/twemoji](https://github.com/twitter/twemoji)) are used for emoji display compatibility. Licensed under CC-BY 4.0. Copyright 2020 Twitter, Inc and other contributors.
