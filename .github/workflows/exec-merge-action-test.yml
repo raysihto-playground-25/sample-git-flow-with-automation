@@ -20,8 +20,10 @@ defaults:
 
 jobs:
   test:
-    name: exec-merge - Build and Test
+    name: Build and Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -39,8 +41,17 @@ jobs:
       - name: Run linter
         run: npm run lint
 
-      - name: Run tests
-        run: npm test
+      - name: Run tests with coverage
+        run: npm test -- --coverage 2>&1 | tee coverage-output.txt
+
+      - name: Report coverage to summary
+        run: |
+          echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -A 100 "Coverage report" coverage-output.txt | head -20 >> $GITHUB_STEP_SUMMARY || echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          rm -f coverage-output.txt
 
       - name: Build action
         run: npm run build

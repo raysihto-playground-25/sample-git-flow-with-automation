@@ -638,7 +638,7 @@ describe('countUnresolvedThreads', () => {
   it('should count unresolved threads across pages', async () => {
     const octokit = createMockOctokit();
     let callCount = 0;
-    (octokit.graphql as MockedFunction<typeof octokit.graphql>).mockImplementation(async () => {
+    (octokit.graphql as unknown as MockedFunction<typeof octokit.graphql>).mockImplementation(async () => {
       callCount++;
       if (callCount === 1) {
         return {
@@ -834,7 +834,7 @@ describe('execMerge', () => {
       const octokit = createMockOctokit();
 
       // Mock approved review from another user
-      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
           state: 'APPROVED',
@@ -856,7 +856,7 @@ describe('execMerge', () => {
       const octokit = createMockOctokit();
 
       // No approved reviews
-      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
 
       const context = createEventContext();
       const config = createConfig();
@@ -893,7 +893,7 @@ describe('execMerge', () => {
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock approved review on OLD commit (stale)
-      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
           state: 'APPROVED',
@@ -943,7 +943,7 @@ describe('execMerge', () => {
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock approved review on OLD commit (stale)
-      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
           state: 'APPROVED',
@@ -965,9 +965,10 @@ describe('execMerge', () => {
       // Should post comment about dismiss failure
       expect(octokit.rest.issues.createComment).toHaveBeenCalled();
       const commentCalls = (octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>).mock.calls;
-      const hasFailureComment = commentCalls.some(call =>
-        call[0].body?.includes('Failed to dismiss') || call[0].body?.includes('Dismiss failures')
-      );
+      const hasFailureComment = commentCalls.some(call => {
+        const body = call[0]?.body;
+        return body?.includes('Failed to dismiss') || body?.includes('Dismiss failures');
+      });
       expect(hasFailureComment).toBe(true);
 
       // Should fail because no valid approvals
@@ -1006,7 +1007,7 @@ describe('execMerge', () => {
       });
 
       // Mock valid approval
-      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
           state: 'APPROVED',
@@ -1059,7 +1060,7 @@ describe('execMerge', () => {
       });
 
       // Mock valid approval
-      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
           state: 'APPROVED',
@@ -1111,7 +1112,7 @@ describe('execMerge', () => {
       });
 
       // Mock valid approval
-      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
           state: 'APPROVED',
@@ -1157,7 +1158,7 @@ describe('execMerge', () => {
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock valid approval
-      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
           state: 'APPROVED',
@@ -1178,7 +1179,7 @@ describe('execMerge', () => {
       const octokit = createMockOctokit();
 
       // Mock valid approval
-      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
           state: 'APPROVED',
