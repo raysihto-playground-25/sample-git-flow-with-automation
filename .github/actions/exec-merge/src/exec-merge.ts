@@ -153,6 +153,11 @@ export const TWEMOJI = {
 } as const;
 
 /**
+ * Maximum number of unresolved thread links to display in failure comments.
+ */
+export const MAX_UNRESOLVED_LINKS = 10;
+
+/**
  * Valid author associations that can use the /exec merge command.
  * Why: Only trusted users with write access should be able to trigger merges.
  * OWNER/MEMBER have org-level trust, COLLABORATOR has explicit repo access.
@@ -347,6 +352,20 @@ export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
  */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Builds a markdown link for a commit SHA.
+ * 
+ * @param sha - Full commit SHA
+ * @param serverUrl - GitHub server URL (e.g., "https://github.com")
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @returns Markdown link with shortened SHA
+ */
+export function buildCommitLink(sha: string, serverUrl: string, owner: string, repo: string): string {
+  const shortSha = sha.slice(0, 7);
+  return `[\`${shortSha}\`](${serverUrl}/${owner}/${repo}/commit/${sha})`;
 }
 
 // =============================================================================
@@ -869,12 +888,12 @@ export async function execMerge(
     let unresolvedThreadsInfo = '';
     if (unresolvedResult.count > 0 && unresolvedResult.threads.length > 0) {
       const threadLinks = unresolvedResult.threads
-        .slice(0, 10) // Limit to 10 links to avoid overly long comments
+        .slice(0, MAX_UNRESOLVED_LINKS)
         .map((thread, index) => `  - [Comment ${index + 1}](${thread.url})`)
         .join('\n');
       unresolvedThreadsInfo = `\n\n### Unresolved Conversations\n\n${threadLinks}`;
-      if (unresolvedResult.threads.length > 10) {
-        unresolvedThreadsInfo += `\n  - ... and ${unresolvedResult.threads.length - 10} more`;
+      if (unresolvedResult.threads.length > MAX_UNRESOLVED_LINKS) {
+        unresolvedThreadsInfo += `\n  - ... and ${unresolvedResult.threads.length - MAX_UNRESOLVED_LINKS} more`;
       }
     }
 
@@ -976,13 +995,11 @@ export async function execMerge(
   }
 
   // Post success comment with clickable links
-  const headShaShort = originalHeadSha.slice(0, 7);
-  const headShaLink = `[\`${headShaShort}\`](${context.serverUrl}/${owner}/${repo}/commit/${originalHeadSha})`;
+  const headShaLink = buildCommitLink(originalHeadSha, context.serverUrl, owner, repo);
   
   let mergeCommitInfo = '';
   if (mergeResult.mergeCommitSha) {
-    const mergeCommitShort = mergeResult.mergeCommitSha.slice(0, 7);
-    const mergeCommitLink = `[\`${mergeCommitShort}\`](${context.serverUrl}/${owner}/${repo}/commit/${mergeResult.mergeCommitSha})`;
+    const mergeCommitLink = buildCommitLink(mergeResult.mergeCommitSha, context.serverUrl, owner, repo);
     mergeCommitInfo = `\n- **Merge Commit SHA:** ${mergeCommitLink}`;
   }
 

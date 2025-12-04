@@ -132,6 +132,10 @@ export declare const TWEMOJI: {
     readonly CROSS: "<img src=\"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg\" width=\"20\" height=\"20\" alt=\"NG\">";
 };
 /**
+ * Maximum number of unresolved thread links to display in failure comments.
+ */
+export declare const MAX_UNRESOLVED_LINKS = 10;
+/**
  * Valid author associations that can use the /exec merge command.
  * Why: Only trusted users with write access should be able to trigger merges.
  * OWNER/MEMBER have org-level trust, COLLABORATOR has explicit repo access.
@@ -221,6 +225,16 @@ export declare function buildCheckResultsMarkdown(checks: CheckResult[]): string
  * @param ms - Milliseconds to sleep
  */
 export declare function sleep(ms: number): Promise<void>;
+/**
+ * Builds a markdown link for a commit SHA.
+ *
+ * @param sha - Full commit SHA
+ * @param serverUrl - GitHub server URL (e.g., "https://github.com")
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @returns Markdown link with shortened SHA
+ */
+export declare function buildCommitLink(sha: string, serverUrl: string, owner: string, repo: string): string;
 /**
  * Adds a reaction to a comment.
  *

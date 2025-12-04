@@ -16,8 +16,10 @@ import {
   validatePRState,
   getMergeableStateDescription,
   buildCheckResultsMarkdown,
+  buildCommitLink,
   TWEMOJI,
   COMMAND_REGEX,
+  MAX_UNRESOLVED_LINKS,
   type ExecMergeConfig,
   type PullRequestData,
   type CheckResult,
@@ -485,6 +487,46 @@ describe('COMMAND_REGEX', () => {
     for (const { input, expected } of testCases) {
       expect(COMMAND_REGEX.test(input)).toBe(expected);
     }
+  });
+});
+
+// =============================================================================
+// Tests for buildCommitLink
+// =============================================================================
+
+describe('buildCommitLink', () => {
+  it('should build a markdown link with shortened SHA', () => {
+    const result = buildCommitLink(
+      'abc1234567890fedcba',
+      'https://github.com',
+      'owner',
+      'repo'
+    );
+    expect(result).toBe('[`abc1234`](https://github.com/owner/repo/commit/abc1234567890fedcba)');
+  });
+
+  it('should handle GitHub Enterprise server URLs', () => {
+    const result = buildCommitLink(
+      'def5678901234567890',
+      'https://github.example.com',
+      'myorg',
+      'myrepo'
+    );
+    expect(result).toBe('[`def5678`](https://github.example.com/myorg/myrepo/commit/def5678901234567890)');
+  });
+});
+
+// =============================================================================
+// Tests for MAX_UNRESOLVED_LINKS constant
+// =============================================================================
+
+describe('MAX_UNRESOLVED_LINKS', () => {
+  it('should be a positive number', () => {
+    expect(MAX_UNRESOLVED_LINKS).toBeGreaterThan(0);
+  });
+
+  it('should be 10 by default', () => {
+    expect(MAX_UNRESOLVED_LINKS).toBe(10);
   });
 });
 
