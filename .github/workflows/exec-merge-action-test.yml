@@ -48,14 +48,14 @@ jobs:
         run: |
           echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          # Generate Markdown table from JSON coverage summary
+          # Generate Markdown table from JSON coverage summary with right-aligned numbers
           if [ -f coverage/coverage-summary.json ]; then
             echo "| Metric | Covered | Total | Percentage |" >> $GITHUB_STEP_SUMMARY
-            echo "|--------|---------|-------|------------|" >> $GITHUB_STEP_SUMMARY
-            jq -r '.total | "| Statements | \(.statements.covered) | \(.statements.total) | \(.statements.pct)% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
-            jq -r '.total | "| Branches | \(.branches.covered) | \(.branches.total) | \(.branches.pct)% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
-            jq -r '.total | "| Functions | \(.functions.covered) | \(.functions.total) | \(.functions.pct)% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
-            jq -r '.total | "| Lines | \(.lines.covered) | \(.lines.total) | \(.lines.pct)% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            echo "|:-------|--------:|------:|-----------:|" >> $GITHUB_STEP_SUMMARY
+            jq -r '.total.statements | "| Statements | \(.covered) | \(.total) | " + (.pct | tostring | split(".") | if length == 1 then .[0] + ".00" elif (.[1] | length) == 1 then .[0] + "." + .[1] + "0" else .[0] + "." + .[1][0:2] end) + "% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            jq -r '.total.branches | "| Branches | \(.covered) | \(.total) | " + (.pct | tostring | split(".") | if length == 1 then .[0] + ".00" elif (.[1] | length) == 1 then .[0] + "." + .[1] + "0" else .[0] + "." + .[1][0:2] end) + "% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            jq -r '.total.functions | "| Functions | \(.covered) | \(.total) | " + (.pct | tostring | split(".") | if length == 1 then .[0] + ".00" elif (.[1] | length) == 1 then .[0] + "." + .[1] + "0" else .[0] + "." + .[1][0:2] end) + "% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            jq -r '.total.lines | "| Lines | \(.covered) | \(.total) | " + (.pct | tostring | split(".") | if length == 1 then .[0] + ".00" elif (.[1] | length) == 1 then .[0] + "." + .[1] + "0" else .[0] + "." + .[1][0:2] end) + "% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
           else
             echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
           fi
