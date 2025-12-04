@@ -340,12 +340,13 @@ export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
 }
 
 /**
- * Delays execution for a specified number of milliseconds.
- * Used for retry intervals when waiting for mergeable status.
+ * Waits for a specified number of milliseconds before retrying.
+ * This is a custom utility function specific to exec-merge action,
+ * used for retry intervals when waiting for mergeable status.
  * 
- * @param ms - Milliseconds to delay
+ * @param ms - Milliseconds to wait
  */
-export function delayMs(ms: number): Promise<void> {
+export function waitBeforeRetryMs(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -873,7 +874,7 @@ export async function execMerge(
   // This typically happens on first fetch after PR update. We retry to wait for computation.
   let retries = 0;
   while (prData.mergeable === null && retries < config.mergeableRetryCount) {
-    await delayMs(config.mergeableRetryInterval * 1000);
+    await waitBeforeRetryMs(config.mergeableRetryInterval * 1000);
     prData = await fetchPullRequestData(octokit, owner, repo, prNumber);
     retries++;
 

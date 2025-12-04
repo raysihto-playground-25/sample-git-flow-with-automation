@@ -215,12 +215,13 @@ export declare function getMergeableStateDescription(state: string): string;
  */
 export declare function buildCheckResultsMarkdown(checks: CheckResult[]): string;
 /**
- * Delays execution for a specified number of milliseconds.
- * Used for retry intervals when waiting for mergeable status.
+ * Waits for a specified number of milliseconds before retrying.
+ * This is a custom utility function specific to exec-merge action,
+ * used for retry intervals when waiting for mergeable status.
  *
- * @param ms - Milliseconds to delay
+ * @param ms - Milliseconds to wait
  */
-export declare function delayMs(ms: number): Promise<void>;
+export declare function waitBeforeRetryMs(ms: number): Promise<void>;
 /**
  * Adds a reaction to a comment.
  *

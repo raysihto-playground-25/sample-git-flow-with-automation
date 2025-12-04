@@ -30,7 +30,7 @@ import {
   countUnresolvedThreads,
   mergePullRequest,
   execMerge,
-  delayMs,
+  waitBeforeRetryMs,
   type EventContext,
 } from './exec-merge';
 
@@ -490,13 +490,13 @@ describe('COMMAND_REGEX', () => {
 });
 
 // =============================================================================
-// Tests for delayMs function
+// Tests for waitBeforeRetryMs function
 // =============================================================================
 
-describe('delayMs', () => {
+describe('waitBeforeRetryMs', () => {
   it('should resolve after specified milliseconds', async () => {
     const start = Date.now();
-    await delayMs(50);
+    await waitBeforeRetryMs(50);
     const elapsed = Date.now() - start;
     // Allow some tolerance for timing
     expect(elapsed).toBeGreaterThanOrEqual(40);
@@ -505,7 +505,7 @@ describe('delayMs', () => {
 
   it('should resolve immediately for 0ms', async () => {
     const start = Date.now();
-    await delayMs(0);
+    await waitBeforeRetryMs(0);
     const elapsed = Date.now() - start;
     expect(elapsed).toBeLessThan(50);
   });
