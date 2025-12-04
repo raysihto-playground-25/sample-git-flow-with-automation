@@ -43,14 +43,19 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          npm test -- --coverage 2>&1 | tee /tmp/coverage-${{ github.run_id }}.txt
+          npm test -- --coverage | tee /tmp/coverage-${{ github.run_id }}.txt
 
       - name: Report coverage to summary
+        if: success()
         run: |
           echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          sed -n '/Coverage report/,/^$/p' /tmp/coverage-${{ github.run_id }}.txt | head -n -1 >> $GITHUB_STEP_SUMMARY
+          if [ -f /tmp/coverage-${{ github.run_id }}.txt ] && grep -q "Coverage report" /tmp/coverage-${{ github.run_id }}.txt; then
+            awk '/Coverage report/{found=1} found; found && /^-----------/ && ++count==3{exit}' /tmp/coverage-${{ github.run_id }}.txt >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
+          fi
           echo '```' >> $GITHUB_STEP_SUMMARY
           rm -f /tmp/coverage-${{ github.run_id }}.txt
 
