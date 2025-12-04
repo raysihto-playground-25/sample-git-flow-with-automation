@@ -73,9 +73,7 @@ jobs:
                   loc = sm.get(sid)
                   if loc:
                       start = loc['start']['line']
-                      end = loc['end'].get('line') if loc['end'] else start
-                      if end is None:
-                          end = start
+                      end = loc.get('end', {}).get('line', start)
                       uncovered_ranges.append((start, end))
           if not uncovered_ranges:
               sys.exit(0)
@@ -95,6 +93,9 @@ jobs:
           print(','.join(parts))
           PYEOF
             
+            # Helper function to format percentage with 2 decimal places
+            format_pct() { echo "$1" | awk '{if($1==100) print "100.00"; else printf "%.2f", $1}'; }
+            
             # Process each file to get metrics and uncovered lines
             jq -r 'to_entries | .[] | select(.key != "total") | .key' coverage/coverage-summary.json | while read -r filepath; do
               # Get file name from path
@@ -102,16 +103,10 @@ jobs:
               
               # Get metrics from coverage-summary.json
               metrics=$(jq -r --arg path "$filepath" '.[$path] | "\(.statements.pct)|\(.branches.pct)|\(.functions.pct)|\(.lines.pct)"' coverage/coverage-summary.json)
-              stmts_pct=$(echo "$metrics" | cut -d'|' -f1)
-              branch_pct=$(echo "$metrics" | cut -d'|' -f2)
-              funcs_pct=$(echo "$metrics" | cut -d'|' -f3)
-              lines_pct=$(echo "$metrics" | cut -d'|' -f4)
-              
-              # Format percentages (ensure 100 shows as 100.00)
-              stmts_pct=$(echo "$stmts_pct" | awk '{if($1==100) print "100.00"; else printf "%.2f", $1}')
-              branch_pct=$(echo "$branch_pct" | awk '{if($1==100) print "100.00"; else printf "%.2f", $1}')
-              funcs_pct=$(echo "$funcs_pct" | awk '{if($1==100) print "100.00"; else printf "%.2f", $1}')
-              lines_pct=$(echo "$lines_pct" | awk '{if($1==100) print "100.00"; else printf "%.2f", $1}')
+              stmts_pct=$(format_pct "$(echo "$metrics" | cut -d'|' -f1)")
+              branch_pct=$(format_pct "$(echo "$metrics" | cut -d'|' -f2)")
+              funcs_pct=$(format_pct "$(echo "$metrics" | cut -d'|' -f3)")
+              lines_pct=$(format_pct "$(echo "$metrics" | cut -d'|' -f4)")
               
               # Get uncovered lines from coverage-final.json
               uncovered_lines=$(python3 /tmp/get_uncovered.py "$filepath")
