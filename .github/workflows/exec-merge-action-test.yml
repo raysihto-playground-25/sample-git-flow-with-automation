@@ -1,0 +1,60 @@
+name: exec-merge-action-test
+
+# =============================================================================
+# Runs unit tests for the exec-merge TypeScript action
+# =============================================================================
+# This workflow ensures that:
+# 1. The TypeScript action compiles successfully
+# 2. All unit tests pass
+# 3. The action is ready for use
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - '.github/actions/exec-merge/**'
+
+defaults:
+  run:
+    working-directory: .github/actions/exec-merge
+
+jobs:
+  test:
+    name: exec-merge - Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '.github/actions/exec-merge/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build action
+        run: npm run build
+
+      - name: Verify dist is up to date
+        run: |
+          # Check if dist/ directory exists and has changes
+          if [ -d "dist" ] && [ -n "$(git status --porcelain dist/)" ]; then
+            echo "::error::dist/ directory is out of date. Run 'npm run build' and commit the changes."
+            git diff dist/
+            exit 1
+          fi
+          # If dist/ doesn't exist after build, that's also an error
+          if [ ! -d "dist" ]; then
+            echo "::error::dist/ directory was not created by the build. Check the build configuration."
+            exit 1
+          fi

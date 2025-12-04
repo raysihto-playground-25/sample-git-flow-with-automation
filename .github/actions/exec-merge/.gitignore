@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output (keep dist/ since it's needed for the action to work)
+# dist/
+
+# Test coverage
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
