@@ -48,19 +48,78 @@ jobs:
         run: |
           echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          # Generate Markdown table from JSON coverage summary with right-aligned numbers
-          if [ -f coverage/coverage-summary.json ]; then
-            echo "| Metric | Covered | Total | Percentage |" >> $GITHUB_STEP_SUMMARY
-            echo "|:-------|--------:|------:|-----------:|" >> $GITHUB_STEP_SUMMARY
-            jq -r '.total as $t | [
-              ["Statements", $t.statements.covered, $t.statements.total, $t.statements.pct],
-              ["Branches",   $t.branches.covered,   $t.branches.total,   $t.branches.pct],
-              ["Functions",  $t.functions.covered,  $t.functions.total,  $t.functions.pct],
-              ["Lines",      $t.lines.covered,      $t.lines.total,      $t.lines.pct]
-            ][] | @tsv' coverage/coverage-summary.json | \
-              while IFS=$'\t' read -r metric covered total pct; do
-                printf "| %s | %d | %d | %.2f%% |\n" "$metric" "$covered" "$total" "$pct"
-              done >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f coverage/coverage-summary.json ] && [ -f coverage/coverage-final.json ]; then
+            # Generate Markdown table matching text coverage format
+            echo "| File | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s |" >> $GITHUB_STEP_SUMMARY
+            echo "|:-----|--------:|---------:|--------:|--------:|:------------------|" >> $GITHUB_STEP_SUMMARY
+            
+            # Output All files (total) row
+            jq -r '.total | "| All files | \(.statements.pct | tostring | if . == "100" then "100.00" else . end) | \(.branches.pct | tostring | if . == "100" then "100.00" else . end) | \(.functions.pct | tostring | if . == "100" then "100.00" else . end) | \(.lines.pct | tostring | if . == "100" then "100.00" else . end) | |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            
+            # Create Python script for extracting uncovered lines
+            cat > /tmp/get_uncovered.py << 'PYEOF'
+          import json, sys
+          with open('coverage/coverage-final.json') as f:
+              d = json.load(f)
+          filepath = sys.argv[1] if len(sys.argv) > 1 else ""
+          if filepath not in d:
+              sys.exit(0)
+          sm = d[filepath]['statementMap']
+          s = d[filepath]['s']
+          uncovered_ranges = []
+          for sid, count in s.items():
+              if count == 0:
+                  loc = sm.get(sid)
+                  if loc:
+                      start = loc['start']['line']
+                      end = loc['end'].get('line') if loc['end'] else start
+                      if end is None:
+                          end = start
+                      uncovered_ranges.append((start, end))
+          if not uncovered_ranges:
+              sys.exit(0)
+          uncovered_ranges.sort()
+          merged = []
+          for start, end in uncovered_ranges:
+              if merged and start <= merged[-1][1] + 1:
+                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+              else:
+                  merged.append((start, end))
+          parts = []
+          for start, end in merged:
+              if start == end:
+                  parts.append(str(start))
+              else:
+                  parts.append(f'{start}-{end}')
+          print(','.join(parts))
+          PYEOF
+            
+            # Process each file to get metrics and uncovered lines
+            jq -r 'to_entries | .[] | select(.key != "total") | .key' coverage/coverage-summary.json | while read -r filepath; do
+              # Get file name from path
+              filename=$(basename "$filepath")
+              
+              # Get metrics from coverage-summary.json
+              metrics=$(jq -r --arg path "$filepath" '.[$path] | "\(.statements.pct)|\(.branches.pct)|\(.functions.pct)|\(.lines.pct)"' coverage/coverage-summary.json)
+              stmts_pct=$(echo "$metrics" | cut -d'|' -f1)
+              branch_pct=$(echo "$metrics" | cut -d'|' -f2)
+              funcs_pct=$(echo "$metrics" | cut -d'|' -f3)
+              lines_pct=$(echo "$metrics" | cut -d'|' -f4)
+              
+              # Format percentages (ensure 100 shows as 100.00)
+              stmts_pct=$(echo "$stmts_pct" | awk '{if($1==100) print "100.00"; else printf "%.2f", $1}')
+              branch_pct=$(echo "$branch_pct" | awk '{if($1==100) print "100.00"; else printf "%.2f", $1}')
+              funcs_pct=$(echo "$funcs_pct" | awk '{if($1==100) print "100.00"; else printf "%.2f", $1}')
+              lines_pct=$(echo "$lines_pct" | awk '{if($1==100) print "100.00"; else printf "%.2f", $1}')
+              
+              # Get uncovered lines from coverage-final.json
+              uncovered_lines=$(python3 /tmp/get_uncovered.py "$filepath")
+              
+              echo "| $filename | $stmts_pct | $branch_pct | $funcs_pct | $lines_pct | $uncovered_lines |" >> $GITHUB_STEP_SUMMARY
+            done
+            
+            rm -f /tmp/get_uncovered.py
           else
             echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
           fi
