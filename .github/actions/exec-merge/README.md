@@ -36,14 +36,15 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/exec-merge
+      - uses: {ORG}/{REPO}/.github/actions/exec-merge@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           release_branch_prefix: "release/"
           develop_branch: "develop"
           sync_branch_prefix: "fix/sync/"
 ```
+
+> **Note:** Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
 
 ## Inputs
 
