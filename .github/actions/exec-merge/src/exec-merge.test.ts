@@ -30,6 +30,7 @@ import {
   countUnresolvedThreads,
   mergePullRequest,
   execMerge,
+  sleep,
   type EventContext,
 } from './exec-merge';
 
@@ -489,6 +490,28 @@ describe('COMMAND_REGEX', () => {
 });
 
 // =============================================================================
+// Tests for sleep function
+// =============================================================================
+
+describe('sleep', () => {
+  it('should resolve after specified milliseconds', async () => {
+    const start = Date.now();
+    await sleep(50);
+    const elapsed = Date.now() - start;
+    // Allow some tolerance for timing
+    expect(elapsed).toBeGreaterThanOrEqual(40);
+    expect(elapsed).toBeLessThan(200);
+  });
+
+  it('should resolve immediately for 0ms', async () => {
+    const start = Date.now();
+    await sleep(0);
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeLessThan(50);
+  });
+});
+
+// =============================================================================
 // Tests for GitHub API Functions (with mocks)
 // =============================================================================
 
@@ -842,6 +865,340 @@ describe('execMerge', () => {
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('checks failed');
+    });
+
+    it('dismisses stale approvals and posts notification', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock PR with current HEAD
+      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+        data: {
+          state: 'open',
+          locked: false,
+          draft: false,
+          merged: false,
+          mergeable: true,
+          mergeable_state: 'clean',
+          head: {
+            sha: 'currenthead123',
+            ref: 'feature/test',
+            repo: { fork: false, owner: { id: 1 } },
+          },
+          base: {
+            ref: 'develop',
+            repo: { owner: { id: 1 } },
+          },
+          user: { login: 'testuser' },
+        },
+      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
+
+      // Mock approved review on OLD commit (stale)
+      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'oldcommit456', // Different from currenthead123
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await execMerge(octokit, context, config);
+
+      // Should dismiss the stale review
+      expect(octokit.rest.pulls.dismissReview).toHaveBeenCalled();
+
+      // Should post comment about stale dismissal
+      expect(octokit.rest.issues.createComment).toHaveBeenCalled();
+
+      // Should fail because no valid approvals remain
+      expect(result.status).toBe('failed');
+    });
+
+    it('handles dismiss failure and posts notification', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock PR with current HEAD
+      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+        data: {
+          state: 'open',
+          locked: false,
+          draft: false,
+          merged: false,
+          mergeable: true,
+          mergeable_state: 'clean',
+          head: {
+            sha: 'currenthead123',
+            ref: 'feature/test',
+            repo: { fork: false, owner: { id: 1 } },
+          },
+          base: {
+            ref: 'develop',
+            repo: { owner: { id: 1 } },
+          },
+          user: { login: 'testuser' },
+        },
+      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
+
+      // Mock approved review on OLD commit (stale)
+      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'oldcommit456',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      // Mock dismissReview to fail
+      (octokit.rest.pulls.dismissReview as MockedFunction<typeof octokit.rest.pulls.dismissReview>).mockRejectedValue(
+        new Error('Forbidden')
+      );
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await execMerge(octokit, context, config);
+
+      // Should post comment about dismiss failure
+      expect(octokit.rest.issues.createComment).toHaveBeenCalled();
+      const commentCalls = (octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>).mock.calls;
+      const hasFailureComment = commentCalls.some(call =>
+        call[0].body?.includes('Failed to dismiss') || call[0].body?.includes('Dismiss failures')
+      );
+      expect(hasFailureComment).toBe(true);
+
+      // Should fail because no valid approvals
+      expect(result.status).toBe('failed');
+    });
+  });
+
+  describe('TOCTOU and mergeability handling', () => {
+    it('detects TOCTOU violation when HEAD changes during validation', async () => {
+      const octokit = createMockOctokit();
+      let callCount = 0;
+
+      // First call returns original HEAD, second call returns different HEAD
+      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockImplementation(async () => {
+        callCount++;
+        return {
+          data: {
+            state: 'open',
+            locked: false,
+            draft: false,
+            merged: false,
+            mergeable: true,
+            mergeable_state: 'clean',
+            head: {
+              sha: callCount === 1 ? 'original123' : 'newhead456', // SHA changes on second call
+              ref: 'feature/test',
+              repo: { fork: false, owner: { id: 1 } },
+            },
+            base: {
+              ref: 'develop',
+              repo: { owner: { id: 1 } },
+            },
+            user: { login: 'testuser' },
+          },
+        } as Awaited<ReturnType<typeof octokit.rest.pulls.get>>;
+      });
+
+      // Mock valid approval
+      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'original123',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await execMerge(octokit, context, config);
+
+      expect(result.status).toBe('failed');
+      expect(result.message).toContain('TOCTOU');
+    });
+
+    it('handles mergeable=null with retry and succeeds', async () => {
+      const octokit = createMockOctokit();
+      let callCount = 0;
+
+      // First call returns clean state to pass initial checks
+      // Subsequent calls during TOCTOU/retry phase simulate null -> true transition
+      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockImplementation(async () => {
+        callCount++;
+        // First call: pass initial checks with clean state
+        // Later calls (for TOCTOU + retry): transition from null to true
+        const isInitialCheck = callCount === 1;
+        const isPostRetry = callCount >= 4;
+        return {
+          data: {
+            state: 'open',
+            locked: false,
+            draft: false,
+            merged: false,
+            mergeable: isInitialCheck || isPostRetry ? true : null,
+            mergeable_state: isInitialCheck || isPostRetry ? 'clean' : 'unknown',
+            head: {
+              sha: 'abc1234567890',
+              ref: 'feature/test',
+              repo: { fork: false, owner: { id: 1 } },
+            },
+            base: {
+              ref: 'develop',
+              repo: { owner: { id: 1 } },
+            },
+            user: { login: 'testuser' },
+          },
+        } as Awaited<ReturnType<typeof octokit.rest.pulls.get>>;
+      });
+
+      // Mock valid approval
+      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig({
+        mergeableRetryCount: 5,
+        mergeableRetryInterval: 0, // No delay in tests
+      });
+
+      const result = await execMerge(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+    });
+
+    it('fails when mergeable remains null after retries', async () => {
+      const octokit = createMockOctokit();
+      let callCount = 0;
+
+      // First call returns clean to pass initial checks
+      // Subsequent calls return null to test retry failure
+      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockImplementation(async () => {
+        callCount++;
+        const isInitialCheck = callCount === 1;
+        return {
+          data: {
+            state: 'open',
+            locked: false,
+            draft: false,
+            merged: false,
+            mergeable: isInitialCheck ? true : null,
+            mergeable_state: isInitialCheck ? 'clean' : 'unknown',
+            head: {
+              sha: 'abc1234567890',
+              ref: 'feature/test',
+              repo: { fork: false, owner: { id: 1 } },
+            },
+            base: {
+              ref: 'develop',
+              repo: { owner: { id: 1 } },
+            },
+            user: { login: 'testuser' },
+          },
+        } as Awaited<ReturnType<typeof octokit.rest.pulls.get>>;
+      });
+
+      // Mock valid approval
+      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig({
+        mergeableRetryCount: 2, // Low retry count
+        mergeableRetryInterval: 0,
+      });
+
+      const result = await execMerge(octokit, context, config);
+
+      expect(result.status).toBe('failed');
+      expect(result.message).toContain('Not mergeable');
+    });
+
+    it('fails when PR has dirty mergeable state (conflicts)', async () => {
+      const octokit = createMockOctokit();
+
+      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+        data: {
+          state: 'open',
+          locked: false,
+          draft: false,
+          merged: false,
+          mergeable: false,
+          mergeable_state: 'dirty',
+          head: {
+            sha: 'abc1234567890',
+            ref: 'feature/test',
+            repo: { fork: false, owner: { id: 1 } },
+          },
+          base: {
+            ref: 'develop',
+            repo: { owner: { id: 1 } },
+          },
+          user: { login: 'testuser' },
+        },
+      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
+
+      // Mock valid approval
+      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await execMerge(octokit, context, config);
+
+      expect(result.status).toBe('failed');
+    });
+
+    it('handles merge API failure', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock valid approval
+      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      // Mock merge to fail
+      (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mockRejectedValue(
+        new Error('Merge conflict')
+      );
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await execMerge(octokit, context, config);
+
+      expect(result.status).toBe('failed');
+      expect(result.message).toContain('Merge failed');
     });
   });
 });
