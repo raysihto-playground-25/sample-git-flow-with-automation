@@ -284,6 +284,22 @@ export declare function fetchApprovedReviews(octokit: Octokit, owner: string, re
  */
 export declare function dismissReview(octokit: Octokit, owner: string, repo: string, prNumber: number, reviewId: number, message: string): Promise<boolean>;
 /**
+ * Information about an unresolved thread including link to the latest comment.
+ */
+export interface UnresolvedThreadInfo {
+    /** URL to the latest comment in the thread */
+    url: string;
+}
+/**
+ * Result of counting unresolved threads.
+ */
+export interface UnresolvedThreadsResult {
+    /** Number of unresolved threads */
+    count: number;
+    /** Information about each unresolved thread (up to a reasonable limit) */
+    threads: UnresolvedThreadInfo[];
+}
+/**
  * Counts unresolved review threads using GraphQL.
  * Why: REST API doesn't provide review thread resolution status, GraphQL is required.
  * Note: Counts ALL unresolved threads including outdated ones, matching GitHub's
@@ -293,9 +309,9 @@ export declare function dismissReview(octokit: Octokit, owner: string, repo: str
  * @param owner - Repository owner
  * @param repo - Repository name
  * @param prNumber - PR number
- * @returns Number of unresolved threads
+ * @returns Number of unresolved threads and their latest comment URLs
  */
-export declare function countUnresolvedThreads(octokit: Octokit, owner: string, repo: string, prNumber: number): Promise<number>;
+export declare function countUnresolvedThreads(octokit: Octokit, owner: string, repo: string, prNumber: number): Promise<UnresolvedThreadsResult>;
 /**
  * Performs the merge operation.
  *
@@ -306,11 +322,12 @@ export declare function countUnresolvedThreads(octokit: Octokit, owner: string, 
  * @param method - Merge method (squash or merge)
  * @param sha - Expected head SHA for TOCTOU check
  * @param commitMessage - Additional commit message
- * @returns true if merge succeeded
+ * @returns Object containing success status, error message, and merge commit SHA
  */
 export declare function mergePullRequest(octokit: Octokit, owner: string, repo: string, prNumber: number, method: 'squash' | 'merge', sha: string, commitMessage: string): Promise<{
     success: boolean;
     error?: string;
+    mergeCommitSha?: string;
 }>;
 /**
  * Main function that orchestrates the exec-merge operation.

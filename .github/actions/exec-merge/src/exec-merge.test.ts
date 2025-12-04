@@ -111,7 +111,7 @@ function createMockOctokit(): Octokit {
         }),
         listReviews: vi.fn().mockResolvedValue({ data: [] }),
         dismissReview: vi.fn().mockResolvedValue({}),
-        merge: vi.fn().mockResolvedValue({}),
+        merge: vi.fn().mockResolvedValue({ data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' } }),
       },
     },
     paginate: vi.fn().mockResolvedValue([]),
@@ -623,7 +623,10 @@ describe('countUnresolvedThreads', () => {
             pullRequest: {
               reviewThreads: {
                 pageInfo: { hasNextPage: true, endCursor: 'cursor1' },
-                nodes: [{ isResolved: false }, { isResolved: true }],
+                nodes: [
+                  { isResolved: false, comments: { nodes: [{ url: 'https://github.com/owner/repo/pull/1#discussion_r1' }] } },
+                  { isResolved: true, comments: { nodes: [{ url: 'https://github.com/owner/repo/pull/1#discussion_r2' }] } },
+                ],
               },
             },
           },
@@ -634,15 +637,20 @@ describe('countUnresolvedThreads', () => {
           pullRequest: {
             reviewThreads: {
               pageInfo: { hasNextPage: false, endCursor: null },
-              nodes: [{ isResolved: false }],
+              nodes: [
+                { isResolved: false, comments: { nodes: [{ url: 'https://github.com/owner/repo/pull/1#discussion_r3' }] } },
+              ],
             },
           },
         },
       };
     });
 
-    const count = await countUnresolvedThreads(octokit, 'owner', 'repo', 1);
-    expect(count).toBe(2);
+    const result = await countUnresolvedThreads(octokit, 'owner', 'repo', 1);
+    expect(result.count).toBe(2);
+    expect(result.threads).toHaveLength(2);
+    expect(result.threads[0].url).toBe('https://github.com/owner/repo/pull/1#discussion_r1');
+    expect(result.threads[1].url).toBe('https://github.com/owner/repo/pull/1#discussion_r3');
   });
 });
 
@@ -660,6 +668,7 @@ describe('mergePullRequest', () => {
     );
 
     expect(result.success).toBe(true);
+    expect(result.mergeCommitSha).toBe('merge123456789');
   });
 
   it('should return error message on failure', async () => {

@@ -533,6 +533,24 @@ export async function dismissReview(
 }
 
 /**
+ * Information about an unresolved thread including link to the latest comment.
+ */
+export interface UnresolvedThreadInfo {
+  /** URL to the latest comment in the thread */
+  url: string;
+}
+
+/**
+ * Result of counting unresolved threads.
+ */
+export interface UnresolvedThreadsResult {
+  /** Number of unresolved threads */
+  count: number;
+  /** Information about each unresolved thread (up to a reasonable limit) */
+  threads: UnresolvedThreadInfo[];
+}
+
+/**
  * Counts unresolved review threads using GraphQL.
  * Why: REST API doesn't provide review thread resolution status, GraphQL is required.
  * Note: Counts ALL unresolved threads including outdated ones, matching GitHub's
@@ -542,15 +560,16 @@ export async function dismissReview(
  * @param owner - Repository owner
  * @param repo - Repository name
  * @param prNumber - PR number
- * @returns Number of unresolved threads
+ * @returns Number of unresolved threads and their latest comment URLs
  */
 export async function countUnresolvedThreads(
   octokit: Octokit,
   owner: string,
   repo: string,
   prNumber: number
-): Promise<number> {
+): Promise<UnresolvedThreadsResult> {
   let unresolvedCount = 0;
+  const unresolvedThreads: UnresolvedThreadInfo[] = [];
   let hasNextPage = true;
   let cursor: string | null = null;
 
@@ -565,6 +584,11 @@ export async function countUnresolvedThreads(
             }
             nodes {
               isResolved
+              comments(last: 1) {
+                nodes {
+                  url
+                }
+              }
             }
           }
         }
@@ -578,7 +602,10 @@ export async function countUnresolvedThreads(
         pullRequest: {
           reviewThreads: {
             pageInfo: { hasNextPage: boolean; endCursor: string | null };
-            nodes: Array<{ isResolved: boolean }>;
+            nodes: Array<{
+              isResolved: boolean;
+              comments: { nodes: Array<{ url: string }> };
+            }>;
           };
         };
       };
@@ -590,12 +617,20 @@ export async function countUnresolvedThreads(
     });
 
     const threads = response.repository.pullRequest.reviewThreads;
-    unresolvedCount += threads.nodes.filter((n) => !n.isResolved).length;
+    for (const node of threads.nodes) {
+      if (!node.isResolved) {
+        unresolvedCount++;
+        const latestComment = node.comments.nodes[0];
+        if (latestComment?.url) {
+          unresolvedThreads.push({ url: latestComment.url });
+        }
+      }
+    }
     hasNextPage = threads.pageInfo.hasNextPage;
     cursor = threads.pageInfo.endCursor;
   }
 
-  return unresolvedCount;
+  return { count: unresolvedCount, threads: unresolvedThreads };
 }
 
 /**
@@ -608,7 +643,7 @@ export async function countUnresolvedThreads(
  * @param method - Merge method (squash or merge)
  * @param sha - Expected head SHA for TOCTOU check
  * @param commitMessage - Additional commit message
- * @returns true if merge succeeded
+ * @returns Object containing success status, error message, and merge commit SHA
  */
 export async function mergePullRequest(
   octokit: Octokit,
@@ -618,9 +653,9 @@ export async function mergePullRequest(
   method: 'squash' | 'merge',
   sha: string,
   commitMessage: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; mergeCommitSha?: string }> {
   try {
-    await octokit.rest.pulls.merge({
+    const response = await octokit.rest.pulls.merge({
       owner,
       repo,
       pull_number: prNumber,
@@ -628,7 +663,7 @@ export async function mergePullRequest(
       sha,
       commit_message: commitMessage,
     });
-    return { success: true };
+    return { success: true, mergeCommitSha: response.data.sha };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: message };
@@ -794,11 +829,11 @@ export async function execMerge(
   });
 
   // Unresolved threads check
-  const unresolvedCount = await countUnresolvedThreads(octokit, owner, repo, prNumber);
+  const unresolvedResult = await countUnresolvedThreads(octokit, owner, repo, prNumber);
   checks.push({
     name: 'All review conversations are resolved',
-    passed: unresolvedCount === 0,
-    details: unresolvedCount > 0 ? `${unresolvedCount} unresolved` : undefined,
+    passed: unresolvedResult.count === 0,
+    details: unresolvedResult.count > 0 ? `${unresolvedResult.count} unresolved` : undefined,
   });
 
   // Merge conflicts check (based on mergeable_state)
@@ -830,12 +865,25 @@ export async function execMerge(
   // -------------------------------------------------------------------------
 
   if (!allPassed) {
+    // Build additional information for unresolved threads
+    let unresolvedThreadsInfo = '';
+    if (unresolvedResult.count > 0 && unresolvedResult.threads.length > 0) {
+      const threadLinks = unresolvedResult.threads
+        .slice(0, 10) // Limit to 10 links to avoid overly long comments
+        .map((thread, index) => `  - [Comment ${index + 1}](${thread.url})`)
+        .join('\n');
+      unresolvedThreadsInfo = `\n\n### Unresolved Conversations\n\n${threadLinks}`;
+      if (unresolvedResult.threads.length > 10) {
+        unresolvedThreadsInfo += `\n  - ... and ${unresolvedResult.threads.length - 10} more`;
+      }
+    }
+
     await postComment(
       octokit,
       owner,
       repo,
       prNumber,
-      `## Merge checks failed\n\nThe following checks must pass before merging:\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`
+      `## Merge checks failed\n\nThe following checks must pass before merging:\n\n${checksMarkdown}${unresolvedThreadsInfo}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`
     );
     return { status: 'failed', message: 'Merge checks failed' };
   }
@@ -927,13 +975,23 @@ export async function execMerge(
     return { status: 'failed', message: `Merge failed: ${mergeResult.error}` };
   }
 
-  // Post success comment
+  // Post success comment with clickable links
+  const headShaShort = originalHeadSha.slice(0, 7);
+  const headShaLink = `[\`${headShaShort}\`](${context.serverUrl}/${owner}/${repo}/commit/${originalHeadSha})`;
+  
+  let mergeCommitInfo = '';
+  if (mergeResult.mergeCommitSha) {
+    const mergeCommitShort = mergeResult.mergeCommitSha.slice(0, 7);
+    const mergeCommitLink = `[\`${mergeCommitShort}\`](${context.serverUrl}/${owner}/${repo}/commit/${mergeResult.mergeCommitSha})`;
+    mergeCommitInfo = `\n- **Merge Commit SHA:** ${mergeCommitLink}`;
+  }
+
   await postComment(
     octokit,
     owner,
     repo,
     prNumber,
-    `## Merged by exec-merge\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** \`${originalHeadSha.slice(0, 7)}\``
+    `## Merged by exec-merge\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** ${headShaLink}${mergeCommitInfo}`
   );
 
   return {
