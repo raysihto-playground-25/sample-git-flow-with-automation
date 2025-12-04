@@ -42,18 +42,23 @@ jobs:
         run: npm run lint
 
       - name: Run tests with coverage
-        run: npm test -- --coverage 2>&1 | tee coverage-output.txt
+        run: npm test -- --coverage
 
       - name: Report coverage to summary
         run: |
           echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          # Extract coverage table and remove ANSI escape sequences
-          COVERAGE=$(grep -A 100 "Coverage report" coverage-output.txt | head -20 | sed 's/\x1b\[[0-9;]*m//g')
-          echo "$COVERAGE" >> $GITHUB_STEP_SUMMARY || echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          rm -f coverage-output.txt
+          # Generate Markdown table from JSON coverage summary
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "| Metric | Covered | Total | Percentage |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|---------|-------|------------|" >> $GITHUB_STEP_SUMMARY
+            jq -r '.total | "| Statements | \(.statements.covered) | \(.statements.total) | \(.statements.pct)% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            jq -r '.total | "| Branches | \(.branches.covered) | \(.branches.total) | \(.branches.pct)% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            jq -r '.total | "| Functions | \(.functions.covered) | \(.functions.total) | \(.functions.pct)% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            jq -r '.total | "| Lines | \(.lines.covered) | \(.lines.total) | \(.lines.pct)% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Build action
         run: npm run build
