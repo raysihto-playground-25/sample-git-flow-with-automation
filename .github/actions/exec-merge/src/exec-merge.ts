@@ -608,7 +608,7 @@ export async function countUnresolvedThreads(
  * @param method - Merge method (squash or merge)
  * @param sha - Expected head SHA for TOCTOU check
  * @param commitMessage - Additional commit message
- * @returns true if merge succeeded
+ * @returns Object containing success status, error message, and merge commit SHA
  */
 export async function mergePullRequest(
   octokit: Octokit,
@@ -618,9 +618,9 @@ export async function mergePullRequest(
   method: 'squash' | 'merge',
   sha: string,
   commitMessage: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; mergeCommitSha?: string }> {
   try {
-    await octokit.rest.pulls.merge({
+    const response = await octokit.rest.pulls.merge({
       owner,
       repo,
       pull_number: prNumber,
@@ -628,7 +628,7 @@ export async function mergePullRequest(
       sha,
       commit_message: commitMessage,
     });
-    return { success: true };
+    return { success: true, mergeCommitSha: response.data.sha };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: message };
@@ -760,7 +760,7 @@ export async function execMerge(
       const dismissed = await dismissReview(octokit, owner, repo, prNumber, review.id, message);
       if (dismissed) {
         staleMessages.push(
-          `- Dismissed approval from @${review.user?.login} (reviewed commit: \`${review.commit_id?.slice(0, 7)}\`, current HEAD: \`${prData.headSha.slice(0, 7)}\`)`
+          `- Dismissed approval from @${review.user?.login} (reviewed commit: ${review.commit_id}, current HEAD: ${prData.headSha})`
         );
       } else {
         dismissFailures.push(
@@ -864,7 +864,7 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      `## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: \`${originalHeadSha.slice(0, 7)}\`\n- Current HEAD SHA: \`${prData.headSha.slice(0, 7)}\`\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`
+      `## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: ${originalHeadSha}\n- Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`
     );
     return { status: 'failed', message: 'TOCTOU violation' };
   }
@@ -884,7 +884,7 @@ export async function execMerge(
         owner,
         repo,
         prNumber,
-        `## New commits detected\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: \`${originalHeadSha.slice(0, 7)}\`\n- Current HEAD SHA: \`${prData.headSha.slice(0, 7)}\`\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`
+        `## New commits detected\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: ${originalHeadSha}\n- Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`
       );
       return { status: 'failed', message: 'TOCTOU violation during retry' };
     }
@@ -927,13 +927,18 @@ export async function execMerge(
     return { status: 'failed', message: `Merge failed: ${mergeResult.error}` };
   }
 
-  // Post success comment
+  // Post success comment with commit SHAs (GitHub auto-links them)
+  let mergeCommitInfo = '';
+  if (mergeResult.mergeCommitSha) {
+    mergeCommitInfo = `\n- **Merge Commit SHA:** ${mergeResult.mergeCommitSha}`;
+  }
+
   await postComment(
     octokit,
     owner,
     repo,
     prNumber,
-    `## Merged by exec-merge\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** \`${originalHeadSha.slice(0, 7)}\``
+    `## Merged by exec-merge\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** ${originalHeadSha}${mergeCommitInfo}`
   );
 
   return {

@@ -306,11 +306,12 @@ export declare function countUnresolvedThreads(octokit: Octokit, owner: string, 
  * @param method - Merge method (squash or merge)
  * @param sha - Expected head SHA for TOCTOU check
  * @param commitMessage - Additional commit message
- * @returns true if merge succeeded
+ * @returns Object containing success status, error message, and merge commit SHA
  */
 export declare function mergePullRequest(octokit: Octokit, owner: string, repo: string, prNumber: number, method: 'squash' | 'merge', sha: string, commitMessage: string): Promise<{
     success: boolean;
     error?: string;
+    mergeCommitSha?: string;
 }>;
 /**
  * Main function that orchestrates the exec-merge operation.

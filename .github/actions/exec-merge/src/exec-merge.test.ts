@@ -111,7 +111,7 @@ function createMockOctokit(): Octokit {
         }),
         listReviews: vi.fn().mockResolvedValue({ data: [] }),
         dismissReview: vi.fn().mockResolvedValue({}),
-        merge: vi.fn().mockResolvedValue({}),
+        merge: vi.fn().mockResolvedValue({ data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' } }),
       },
     },
     paginate: vi.fn().mockResolvedValue([]),
@@ -623,7 +623,10 @@ describe('countUnresolvedThreads', () => {
             pullRequest: {
               reviewThreads: {
                 pageInfo: { hasNextPage: true, endCursor: 'cursor1' },
-                nodes: [{ isResolved: false }, { isResolved: true }],
+                nodes: [
+                  { isResolved: false },
+                  { isResolved: true },
+                ],
               },
             },
           },
@@ -634,7 +637,9 @@ describe('countUnresolvedThreads', () => {
           pullRequest: {
             reviewThreads: {
               pageInfo: { hasNextPage: false, endCursor: null },
-              nodes: [{ isResolved: false }],
+              nodes: [
+                { isResolved: false },
+              ],
             },
           },
         },
@@ -660,6 +665,7 @@ describe('mergePullRequest', () => {
     );
 
     expect(result.success).toBe(true);
+    expect(result.mergeCommitSha).toBe('merge123456789');
   });
 
   it('should return error message on failure', async () => {
