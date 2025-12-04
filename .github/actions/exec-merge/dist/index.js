@@ -29930,13 +29930,20 @@ function wrappy (fn, cb) {
 /**
  * exec-merge.ts - Core logic for automated PR merging
  *
- * This module contains all the business logic for the exec-merge action.
- * It validates PR state, permissions, and performs the merge operation.
+ * FLOW OVERVIEW:
+ * 1. Command validation - Check if comment is "/exec merge" (skip bots)
+ * 2. Permission check - Verify OWNER/MEMBER/COLLABORATOR + write permission
+ * 3. PR state check - Ensure PR is open, unlocked, not draft, not from fork
+ * 4. Review check - Dismiss stale approvals, require 1+ valid approval
+ * 5. Thread check - Ensure all review conversations are resolved
+ * 6. Mergeability check - Wait for GitHub to compute, verify no conflicts
+ * 7. TOCTOU check - Re-verify HEAD SHA hasn't changed before merge
+ * 8. Execute merge - Use squash or merge commit based on branch patterns
  *
  * The code is structured to be easily testable by:
- * 1. Separating pure logic functions from I/O operations
- * 2. Using dependency injection for GitHub API calls
- * 3. Using TypeScript interfaces for type safety
+ * - Separating pure logic functions from I/O operations
+ * - Using dependency injection for GitHub API calls
+ * - Using TypeScript interfaces for type safety
  *
  * THIRD-PARTY LICENSES:
  * - Twemoji graphics (https://github.com/twitter/twemoji) are used for emoji
@@ -29981,10 +29988,15 @@ exports.TWEMOJI = {
 };
 /**
  * Valid author associations that can use the /exec merge command.
+ * Why: Only trusted users with write access should be able to trigger merges.
+ * OWNER/MEMBER have org-level trust, COLLABORATOR has explicit repo access.
+ * CONTRIBUTOR and others may have submitted PRs but lack merge authority.
  */
 exports.VALID_AUTHOR_ASSOCIATIONS = ['OWNER', 'MEMBER', 'COLLABORATOR'];
 /**
  * Valid permission levels that can use the /exec merge command.
+ * Why: Maps to GitHub's permission model - admin/maintain/write can merge PRs.
+ * Read-only users should not be able to trigger merges even if they can comment.
  */
 exports.VALID_PERMISSIONS = ['admin', 'maintain', 'write'];
 // =============================================================================
@@ -30293,6 +30305,9 @@ async function dismissReview(octokit, owner, repo, prNumber, reviewId, message) 
 }
 /**
  * Counts unresolved review threads using GraphQL.
+ * Why: REST API doesn't provide review thread resolution status, GraphQL is required.
+ * Note: Counts ALL unresolved threads including outdated ones, matching GitHub's
+ * "Require conversations to be resolved" branch protection behavior.
  *
  * @param octokit - GitHub API client
  * @param owner - Repository owner
@@ -30411,7 +30426,8 @@ async function execMerge(octokit, context, config) {
     // Step 2: Fetch and validate PR data
     // -------------------------------------------------------------------------
     let prData = await fetchPullRequestData(octokit, owner, repo, prNumber);
-    // Check if fork PR
+    // Why: GITHUB_TOKEN has limited write permissions for fork PRs by default.
+    // Merge operations would fail, so we reject early with a clear message.
     if (prData.isFork) {
         await postComment(octokit, owner, repo, prNumber, '## Fork PR not supported\n\nThe `/exec merge` command is not supported for PRs from forked repositories.\n\nThis is because the GITHUB_TOKEN has limited write permissions for fork-originated PRs by default.');
         return { status: 'failed', message: 'Fork PR not supported' };
@@ -30518,7 +30534,8 @@ async function execMerge(octokit, context, config) {
         await postComment(octokit, owner, repo, prNumber, `## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: \`${originalHeadSha.slice(0, 7)}\`\n- Current HEAD SHA: \`${prData.headSha.slice(0, 7)}\`\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`);
         return { status: 'failed', message: 'TOCTOU violation' };
     }
-    // Wait for mergeable status if null
+    // Why: GitHub API returns mergeable=null while computing merge status asynchronously.
+    // This typically happens on first fetch after PR update. We retry to wait for computation.
     let retries = 0;
     while (prData.mergeable === null && retries < config.mergeableRetryCount) {
         await sleep(config.mergeableRetryInterval * 1000);
@@ -30564,13 +30581,13 @@ async function execMerge(octokit, context, config) {
 
 /***/ }),
 
-/***/ 9407:
+/***/ 1730:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
 /**
- * index.ts - Entry point for the exec-merge GitHub Action
+ * main.ts - Entry point for the exec-merge GitHub Action
  *
  * This file is the main entry point that:
  * 1. Reads inputs from the GitHub Actions environment
@@ -32634,7 +32651,7 @@ module.exports = parseParams
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(9407);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(1730);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()

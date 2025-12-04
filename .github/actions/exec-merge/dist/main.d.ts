@@ -1,5 +1,5 @@
 /**
- * index.ts - Entry point for the exec-merge GitHub Action
+ * main.ts - Entry point for the exec-merge GitHub Action
  *
  * This file is the main entry point that:
  * 1. Reads inputs from the GitHub Actions environment

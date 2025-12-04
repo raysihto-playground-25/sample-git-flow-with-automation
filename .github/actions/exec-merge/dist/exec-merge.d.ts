@@ -1,13 +1,20 @@
 /**
  * exec-merge.ts - Core logic for automated PR merging
  *
- * This module contains all the business logic for the exec-merge action.
- * It validates PR state, permissions, and performs the merge operation.
+ * FLOW OVERVIEW:
+ * 1. Command validation - Check if comment is "/exec merge" (skip bots)
+ * 2. Permission check - Verify OWNER/MEMBER/COLLABORATOR + write permission
+ * 3. PR state check - Ensure PR is open, unlocked, not draft, not from fork
+ * 4. Review check - Dismiss stale approvals, require 1+ valid approval
+ * 5. Thread check - Ensure all review conversations are resolved
+ * 6. Mergeability check - Wait for GitHub to compute, verify no conflicts
+ * 7. TOCTOU check - Re-verify HEAD SHA hasn't changed before merge
+ * 8. Execute merge - Use squash or merge commit based on branch patterns
  *
  * The code is structured to be easily testable by:
- * 1. Separating pure logic functions from I/O operations
- * 2. Using dependency injection for GitHub API calls
- * 3. Using TypeScript interfaces for type safety
+ * - Separating pure logic functions from I/O operations
+ * - Using dependency injection for GitHub API calls
+ * - Using TypeScript interfaces for type safety
  *
  * THIRD-PARTY LICENSES:
  * - Twemoji graphics (https://github.com/twitter/twemoji) are used for emoji
@@ -126,10 +133,15 @@ export declare const TWEMOJI: {
 };
 /**
  * Valid author associations that can use the /exec merge command.
+ * Why: Only trusted users with write access should be able to trigger merges.
+ * OWNER/MEMBER have org-level trust, COLLABORATOR has explicit repo access.
+ * CONTRIBUTOR and others may have submitted PRs but lack merge authority.
  */
 export declare const VALID_AUTHOR_ASSOCIATIONS: readonly ["OWNER", "MEMBER", "COLLABORATOR"];
 /**
  * Valid permission levels that can use the /exec merge command.
+ * Why: Maps to GitHub's permission model - admin/maintain/write can merge PRs.
+ * Read-only users should not be able to trigger merges even if they can comment.
  */
 export declare const VALID_PERMISSIONS: readonly ["admin", "maintain", "write"];
 /**
@@ -273,6 +285,9 @@ export declare function fetchApprovedReviews(octokit: Octokit, owner: string, re
 export declare function dismissReview(octokit: Octokit, owner: string, repo: string, prNumber: number, reviewId: number, message: string): Promise<boolean>;
 /**
  * Counts unresolved review threads using GraphQL.
+ * Why: REST API doesn't provide review thread resolution status, GraphQL is required.
+ * Note: Counts ALL unresolved threads including outdated ones, matching GitHub's
+ * "Require conversations to be resolved" branch protection behavior.
  *
  * @param octokit - GitHub API client
  * @param owner - Repository owner

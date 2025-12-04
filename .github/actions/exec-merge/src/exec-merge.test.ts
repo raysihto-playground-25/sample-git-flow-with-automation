@@ -149,48 +149,49 @@ function createEventContext(overrides: Partial<EventContext> = {}): EventContext
 
 // =============================================================================
 // Tests for isExecMergeCommand
+// Specification: Only exact "/exec merge" command triggers merge (case-sensitive)
 // =============================================================================
 
 describe('isExecMergeCommand', () => {
-  it('should match exact /exec merge command', () => {
+  it('matches exact "/exec merge" command', () => {
     expect(isExecMergeCommand('/exec merge')).toBe(true);
   });
 
-  it('should match command with leading whitespace', () => {
+  it('matches with leading whitespace (space/tab/newline)', () => {
     expect(isExecMergeCommand('  /exec merge')).toBe(true);
     expect(isExecMergeCommand('\t/exec merge')).toBe(true);
     expect(isExecMergeCommand('\n/exec merge')).toBe(true);
   });
 
-  it('should match command with trailing whitespace', () => {
+  it('matches with trailing whitespace (space/tab/newline)', () => {
     expect(isExecMergeCommand('/exec merge  ')).toBe(true);
     expect(isExecMergeCommand('/exec merge\t')).toBe(true);
     expect(isExecMergeCommand('/exec merge\n')).toBe(true);
   });
 
-  it('should match command with multiple spaces between words', () => {
+  it('matches with multiple spaces between words', () => {
     expect(isExecMergeCommand('/exec  merge')).toBe(true);
     expect(isExecMergeCommand('/exec   merge')).toBe(true);
     expect(isExecMergeCommand('/exec\tmerge')).toBe(true);
   });
 
-  it('should not match command with extra arguments', () => {
+  it('rejects command with extra arguments (no flags allowed)', () => {
     expect(isExecMergeCommand('/exec merge now')).toBe(false);
     expect(isExecMergeCommand('/exec merge --force')).toBe(false);
   });
 
-  it('should not match partial commands', () => {
+  it('rejects partial or malformed commands', () => {
     expect(isExecMergeCommand('/exec')).toBe(false);
     expect(isExecMergeCommand('/exec merg')).toBe(false);
     expect(isExecMergeCommand('exec merge')).toBe(false);
   });
 
-  it('should not match embedded commands', () => {
+  it('rejects when command is embedded in other text', () => {
     expect(isExecMergeCommand('Please /exec merge this')).toBe(false);
     expect(isExecMergeCommand('Run /exec merge')).toBe(false);
   });
 
-  it('should be case sensitive', () => {
+  it('is case-sensitive (uppercase rejected)', () => {
     expect(isExecMergeCommand('/EXEC MERGE')).toBe(false);
     expect(isExecMergeCommand('/Exec Merge')).toBe(false);
   });
@@ -218,128 +219,127 @@ describe('isBot', () => {
 
 // =============================================================================
 // Tests for hasValidAuthorAssociation
+// Specification: Only OWNER/MEMBER/COLLABORATOR can use /exec merge
 // =============================================================================
 
 describe('hasValidAuthorAssociation', () => {
-  it('should return true for OWNER', () => {
+  it('allows OWNER (repository/org owner)', () => {
     expect(hasValidAuthorAssociation('OWNER')).toBe(true);
   });
 
-  it('should return true for MEMBER', () => {
+  it('allows MEMBER (organization member)', () => {
     expect(hasValidAuthorAssociation('MEMBER')).toBe(true);
   });
 
-  it('should return true for COLLABORATOR', () => {
+  it('allows COLLABORATOR (explicit repo access)', () => {
     expect(hasValidAuthorAssociation('COLLABORATOR')).toBe(true);
   });
 
-  it('should return false for CONTRIBUTOR', () => {
+  it('rejects CONTRIBUTOR (PR author without collaborator status)', () => {
     expect(hasValidAuthorAssociation('CONTRIBUTOR')).toBe(false);
   });
 
-  it('should return false for FIRST_TIME_CONTRIBUTOR', () => {
+  it('rejects FIRST_TIME_CONTRIBUTOR', () => {
     expect(hasValidAuthorAssociation('FIRST_TIME_CONTRIBUTOR')).toBe(false);
   });
 
-  it('should return false for FIRST_TIMER', () => {
+  it('rejects FIRST_TIMER', () => {
     expect(hasValidAuthorAssociation('FIRST_TIMER')).toBe(false);
   });
 
-  it('should return false for NONE', () => {
+  it('rejects NONE (no association)', () => {
     expect(hasValidAuthorAssociation('NONE')).toBe(false);
   });
 });
 
 // =============================================================================
 // Tests for hasValidPermission
+// Specification: admin/maintain/write permissions required for merge
 // =============================================================================
 
 describe('hasValidPermission', () => {
-  it('should return true for admin', () => {
+  it('allows admin permission', () => {
     expect(hasValidPermission('admin')).toBe(true);
   });
 
-  it('should return true for maintain', () => {
+  it('allows maintain permission', () => {
     expect(hasValidPermission('maintain')).toBe(true);
   });
 
-  it('should return true for write', () => {
+  it('allows write permission', () => {
     expect(hasValidPermission('write')).toBe(true);
   });
 
-  it('should return false for read', () => {
+  it('rejects read permission', () => {
     expect(hasValidPermission('read')).toBe(false);
   });
 
-  it('should return false for none', () => {
+  it('rejects none (no permission)', () => {
     expect(hasValidPermission('none')).toBe(false);
   });
 });
 
 // =============================================================================
 // Tests for determineMergeMethod
+// Specification: Merge method is determined by branch naming patterns
+// - Head branch patterns take precedence over base branch patterns
+// - release/* and fix/sync/* heads use merge commit (preserve history)
+// - develop base uses squash (clean feature commits)
+// - Default is merge commit
 // =============================================================================
 
 describe('determineMergeMethod', () => {
   const config = createConfig();
 
-  describe('when head branch is a release branch', () => {
-    it('should return merge method', () => {
-      const result = determineMergeMethod('release/1.0.0', 'master', config);
-      expect(result.method).toBe('merge');
-      expect(result.reason).toContain('release branch');
-      expect(result.reason).toContain('preserve release history');
-    });
+  // Head branch patterns (highest precedence)
+  it('uses merge for PRs from release/* branch (preserves release history)', () => {
+    const result = determineMergeMethod('release/1.0.0', 'master', config);
+    expect(result.method).toBe('merge');
+    expect(result.reason).toContain('release branch');
+    expect(result.reason).toContain('preserve release history');
   });
 
-  describe('when head branch is a sync branch', () => {
-    it('should return merge method', () => {
-      const result = determineMergeMethod('fix/sync/merge-1.0.0', 'develop', config);
-      expect(result.method).toBe('merge');
-      expect(result.reason).toContain('sync branch');
-      expect(result.reason).toContain('preserve back-merge history');
-    });
+  it('uses merge for PRs from fix/sync/* branch (preserves back-merge history)', () => {
+    const result = determineMergeMethod('fix/sync/merge-1.0.0', 'develop', config);
+    expect(result.method).toBe('merge');
+    expect(result.reason).toContain('sync branch');
+    expect(result.reason).toContain('preserve back-merge history');
   });
 
-  describe('when base branch is a release branch', () => {
-    it('should return squash method', () => {
-      const result = determineMergeMethod('fix/bug-123', 'release/1.0.0', config);
-      expect(result.method).toBe('squash');
-      expect(result.reason).toContain('release branch');
-    });
+  // Base branch patterns
+  it('uses squash for PRs targeting release/* branch (clean release commits)', () => {
+    const result = determineMergeMethod('fix/bug-123', 'release/1.0.0', config);
+    expect(result.method).toBe('squash');
+    expect(result.reason).toContain('release branch');
   });
 
-  describe('when base branch is develop', () => {
-    it('should return squash method', () => {
-      const result = determineMergeMethod('feature/new-feature', 'develop', config);
-      expect(result.method).toBe('squash');
-      expect(result.reason).toContain('develop');
-    });
+  it('uses squash for PRs targeting develop branch (clean feature commits)', () => {
+    const result = determineMergeMethod('feature/new-feature', 'develop', config);
+    expect(result.method).toBe('squash');
+    expect(result.reason).toContain('develop');
   });
 
-  describe('when no special branch pattern matches', () => {
-    it('should return merge method as default', () => {
-      const result = determineMergeMethod('feature/test', 'main', config);
-      expect(result.method).toBe('merge');
-      expect(result.reason).toContain('Default merge commit');
-    });
+  // Default case
+  it('uses merge commit by default for unmatched branch patterns', () => {
+    const result = determineMergeMethod('feature/test', 'main', config);
+    expect(result.method).toBe('merge');
+    expect(result.reason).toContain('Default merge commit');
   });
 
-  describe('head branch patterns take precedence over base branch', () => {
-    it('should use merge for release head even with develop base', () => {
-      // Head is release branch, base is develop - head takes precedence
-      const result = determineMergeMethod('release/1.0.0', 'develop', config);
-      expect(result.method).toBe('merge');
-    });
+  // Precedence rule
+  it('head branch pattern takes precedence over base (release/* to develop uses merge)', () => {
+    const result = determineMergeMethod('release/1.0.0', 'develop', config);
+    expect(result.method).toBe('merge');
   });
 });
 
 // =============================================================================
 // Tests for validatePRState
+// Specification: PR must be open, unlocked, and not a draft
 // =============================================================================
 
 describe('validatePRState', () => {
-  it('should pass all checks for valid open PR', () => {
+  it('passes all checks for valid open PR', () => {
     const prData = createPRData();
     const checks = validatePRState(prData);
 
@@ -347,7 +347,7 @@ describe('validatePRState', () => {
     expect(checks.every((c) => c.passed)).toBe(true);
   });
 
-  it('should fail open check for closed PR', () => {
+  it('fails open check when PR is closed', () => {
     const prData = createPRData({ state: 'closed' });
     const checks = validatePRState(prData);
 
@@ -356,7 +356,7 @@ describe('validatePRState', () => {
     expect(openCheck?.details).toContain('closed');
   });
 
-  it('should fail unlocked check for locked PR', () => {
+  it('fails unlocked check when PR is locked', () => {
     const prData = createPRData({ locked: true });
     const checks = validatePRState(prData);
 
@@ -365,7 +365,7 @@ describe('validatePRState', () => {
     expect(lockedCheck?.details).toContain('locked');
   });
 
-  it('should fail draft check for draft PR', () => {
+  it('fails ready check when PR is a draft', () => {
     const prData = createPRData({ draft: true });
     const checks = validatePRState(prData);
 
@@ -674,10 +674,11 @@ describe('mergePullRequest', () => {
 
 // =============================================================================
 // Tests for execMerge main function
+// Specification: End-to-end merge workflow behavior
 // =============================================================================
 
 describe('execMerge', () => {
-  it('should skip for bot comments', async () => {
+  it('skips processing for bot comments', async () => {
     const octokit = createMockOctokit();
     const context = createEventContext({ userType: 'Bot' });
     const config = createConfig();
@@ -688,7 +689,7 @@ describe('execMerge', () => {
     expect(result.message).toContain('bot');
   });
 
-  it('should skip for non-matching commands', async () => {
+  it('skips processing for non-matching command', async () => {
     const octokit = createMockOctokit();
     const context = createEventContext({ commentBody: 'Hello world' });
     const config = createConfig();
@@ -699,7 +700,7 @@ describe('execMerge', () => {
     expect(result.message).toContain('not matched');
   });
 
-  it('should fail for invalid author association', async () => {
+  it('fails for users without valid author association', async () => {
     const octokit = createMockOctokit();
     const context = createEventContext({ authorAssociation: 'NONE' });
     const config = createConfig();
@@ -710,7 +711,7 @@ describe('execMerge', () => {
     expect(result.message).toContain('author association');
   });
 
-  it('should fail for insufficient permissions', async () => {
+  it('fails for users without write permission', async () => {
     const octokit = createMockOctokit();
     (octokit.rest.repos.getCollaboratorPermissionLevel as MockedFunction<typeof octokit.rest.repos.getCollaboratorPermissionLevel>).mockResolvedValue({
       data: { permission: 'read' },
@@ -724,7 +725,7 @@ describe('execMerge', () => {
     expect(result.message).toContain('permissions');
   });
 
-  it('should fail for fork PRs', async () => {
+  it('fails for PRs from forked repositories', async () => {
     const octokit = createMockOctokit();
     (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
       data: {
@@ -755,7 +756,7 @@ describe('execMerge', () => {
     expect(result.message).toContain('Fork');
   });
 
-  it('should return already_merged for merged PRs', async () => {
+  it('returns already_merged for previously merged PRs', async () => {
     const octokit = createMockOctokit();
     (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
       data: {
@@ -785,7 +786,7 @@ describe('execMerge', () => {
     expect(result.status).toBe('already_merged');
   });
 
-  it('should successfully merge a valid PR', async () => {
+  it('successfully merges PR with valid approval (uses squash for develop base)', async () => {
     const octokit = createMockOctokit();
 
     // Mock approved review from another user
@@ -807,7 +808,7 @@ describe('execMerge', () => {
     expect(result.mergeMethod).toBe('squash'); // base is develop
   });
 
-  it('should fail when no valid approvals exist', async () => {
+  it('fails when no valid approvals exist', async () => {
     const octokit = createMockOctokit();
 
     // No approved reviews
