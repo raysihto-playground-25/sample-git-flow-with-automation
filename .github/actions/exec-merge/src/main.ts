@@ -43,7 +43,7 @@ function writeSummary(
   }
 
   if (headSha) {
-    summary += `| **HEAD SHA** | ${headSha.slice(0, 7)} |\n`;
+    summary += `| **HEAD SHA** | ${headSha} |\n`;
   }
 
   core.summary.addRaw(summary).write();
