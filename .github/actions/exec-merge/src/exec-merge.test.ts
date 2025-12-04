@@ -5,7 +5,7 @@
  * GitHub API interactions are mocked for isolation.
  */
 
-import { describe, it, expect, vi, beforeEach, type MockedFunction } from 'vitest';
+import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 import {
   isExecMergeCommand,
