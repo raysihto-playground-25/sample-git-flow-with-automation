@@ -52,10 +52,15 @@ jobs:
           if [ -f coverage/coverage-summary.json ]; then
             echo "| Metric | Covered | Total | Percentage |" >> $GITHUB_STEP_SUMMARY
             echo "|:-------|--------:|------:|-----------:|" >> $GITHUB_STEP_SUMMARY
-            jq -r '.total.statements | "| Statements | \(.covered) | \(.total) | " + (.pct | tostring | split(".") | if length == 1 then .[0] + ".00" elif (.[1] | length) == 1 then .[0] + "." + .[1] + "0" else .[0] + "." + .[1][0:2] end) + "% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
-            jq -r '.total.branches | "| Branches | \(.covered) | \(.total) | " + (.pct | tostring | split(".") | if length == 1 then .[0] + ".00" elif (.[1] | length) == 1 then .[0] + "." + .[1] + "0" else .[0] + "." + .[1][0:2] end) + "% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
-            jq -r '.total.functions | "| Functions | \(.covered) | \(.total) | " + (.pct | tostring | split(".") | if length == 1 then .[0] + ".00" elif (.[1] | length) == 1 then .[0] + "." + .[1] + "0" else .[0] + "." + .[1][0:2] end) + "% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
-            jq -r '.total.lines | "| Lines | \(.covered) | \(.total) | " + (.pct | tostring | split(".") | if length == 1 then .[0] + ".00" elif (.[1] | length) == 1 then .[0] + "." + .[1] + "0" else .[0] + "." + .[1][0:2] end) + "% |"' coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+            jq -r '.total as $t | [
+              ["Statements", $t.statements.covered, $t.statements.total, $t.statements.pct],
+              ["Branches",   $t.branches.covered,   $t.branches.total,   $t.branches.pct],
+              ["Functions",  $t.functions.covered,  $t.functions.total,  $t.functions.pct],
+              ["Lines",      $t.lines.covered,      $t.lines.total,      $t.lines.pct]
+            ][] | @tsv' coverage/coverage-summary.json | \
+              while IFS=$'\t' read -r metric covered total pct; do
+                printf "| %s | %d | %d | %.2f%% |\n" "$metric" "$covered" "$total" "$pct"
+              done >> $GITHUB_STEP_SUMMARY
           else
             echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
           fi
