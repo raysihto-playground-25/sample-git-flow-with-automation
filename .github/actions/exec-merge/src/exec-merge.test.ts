@@ -16,10 +16,8 @@ import {
   validatePRState,
   getMergeableStateDescription,
   buildCheckResultsMarkdown,
-  buildCommitLink,
   TWEMOJI,
   COMMAND_REGEX,
-  MAX_UNRESOLVED_LINKS,
   type ExecMergeConfig,
   type PullRequestData,
   type CheckResult,
@@ -491,46 +489,6 @@ describe('COMMAND_REGEX', () => {
 });
 
 // =============================================================================
-// Tests for buildCommitLink
-// =============================================================================
-
-describe('buildCommitLink', () => {
-  it('should build a markdown link with shortened SHA', () => {
-    const result = buildCommitLink(
-      'abc1234567890fedcba',
-      'https://github.com',
-      'owner',
-      'repo'
-    );
-    expect(result).toBe('[`abc1234`](https://github.com/owner/repo/commit/abc1234567890fedcba)');
-  });
-
-  it('should handle GitHub Enterprise server URLs', () => {
-    const result = buildCommitLink(
-      'def5678901234567890',
-      'https://github.example.com',
-      'myorg',
-      'myrepo'
-    );
-    expect(result).toBe('[`def5678`](https://github.example.com/myorg/myrepo/commit/def5678901234567890)');
-  });
-});
-
-// =============================================================================
-// Tests for MAX_UNRESOLVED_LINKS constant
-// =============================================================================
-
-describe('MAX_UNRESOLVED_LINKS', () => {
-  it('should be a positive number', () => {
-    expect(MAX_UNRESOLVED_LINKS).toBeGreaterThan(0);
-  });
-
-  it('should be 10 by default', () => {
-    expect(MAX_UNRESOLVED_LINKS).toBe(10);
-  });
-});
-
-// =============================================================================
 // Tests for GitHub API Functions (with mocks)
 // =============================================================================
 
@@ -666,8 +624,8 @@ describe('countUnresolvedThreads', () => {
               reviewThreads: {
                 pageInfo: { hasNextPage: true, endCursor: 'cursor1' },
                 nodes: [
-                  { isResolved: false, comments: { nodes: [{ url: 'https://github.com/owner/repo/pull/1#discussion_r1' }] } },
-                  { isResolved: true, comments: { nodes: [{ url: 'https://github.com/owner/repo/pull/1#discussion_r2' }] } },
+                  { isResolved: false },
+                  { isResolved: true },
                 ],
               },
             },
@@ -680,7 +638,7 @@ describe('countUnresolvedThreads', () => {
             reviewThreads: {
               pageInfo: { hasNextPage: false, endCursor: null },
               nodes: [
-                { isResolved: false, comments: { nodes: [{ url: 'https://github.com/owner/repo/pull/1#discussion_r3' }] } },
+                { isResolved: false },
               ],
             },
           },
@@ -688,11 +646,8 @@ describe('countUnresolvedThreads', () => {
       };
     });
 
-    const result = await countUnresolvedThreads(octokit, 'owner', 'repo', 1);
-    expect(result.count).toBe(2);
-    expect(result.threads).toHaveLength(2);
-    expect(result.threads[0].url).toBe('https://github.com/owner/repo/pull/1#discussion_r1');
-    expect(result.threads[1].url).toBe('https://github.com/owner/repo/pull/1#discussion_r3');
+    const count = await countUnresolvedThreads(octokit, 'owner', 'repo', 1);
+    expect(count).toBe(2);
   });
 });
 

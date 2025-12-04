@@ -132,10 +132,6 @@ export declare const TWEMOJI: {
     readonly CROSS: "<img src=\"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg\" width=\"20\" height=\"20\" alt=\"NG\">";
 };
 /**
- * Maximum number of unresolved thread links to display in failure comments.
- */
-export declare const MAX_UNRESOLVED_LINKS = 10;
-/**
  * Valid author associations that can use the /exec merge command.
  * Why: Only trusted users with write access should be able to trigger merges.
  * OWNER/MEMBER have org-level trust, COLLABORATOR has explicit repo access.
@@ -226,16 +222,6 @@ export declare function buildCheckResultsMarkdown(checks: CheckResult[]): string
  */
 export declare function sleep(ms: number): Promise<void>;
 /**
- * Builds a markdown link for a commit SHA.
- *
- * @param sha - Full commit SHA
- * @param serverUrl - GitHub server URL (e.g., "https://github.com")
- * @param owner - Repository owner
- * @param repo - Repository name
- * @returns Markdown link with shortened SHA
- */
-export declare function buildCommitLink(sha: string, serverUrl: string, owner: string, repo: string): string;
-/**
  * Adds a reaction to a comment.
  *
  * @param octokit - GitHub API client
@@ -298,22 +284,6 @@ export declare function fetchApprovedReviews(octokit: Octokit, owner: string, re
  */
 export declare function dismissReview(octokit: Octokit, owner: string, repo: string, prNumber: number, reviewId: number, message: string): Promise<boolean>;
 /**
- * Information about an unresolved thread including link to the latest comment.
- */
-export interface UnresolvedThreadInfo {
-    /** URL to the latest comment in the thread */
-    url: string;
-}
-/**
- * Result of counting unresolved threads.
- */
-export interface UnresolvedThreadsResult {
-    /** Number of unresolved threads */
-    count: number;
-    /** Information about each unresolved thread (up to a reasonable limit) */
-    threads: UnresolvedThreadInfo[];
-}
-/**
  * Counts unresolved review threads using GraphQL.
  * Why: REST API doesn't provide review thread resolution status, GraphQL is required.
  * Note: Counts ALL unresolved threads including outdated ones, matching GitHub's
@@ -323,9 +293,9 @@ export interface UnresolvedThreadsResult {
  * @param owner - Repository owner
  * @param repo - Repository name
  * @param prNumber - PR number
- * @returns Number of unresolved threads and their latest comment URLs
+ * @returns Number of unresolved threads
  */
-export declare function countUnresolvedThreads(octokit: Octokit, owner: string, repo: string, prNumber: number): Promise<UnresolvedThreadsResult>;
+export declare function countUnresolvedThreads(octokit: Octokit, owner: string, repo: string, prNumber: number): Promise<number>;
 /**
  * Performs the merge operation.
  *
