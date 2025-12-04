@@ -49,7 +49,9 @@ jobs:
           echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          grep -A 100 "Coverage report" coverage-output.txt | head -20 >> $GITHUB_STEP_SUMMARY || echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
+          # Extract coverage table and remove ANSI escape sequences
+          COVERAGE=$(grep -A 100 "Coverage report" coverage-output.txt | head -20 | sed 's/\x1b\[[0-9;]*m//g')
+          echo "$COVERAGE" >> $GITHUB_STEP_SUMMARY || echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           rm -f coverage-output.txt
 

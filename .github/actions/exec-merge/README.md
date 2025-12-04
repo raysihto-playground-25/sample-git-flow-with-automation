@@ -118,72 +118,13 @@ npm run build   # Build with ncc
 
 ## Testing
 
-### Test Overview
-
 This action uses **Vitest** for unit testing. The test suite focuses on testing pure logic functions and mocking GitHub API interactions for isolation.
 
 | Test Type | Status | Description |
 |-----------|--------|-------------|
-| **Unit Tests** | ✅ Implemented | 75+ test cases covering core business logic |
+| **Unit Tests** | ✅ Implemented | Covers command parsing, permissions, merge logic, and API interactions |
 | **Integration Tests** | ❌ Not implemented | Would test GitHub API interactions with real tokens |
 | **E2E Tests** | ❌ Not implemented | Would test full workflow execution on real PRs |
-
-### Current Coverage
-
-Run `npm test -- --coverage` to generate a coverage report:
-
-```
-File           | % Stmts | % Branch | % Funcs | % Lines
----------------|---------|----------|---------|--------
-exec-merge.ts  |   ~96%  |   ~85%   |   100%  |   ~96%
-```
-
-### Test Categories
-
-The test suite (`src/exec-merge.test.ts`) covers:
-
-1. **Command Parsing** - Validates `/exec merge` command recognition
-2. **User Validation** - Tests bot detection, author association, and permissions
-3. **Merge Method Selection** - Tests branch pattern matching logic
-4. **PR State Validation** - Tests open/locked/draft state checks
-5. **Mergeable State Description** - Tests human-readable state messages
-6. **Markdown Building** - Tests check result formatting
-7. **GitHub API Functions** - Tests with mocked Octokit instance
-8. **Main Orchestration** - Tests `execMerge` function end-to-end (with mocks)
-
-### Remaining Uncovered Code Paths
-
-The following code paths have limited coverage due to their complex async nature:
-
-| Code Path | Lines | Status | Notes |
-|-----------|-------|--------|-------|
-| Self-approval skip | 754 | Partial | Requires specific test setup |
-| TOCTOU during retry | 882-889 | Partial | Hard to simulate race condition |
-| Mergeability error paths | 898-901 | Partial | Various edge cases |
-
-All major code paths including `sleep()`, stale approval dismissal, TOCTOU detection, mergeable retry, and merge failure handling are now covered by unit tests.
-
-### Adding Integration or E2E Tests
-
-**Integration tests** would require:
-- A GitHub token with appropriate permissions
-- A test repository with configurable PRs
-- Mocking or stubbing network calls at a higher level
-
-**E2E tests** would require:
-- A dedicated test repository
-- Actual PR creation and `/exec merge` comment triggers
-- Verification of merge results
-
-To add integration tests, consider:
-
-```typescript
-// Example integration test structure (not implemented)
-describe('Integration: GitHub API', () => {
-  // Would require GITHUB_TOKEN environment variable
-  // Would make real API calls to a test repository
-});
-```
 
 ### Running Tests
 
@@ -196,9 +137,6 @@ npm run test:watch
 
 # Run tests with coverage
 npm test -- --coverage
-
-# Run specific test file
-npm test -- src/exec-merge.test.ts
 ```
 
 ## Third-Party Licenses
