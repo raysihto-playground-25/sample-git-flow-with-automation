@@ -6,9 +6,7 @@ Automated Git Flow workflow implementation for GitHub repositories.
 
 This repository provides reusable GitHub Actions workflows and actions for automating Git Flow operations.
 
-### Reusable Workflows
-
-For documentation on reusable workflows that can be shared across projects, see [`.github/workflows/README.md`](.github/workflows/README.md).
+### Workflows
 
 - **feature-freeze**: Creates a new release branch from develop and initiates the release process.
 - **release-automation**: Handles automatic RC (Release Candidate) tagging and back-merge PR creation when changes are pushed to release branches.
