@@ -13,6 +13,7 @@ on:
   pull_request:
     paths:
       - '.github/actions/exec-merge/**'
+      - '.github/workflows/exec-merge-action-test.yml'
 
 defaults:
   run:
@@ -42,28 +43,23 @@ jobs:
         run: npm run lint
 
       - name: Run tests with coverage
-        run: npm test -- --coverage
+        run: |
+          npm test -- --coverage | tee /tmp/coverage-${{ github.run_id }}.txt
 
       - name: Report coverage to summary
+        if: success()
         run: |
           echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          # Generate Markdown table from JSON coverage summary with right-aligned numbers
-          if [ -f coverage/coverage-summary.json ]; then
-            echo "| Metric | Covered | Total | Percentage |" >> $GITHUB_STEP_SUMMARY
-            echo "|:-------|--------:|------:|-----------:|" >> $GITHUB_STEP_SUMMARY
-            jq -r '.total as $t | [
-              ["Statements", $t.statements.covered, $t.statements.total, $t.statements.pct],
-              ["Branches",   $t.branches.covered,   $t.branches.total,   $t.branches.pct],
-              ["Functions",  $t.functions.covered,  $t.functions.total,  $t.functions.pct],
-              ["Lines",      $t.lines.covered,      $t.lines.total,      $t.lines.pct]
-            ][] | @tsv' coverage/coverage-summary.json | \
-              while IFS=$'\t' read -r metric covered total pct; do
-                printf "| %s | %d | %d | %.2f%% |\n" "$metric" "$covered" "$total" "$pct"
-              done >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ -f /tmp/coverage-${{ github.run_id }}.txt ] && grep -q "Coverage report" /tmp/coverage-${{ github.run_id }}.txt; then
+            # Extract coverage table and strip ANSI escape sequences
+            awk '/Coverage report/{found=1} found; found && /^-----------/ && ++count==3{exit}' /tmp/coverage-${{ github.run_id }}.txt | sed 's/\x1b\[[0-9;]*m//g' >> $GITHUB_STEP_SUMMARY
           else
             echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
           fi
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          rm -f /tmp/coverage-${{ github.run_id }}.txt
 
       - name: Build action
         run: npm run build
