@@ -16,6 +16,7 @@ import {
   validatePRState,
   getMergeableStateDescription,
   buildCheckResultsMarkdown,
+  isReviewStale,
   TWEMOJI,
   COMMAND_REGEX,
   type ExecMergeConfig,
@@ -67,6 +68,7 @@ function createPRData(overrides: Partial<PullRequestData> = {}): PullRequestData
     baseRef: 'develop',
     author: 'testuser',
     isFork: false,
+    headCommitDate: '2024-12-04T04:00:00Z',
     ...overrides,
   };
 }
@@ -86,6 +88,15 @@ function createMockOctokit(): Octokit {
       repos: {
         getCollaboratorPermissionLevel: vi.fn().mockResolvedValue({
           data: { permission: 'write' },
+        }),
+      },
+      git: {
+        getCommit: vi.fn().mockResolvedValue({
+          data: {
+            author: {
+              date: '2024-12-04T04:00:00Z',
+            },
+          },
         }),
       },
       pulls: {
@@ -464,6 +475,90 @@ describe('buildCheckResultsMarkdown', () => {
 });
 
 // =============================================================================
+// Tests for isReviewStale
+// =============================================================================
+
+describe('isReviewStale', () => {
+  describe('commit_id mismatch (traditional detection)', () => {
+    it('returns true when review commit_id does not match HEAD', () => {
+      const result = isReviewStale(
+        '2024-12-04T05:00:00Z', // Review submitted after commit
+        'old-commit-sha',       // Different commit
+        'new-commit-sha',       // Current HEAD
+        '2024-12-04T04:00:00Z'  // Commit authored before review
+      );
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('timestamp-based detection (handles rebases)', () => {
+    it('returns true when review was submitted BEFORE commit was authored', () => {
+      // This is the key case: rebase scenario where GitHub updates commit_id
+      // but the review was actually given on an older commit
+      const result = isReviewStale(
+        '2024-12-04T04:00:00Z', // Review submitted at this time
+        'abc123',               // GitHub updated this to match HEAD
+        'abc123',               // Current HEAD (same as commit_id)
+        '2024-12-04T05:00:00Z'  // But commit was authored AFTER the review
+      );
+      expect(result).toBe(true);
+    });
+
+    it('returns false when review was submitted AFTER commit was authored', () => {
+      const result = isReviewStale(
+        '2024-12-04T05:00:00Z', // Review submitted after commit
+        'abc123',               // Matches HEAD
+        'abc123',               // Current HEAD
+        '2024-12-04T04:00:00Z'  // Commit authored before review
+      );
+      expect(result).toBe(false);
+    });
+
+    it('returns false when review was submitted at same time as commit', () => {
+      const result = isReviewStale(
+        '2024-12-04T04:00:00Z', // Same time
+        'abc123',
+        'abc123',
+        '2024-12-04T04:00:00Z'  // Same time
+      );
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('handles null commit_id (returns true)', () => {
+      const result = isReviewStale(
+        '2024-12-04T05:00:00Z',
+        null, // null commit_id
+        'abc123',
+        '2024-12-04T04:00:00Z'
+      );
+      expect(result).toBe(true);
+    });
+
+    it('handles different timezone formats', () => {
+      // UTC vs Z suffix should work the same
+      const result1 = isReviewStale(
+        '2024-12-04T05:00:00Z',
+        'abc123',
+        'abc123',
+        '2024-12-04T04:00:00Z'
+      );
+      expect(result1).toBe(false);
+
+      // Review 1 hour before commit
+      const result2 = isReviewStale(
+        '2024-12-04T03:00:00Z',
+        'abc123',
+        'abc123',
+        '2024-12-04T04:00:00Z'
+      );
+      expect(result2).toBe(true);
+    });
+  });
+});
+
+// =============================================================================
 // Tests for COMMAND_REGEX constant
 // =============================================================================
 
@@ -562,6 +657,7 @@ describe('fetchPullRequestData', () => {
     expect(prData.headRef).toBe('feature/test');
     expect(prData.baseRef).toBe('develop');
     expect(prData.isFork).toBe(false);
+    expect(prData.headCommitDate).toBe('2024-12-04T04:00:00Z');
   });
 
   it('should detect fork PRs correctly', async () => {
@@ -811,11 +907,13 @@ describe('execMerge', () => {
       const octokit = createMockOctokit();
 
       // Mock approved review from another user
+      // submitted_at must be after the commit date to be valid
       (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
           state: 'APPROVED',
           commit_id: 'abc1234567890',
+          submitted_at: '2024-12-04T05:00:00Z', // After commit date of 2024-12-04T04:00:00Z
           user: { login: 'reviewer' },
         },
       ]);
@@ -827,6 +925,34 @@ describe('execMerge', () => {
 
       expect(result.status).toBe('merged');
       expect(result.mergeMethod).toBe('squash'); // base is develop
+    });
+
+    it('dismisses stale approvals when review was submitted before commit was authored (rebase case)', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock approved review that was submitted BEFORE the commit was authored
+      // This simulates the dependabot rebase scenario where GitHub updates commit_id
+      // but the review was given before the rebase happened
+      (octokit.paginate as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890', // GitHub updated this to match HEAD after rebase
+          submitted_at: '2024-12-04T03:00:00Z', // BEFORE commit date of 2024-12-04T04:00:00Z
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await execMerge(octokit, context, config);
+
+      // Should fail because the approval is stale (review was before commit)
+      expect(result.status).toBe('failed');
+      expect(result.message).toContain('checks failed');
+      // Verify dismiss was called
+      expect(octokit.rest.pulls.dismissReview).toHaveBeenCalled();
     });
 
     it('fails when no valid approvals exist', async () => {

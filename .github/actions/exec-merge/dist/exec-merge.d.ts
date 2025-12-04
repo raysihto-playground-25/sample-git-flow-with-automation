@@ -79,6 +79,8 @@ export interface PullRequestData {
     baseRef: string;
     author: string;
     isFork: boolean;
+    /** ISO 8601 timestamp of when the head commit was authored */
+    headCommitDate: string;
 }
 /**
  * Result of validation checks.
@@ -222,6 +224,28 @@ export declare function buildCheckResultsMarkdown(checks: CheckResult[]): string
  */
 export declare function sleep(ms: number): Promise<void>;
 /**
+ * Checks if a review is stale based on its submission time and the commit date.
+ *
+ * Why this is needed:
+ * When a PR is rebased (e.g., by dependabot), GitHub updates the review's
+ * `commit_id` field to point to the new HEAD commit. This means simply comparing
+ * `review.commit_id !== headSha` is not sufficient to detect stale approvals.
+ *
+ * To properly detect stale approvals, we compare:
+ * 1. The review's `commit_id` with the current HEAD SHA (traditional check)
+ * 2. The review's `submitted_at` timestamp with the HEAD commit's author date
+ *
+ * A review is considered stale if it was submitted BEFORE the current HEAD
+ * commit was authored, even if the commit_id matches (due to GitHub's auto-update).
+ *
+ * @param reviewSubmittedAt - ISO 8601 timestamp of when the review was submitted
+ * @param reviewCommitId - The commit SHA the review was submitted against
+ * @param headSha - Current HEAD SHA of the PR
+ * @param headCommitDate - ISO 8601 timestamp of when the HEAD commit was authored
+ * @returns true if the review is stale
+ */
+export declare function isReviewStale(reviewSubmittedAt: string, reviewCommitId: string | null, headSha: string, headCommitDate: string): boolean;
+/**
  * Adds a reaction to a comment.
  *
  * @param octokit - GitHub API client
@@ -251,6 +275,16 @@ export declare function postComment(octokit: Octokit, owner: string, repo: strin
  * @returns Permission level or 'none' on failure
  */
 export declare function getCollaboratorPermission(octokit: Octokit, owner: string, repo: string, username: string): Promise<string>;
+/**
+ * Fetches the author date of a specific commit.
+ *
+ * @param octokit - GitHub API client
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param sha - Commit SHA
+ * @returns ISO 8601 timestamp of when the commit was authored
+ */
+export declare function fetchCommitDate(octokit: Octokit, owner: string, repo: string, sha: string): Promise<string>;
 /**
  * Fetches PR data from GitHub API.
  *

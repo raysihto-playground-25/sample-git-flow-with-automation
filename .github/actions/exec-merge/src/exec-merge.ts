@@ -87,6 +87,8 @@ export interface PullRequestData {
   baseRef: string;
   author: string;
   isFork: boolean;
+  /** ISO 8601 timestamp of when the head commit was authored */
+  headCommitDate: string;
 }
 
 /**
@@ -349,6 +351,50 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Checks if a review is stale based on its submission time and the commit date.
+ * 
+ * Why this is needed:
+ * When a PR is rebased (e.g., by dependabot), GitHub updates the review's
+ * `commit_id` field to point to the new HEAD commit. This means simply comparing
+ * `review.commit_id !== headSha` is not sufficient to detect stale approvals.
+ * 
+ * To properly detect stale approvals, we compare:
+ * 1. The review's `commit_id` with the current HEAD SHA (traditional check)
+ * 2. The review's `submitted_at` timestamp with the HEAD commit's author date
+ * 
+ * A review is considered stale if it was submitted BEFORE the current HEAD
+ * commit was authored, even if the commit_id matches (due to GitHub's auto-update).
+ * 
+ * @param reviewSubmittedAt - ISO 8601 timestamp of when the review was submitted
+ * @param reviewCommitId - The commit SHA the review was submitted against
+ * @param headSha - Current HEAD SHA of the PR
+ * @param headCommitDate - ISO 8601 timestamp of when the HEAD commit was authored
+ * @returns true if the review is stale
+ */
+export function isReviewStale(
+  reviewSubmittedAt: string,
+  reviewCommitId: string | null,
+  headSha: string,
+  headCommitDate: string
+): boolean {
+  // Case 1: Traditional check - commit_id doesn't match HEAD
+  // This handles cases where the branch protection auto-dismiss is disabled
+  // and GitHub hasn't updated the commit_id
+  if (reviewCommitId !== headSha) {
+    return true;
+  }
+
+  // Case 2: Timestamp check - review was submitted before HEAD was authored
+  // This handles cases like rebases where GitHub updates commit_id but
+  // the review was actually given on an older commit
+  const reviewTime = new Date(reviewSubmittedAt).getTime();
+  const commitTime = new Date(headCommitDate).getTime();
+  
+  // The review is stale if it was submitted before the commit was authored
+  return reviewTime < commitTime;
+}
+
 // =============================================================================
 // GitHub API Functions (require Octokit instance)
 // =============================================================================
@@ -433,6 +479,31 @@ export async function getCollaboratorPermission(
 }
 
 /**
+ * Fetches the author date of a specific commit.
+ * 
+ * @param octokit - GitHub API client
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param sha - Commit SHA
+ * @returns ISO 8601 timestamp of when the commit was authored
+ */
+export async function fetchCommitDate(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<string> {
+  const response = await octokit.rest.git.getCommit({
+    owner,
+    repo,
+    commit_sha: sha,
+  });
+  // Use author date (when the code was written) rather than committer date
+  // (when the commit was applied), as rebases update committer date
+  return response.data.author.date;
+}
+
+/**
  * Fetches PR data from GitHub API.
  * 
  * @param octokit - GitHub API client
@@ -460,6 +531,12 @@ export async function fetchPullRequestData(
     pr.head.repo?.fork === true ||
     (pr.head.repo?.owner?.id ?? 0) !== (pr.base.repo?.owner?.id ?? 0);
 
+  // Fetch the head commit date for stale approval detection
+  // Why: When a PR is rebased (e.g., by dependabot), GitHub updates the review's
+  // commit_id to point to the new HEAD. To detect stale approvals, we need to
+  // compare the review's submitted_at with the commit's author date.
+  const headCommitDate = await fetchCommitDate(octokit, owner, repo, pr.head.sha);
+
   return {
     state: pr.state,
     locked: pr.locked,
@@ -472,6 +549,7 @@ export async function fetchPullRequestData(
     baseRef: pr.base.ref,
     author: pr.user?.login ?? 'unknown',
     isFork,
+    headCommitDate,
   };
 }
 
@@ -754,13 +832,22 @@ export async function execMerge(
       continue;
     }
 
-    // Check if review is stale (not on current HEAD)
-    if (review.commit_id !== prData.headSha) {
-      const message = `Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${review.commit_id?.slice(0, 7)}, current HEAD: ${prData.headSha.slice(0, 7)}).`;
+    // Check if review is stale using both commit_id and timestamp comparison
+    // This handles rebases where GitHub updates commit_id but the approval was given before
+    const reviewSubmittedAt = review.submitted_at ?? '';
+    const isStale = isReviewStale(
+      reviewSubmittedAt,
+      review.commit_id ?? null,
+      prData.headSha,
+      prData.headCommitDate
+    );
+
+    if (isStale) {
+      const message = `Approval dismissed: Review was submitted before the current HEAD commit was authored (review time: ${reviewSubmittedAt}, commit time: ${prData.headCommitDate}).`;
       const dismissed = await dismissReview(octokit, owner, repo, prNumber, review.id, message);
       if (dismissed) {
         staleMessages.push(
-          `- Dismissed approval from @${review.user?.login} (reviewed commit: ${review.commit_id}, current HEAD: ${prData.headSha})`
+          `- Dismissed approval from @${review.user?.login} (review submitted: \`${reviewSubmittedAt}\`, HEAD authored: \`${prData.headCommitDate}\`)`
         );
       } else {
         dismissFailures.push(
