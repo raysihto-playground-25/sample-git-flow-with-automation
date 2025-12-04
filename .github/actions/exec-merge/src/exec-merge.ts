@@ -340,12 +340,12 @@ export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
 }
 
 /**
- * Sleeps for a specified number of milliseconds.
+ * Delays execution for a specified number of milliseconds.
  * Used for retry intervals when waiting for mergeable status.
  * 
- * @param ms - Milliseconds to sleep
+ * @param ms - Milliseconds to delay
  */
-export function sleep(ms: number): Promise<void> {
+export function delayMs(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -873,7 +873,7 @@ export async function execMerge(
   // This typically happens on first fetch after PR update. We retry to wait for computation.
   let retries = 0;
   while (prData.mergeable === null && retries < config.mergeableRetryCount) {
-    await sleep(config.mergeableRetryInterval * 1000);
+    await delayMs(config.mergeableRetryInterval * 1000);
     prData = await fetchPullRequestData(octokit, owner, repo, prNumber);
     retries++;
 

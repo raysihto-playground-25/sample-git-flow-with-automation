@@ -30,7 +30,7 @@ import {
   countUnresolvedThreads,
   mergePullRequest,
   execMerge,
-  sleep,
+  delayMs,
   type EventContext,
 } from './exec-merge';
 
@@ -490,13 +490,13 @@ describe('COMMAND_REGEX', () => {
 });
 
 // =============================================================================
-// Tests for sleep function
+// Tests for delayMs function
 // =============================================================================
 
-describe('sleep', () => {
+describe('delayMs', () => {
   it('should resolve after specified milliseconds', async () => {
     const start = Date.now();
-    await sleep(50);
+    await delayMs(50);
     const elapsed = Date.now() - start;
     // Allow some tolerance for timing
     expect(elapsed).toBeGreaterThanOrEqual(40);
@@ -505,7 +505,7 @@ describe('sleep', () => {
 
   it('should resolve immediately for 0ms', async () => {
     const start = Date.now();
-    await sleep(0);
+    await delayMs(0);
     const elapsed = Date.now() - start;
     expect(elapsed).toBeLessThan(50);
   });
