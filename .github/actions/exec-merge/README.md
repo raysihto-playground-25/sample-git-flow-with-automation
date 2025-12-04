@@ -36,7 +36,7 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: {ORG}/{REPO}/.github/actions/exec-merge@main
+      - uses: {ORG}/{REPO}/.github/actions/exec-merge@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           release_branch_prefix: "release/"
