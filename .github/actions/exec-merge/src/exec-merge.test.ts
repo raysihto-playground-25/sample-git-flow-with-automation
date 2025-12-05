@@ -16,8 +16,11 @@ import {
   validatePRState,
   getMergeableStateDescription,
   buildCheckResultsMarkdown,
+  isConventionalCommitTitle,
   TWEMOJI,
   COMMAND_REGEX,
+  CONVENTIONAL_COMMIT_TYPES,
+  CONVENTIONAL_COMMIT_REGEX,
   type ExecMergeConfig,
   type PullRequestData,
   type CheckResult,
@@ -68,6 +71,7 @@ function createPRData(overrides: Partial<PullRequestData> = {}): PullRequestData
     baseRef: 'develop',
     author: 'testuser',
     isFork: false,
+    title: 'feat: test pull request',
     ...overrides,
   };
 }
@@ -108,6 +112,7 @@ function createMockOctokit(): Octokit {
               repo: { owner: { id: 1 } },
             },
             user: { login: 'testuser' },
+            title: 'feat: test pull request',
           },
         }),
         listReviews: vi.fn().mockResolvedValue({ data: [] }),
@@ -462,6 +467,148 @@ describe('buildCheckResultsMarkdown', () => {
     expect(markdown).toContain('Check 2');
     expect(markdown).toContain('Check 3');
   });
+
+  it('should include warning icon for failed optional checks', () => {
+    const checks: CheckResult[] = [
+      { name: 'Optional check', passed: false, details: 'not required', optional: true },
+    ];
+    const markdown = buildCheckResultsMarkdown(checks);
+
+    expect(markdown).toContain(TWEMOJI.WARNING);
+    expect(markdown).toContain('Optional check');
+    expect(markdown).toContain('(not required)');
+  });
+
+  it('should include check icon for passed optional checks', () => {
+    const checks: CheckResult[] = [
+      { name: 'Optional check', passed: true, optional: true },
+    ];
+    const markdown = buildCheckResultsMarkdown(checks);
+
+    expect(markdown).toContain(TWEMOJI.CHECK);
+    expect(markdown).toContain('Optional check');
+  });
+
+  it('should format mixed required and optional checks correctly', () => {
+    const checks: CheckResult[] = [
+      { name: 'Required passing', passed: true },
+      { name: 'Required failing', passed: false, details: 'error' },
+      { name: 'Optional passing', passed: true, optional: true },
+      { name: 'Optional failing', passed: false, details: 'warning', optional: true },
+    ];
+    const markdown = buildCheckResultsMarkdown(checks);
+
+    expect(markdown.split('\n')).toHaveLength(4);
+    // Required passing - check mark
+    expect(markdown).toContain(TWEMOJI.CHECK);
+    // Required failing - cross
+    expect(markdown).toContain(TWEMOJI.CROSS);
+    // Optional failing - warning
+    expect(markdown).toContain(TWEMOJI.WARNING);
+  });
+});
+
+// =============================================================================
+// Tests for isConventionalCommitTitle
+// =============================================================================
+
+describe('isConventionalCommitTitle', () => {
+  describe('valid Conventional Commits titles', () => {
+    it('matches simple type: description format', () => {
+      expect(isConventionalCommitTitle('feat: add new feature')).toBe(true);
+      expect(isConventionalCommitTitle('fix: resolve bug')).toBe(true);
+      expect(isConventionalCommitTitle('docs: update readme')).toBe(true);
+    });
+
+    it('matches type(scope): description format', () => {
+      expect(isConventionalCommitTitle('feat(auth): add login')).toBe(true);
+      expect(isConventionalCommitTitle('fix(api): resolve error')).toBe(true);
+      expect(isConventionalCommitTitle('docs(readme): update installation')).toBe(true);
+    });
+
+    it('matches all 12 supported types', () => {
+      const types = ['build', 'chore', 'ci', 'docs', 'feat', 'fix', 'perf', 'refactor', 'revert', 'style', 'test', 'ux'];
+      for (const type of types) {
+        expect(isConventionalCommitTitle(`${type}: some description`)).toBe(true);
+        expect(isConventionalCommitTitle(`${type}(scope): some description`)).toBe(true);
+      }
+    });
+
+    it('matches with complex scope names', () => {
+      expect(isConventionalCommitTitle('feat(user-management): add feature')).toBe(true);
+      expect(isConventionalCommitTitle('fix(api/v2): resolve bug')).toBe(true);
+    });
+  });
+
+  describe('invalid titles', () => {
+    it('rejects titles without colon', () => {
+      expect(isConventionalCommitTitle('feat add new feature')).toBe(false);
+    });
+
+    it('rejects titles without type', () => {
+      expect(isConventionalCommitTitle(': add new feature')).toBe(false);
+      expect(isConventionalCommitTitle('Add new feature')).toBe(false);
+    });
+
+    it('rejects unsupported types', () => {
+      expect(isConventionalCommitTitle('feature: add new feature')).toBe(false);
+      expect(isConventionalCommitTitle('bugfix: resolve issue')).toBe(false);
+      expect(isConventionalCommitTitle('update: change something')).toBe(false);
+    });
+
+    it('rejects empty description', () => {
+      expect(isConventionalCommitTitle('feat:')).toBe(false);
+      expect(isConventionalCommitTitle('feat: ')).toBe(false);
+    });
+
+    it('rejects empty scope', () => {
+      expect(isConventionalCommitTitle('feat(): description')).toBe(false);
+    });
+
+    it('rejects when type has leading text', () => {
+      expect(isConventionalCommitTitle('prefix feat: add feature')).toBe(false);
+    });
+  });
+});
+
+// =============================================================================
+// Tests for CONVENTIONAL_COMMIT_TYPES constant
+// =============================================================================
+
+describe('CONVENTIONAL_COMMIT_TYPES', () => {
+  it('should contain exactly 12 types', () => {
+    expect(CONVENTIONAL_COMMIT_TYPES).toHaveLength(12);
+  });
+
+  it('should include all required types', () => {
+    const expectedTypes = ['build', 'chore', 'ci', 'docs', 'feat', 'fix', 'perf', 'refactor', 'revert', 'style', 'test', 'ux'];
+    for (const type of expectedTypes) {
+      expect(CONVENTIONAL_COMMIT_TYPES).toContain(type);
+    }
+  });
+});
+
+// =============================================================================
+// Tests for CONVENTIONAL_COMMIT_REGEX constant
+// =============================================================================
+
+describe('CONVENTIONAL_COMMIT_REGEX', () => {
+  it('should be a valid regex pattern', () => {
+    expect(CONVENTIONAL_COMMIT_REGEX).toBeInstanceOf(RegExp);
+  });
+
+  it('should match the same patterns as isConventionalCommitTitle', () => {
+    const testCases = [
+      { input: 'feat: add feature', expected: true },
+      { input: 'fix(auth): resolve bug', expected: true },
+      { input: 'Update README', expected: false },
+      { input: 'feature: not supported', expected: false },
+    ];
+
+    for (const { input, expected } of testCases) {
+      expect(CONVENTIONAL_COMMIT_REGEX.test(input)).toBe(expected);
+    }
+  });
 });
 
 // =============================================================================
@@ -607,6 +754,7 @@ describe('fetchPullRequestData', () => {
           repo: { owner: { id: 1 } },
         },
         user: { login: 'testuser' },
+        title: 'feat: test pull request',
       },
     } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
@@ -787,6 +935,7 @@ describe('execMerge', () => {
             repo: { owner: { id: 1 } },
           },
           user: { login: 'testuser' },
+          title: 'feat: test pull request',
         },
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
       const context = createEventContext();
@@ -818,6 +967,7 @@ describe('execMerge', () => {
             repo: { owner: { id: 1 } },
           },
           user: { login: 'testuser' },
+          title: 'feat: test pull request',
         },
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
       const context = createEventContext();
@@ -889,6 +1039,7 @@ describe('execMerge', () => {
             repo: { owner: { id: 1 } },
           },
           user: { login: 'testuser' },
+          title: 'feat: test pull request',
         },
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
@@ -945,6 +1096,7 @@ describe('execMerge', () => {
             repo: { owner: { id: 1 } },
           },
           user: { login: 'testuser' },
+          title: 'feat: test pull request',
         },
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
@@ -980,6 +1132,90 @@ describe('execMerge', () => {
       // Should fail because no valid approvals
       expect(result.status).toBe('failed');
     });
+
+    it('merges PR with non-conventional title but shows warning', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock PR with non-conventional title
+      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+        data: {
+          state: 'open',
+          locked: false,
+          draft: false,
+          merged: false,
+          mergeable: true,
+          mergeable_state: 'clean',
+          head: {
+            sha: 'abc1234567890',
+            ref: 'feature/test',
+            repo: { fork: false, owner: { id: 1 } },
+          },
+          base: {
+            ref: 'develop',
+            repo: { owner: { id: 1 } },
+          },
+          user: { login: 'testuser' },
+          title: 'Update README', // Non-conventional title
+        },
+      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
+
+      // Mock approved review from another user
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await execMerge(octokit, context, config);
+
+      // Should still merge successfully (conventional commits is optional)
+      expect(result.status).toBe('merged');
+      expect(result.mergeMethod).toBe('squash');
+
+      // Verify the warning icon was used in the comment
+      const commentCalls = (octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>).mock.calls;
+      const hasConventionalCommitsCheck = commentCalls.some(call => {
+        const body = call[0]?.body;
+        return body?.includes('Conventional Commits') && body?.includes(TWEMOJI.WARNING);
+      });
+      expect(hasConventionalCommitsCheck).toBe(true);
+    });
+
+    it('merges PR with conventional title and shows check mark', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock approved review from another user
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await execMerge(octokit, context, config);
+
+      // Should merge successfully
+      expect(result.status).toBe('merged');
+
+      // Verify the check icon was used for conventional commits
+      const commentCalls = (octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>).mock.calls;
+      const hasConventionalCommitsCheck = commentCalls.some(call => {
+        const body = call[0]?.body;
+        return body?.includes('Conventional Commits') && body?.includes(TWEMOJI.CHECK);
+      });
+      expect(hasConventionalCommitsCheck).toBe(true);
+    });
   });
 
   describe('TOCTOU and mergeability handling', () => {
@@ -1008,6 +1244,7 @@ describe('execMerge', () => {
               repo: { owner: { id: 1 } },
             },
             user: { login: 'testuser' },
+            title: 'feat: test pull request',
           },
         } as Awaited<ReturnType<typeof octokit.rest.pulls.get>>;
       });
@@ -1061,6 +1298,7 @@ describe('execMerge', () => {
               repo: { owner: { id: 1 } },
             },
             user: { login: 'testuser' },
+            title: 'feat: test pull request',
           },
         } as Awaited<ReturnType<typeof octokit.rest.pulls.get>>;
       });
@@ -1113,6 +1351,7 @@ describe('execMerge', () => {
               repo: { owner: { id: 1 } },
             },
             user: { login: 'testuser' },
+            title: 'feat: test pull request',
           },
         } as Awaited<ReturnType<typeof octokit.rest.pulls.get>>;
       });
@@ -1160,6 +1399,7 @@ describe('execMerge', () => {
             repo: { owner: { id: 1 } },
           },
           user: { login: 'testuser' },
+          title: 'feat: test pull request',
         },
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 

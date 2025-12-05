@@ -26,6 +26,8 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 - `build`: Changes that affect the build system or external dependencies
 - `ci`: Changes to CI configuration files and scripts
 - `chore`: Other changes that don't modify src or test files
+- `revert`: Reverts a previous commit
+- `ux`: User experience improvements (project-specific additional custom type)
 
 ### Examples
 

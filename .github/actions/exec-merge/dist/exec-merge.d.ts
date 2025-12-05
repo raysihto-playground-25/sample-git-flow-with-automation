@@ -79,6 +79,7 @@ export interface PullRequestData {
     baseRef: string;
     author: string;
     isFork: boolean;
+    title: string;
 }
 /**
  * Result of validation checks.
@@ -98,6 +99,8 @@ export interface CheckResult {
     name: string;
     passed: boolean;
     details?: string;
+    /** If true, this check does not block the merge even when it fails */
+    optional?: boolean;
 }
 /**
  * Merge method and reason.
@@ -130,6 +133,7 @@ export declare const COMMAND_REGEX: RegExp;
 export declare const TWEMOJI: {
     readonly CHECK: "<img src=\"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg\" width=\"20\" height=\"20\" alt=\"OK\">";
     readonly CROSS: "<img src=\"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg\" width=\"20\" height=\"20\" alt=\"NG\">";
+    readonly WARNING: "<img src=\"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/26a0.svg\" width=\"20\" height=\"20\" alt=\"Warning\">";
 };
 /**
  * Valid author associations that can use the /exec merge command.
@@ -144,6 +148,35 @@ export declare const VALID_AUTHOR_ASSOCIATIONS: readonly ["OWNER", "MEMBER", "CO
  * Read-only users should not be able to trigger merges even if they can comment.
  */
 export declare const VALID_PERMISSIONS: readonly ["admin", "maintain", "write"];
+/**
+ * Valid Conventional Commits types for PR title validation.
+ * See https://www.conventionalcommits.org/
+ *
+ * Note: `ux` is a project-specific additional custom type for user experience improvements.
+ */
+export declare const CONVENTIONAL_COMMIT_TYPES: readonly ["build", "chore", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test", "ux"];
+/**
+ * Regex pattern for validating Conventional Commits format.
+ * Format: <type>(<optional scope>): <description>
+ * The description must contain at least one non-whitespace character.
+ * Examples:
+ * - feat: add new feature
+ * - fix(auth): resolve login issue
+ * - docs(readme): update installation guide
+ */
+export declare const CONVENTIONAL_COMMIT_REGEX: RegExp;
+/**
+ * Checks if a PR title follows the Conventional Commits format.
+ *
+ * @param title - The PR title to validate
+ * @returns true if the title follows Conventional Commits format
+ *
+ * @example
+ * isConventionalCommitTitle('feat: add new feature')           // true
+ * isConventionalCommitTitle('fix(auth): resolve login issue')  // true
+ * isConventionalCommitTitle('Update README')                   // false
+ */
+export declare function isConventionalCommitTitle(title: string): boolean;
 /**
  * Checks if a comment matches the `/exec merge` command pattern.
  *

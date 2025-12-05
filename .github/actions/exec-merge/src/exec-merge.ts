@@ -87,6 +87,7 @@ export interface PullRequestData {
   baseRef: string;
   author: string;
   isFork: boolean;
+  title: string;
 }
 
 /**
@@ -108,6 +109,8 @@ export interface CheckResult {
   name: string;
   passed: boolean;
   details?: string;
+  /** If true, this check does not block the merge even when it fails */
+  optional?: boolean;
 }
 
 /**
@@ -150,6 +153,7 @@ export const COMMAND_REGEX = /^\s*\/exec\s+merge\s*$/;
 export const TWEMOJI = {
   CHECK: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg" width="20" height="20" alt="OK">',
   CROSS: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg" width="20" height="20" alt="NG">',
+  WARNING: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/26a0.svg" width="20" height="20" alt="Warning">',
 } as const;
 
 /**
@@ -167,9 +171,58 @@ export const VALID_AUTHOR_ASSOCIATIONS = ['OWNER', 'MEMBER', 'COLLABORATOR'] as 
  */
 export const VALID_PERMISSIONS = ['admin', 'maintain', 'write'] as const;
 
+/**
+ * Valid Conventional Commits types for PR title validation.
+ * See https://www.conventionalcommits.org/
+ * 
+ * Note: `ux` is a project-specific additional custom type for user experience improvements.
+ */
+export const CONVENTIONAL_COMMIT_TYPES = [
+  'build',
+  'chore',
+  'ci',
+  'docs',
+  'feat',
+  'fix',
+  'perf',
+  'refactor',
+  'revert',
+  'style',
+  'test',
+  'ux', // project-specific additional custom type
+] as const;
+
+/**
+ * Regex pattern for validating Conventional Commits format.
+ * Format: <type>(<optional scope>): <description>
+ * The description must contain at least one non-whitespace character.
+ * Examples:
+ * - feat: add new feature
+ * - fix(auth): resolve login issue
+ * - docs(readme): update installation guide
+ */
+export const CONVENTIONAL_COMMIT_REGEX = new RegExp(
+  `^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)]+\\))?:\\s*\\S.*$`
+);
+
 // =============================================================================
 // Pure Logic Functions (easily testable)
 // =============================================================================
+
+/**
+ * Checks if a PR title follows the Conventional Commits format.
+ * 
+ * @param title - The PR title to validate
+ * @returns true if the title follows Conventional Commits format
+ * 
+ * @example
+ * isConventionalCommitTitle('feat: add new feature')           // true
+ * isConventionalCommitTitle('fix(auth): resolve login issue')  // true
+ * isConventionalCommitTitle('Update README')                   // false
+ */
+export function isConventionalCommitTitle(title: string): boolean {
+  return CONVENTIONAL_COMMIT_REGEX.test(title);
+}
 
 /**
  * Checks if a comment matches the `/exec merge` command pattern.
@@ -332,7 +385,14 @@ export function getMergeableStateDescription(state: string): string {
 export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
   return checks
     .map((check) => {
-      const icon = check.passed ? TWEMOJI.CHECK : TWEMOJI.CROSS;
+      let icon: string;
+      if (check.passed) {
+        icon = TWEMOJI.CHECK;
+      } else if (check.optional) {
+        icon = TWEMOJI.WARNING;
+      } else {
+        icon = TWEMOJI.CROSS;
+      }
       const detail = check.details ? ` (${check.details})` : '';
       return `- ${icon} ${check.name}${detail}`;
     })
@@ -473,6 +533,7 @@ export async function fetchPullRequestData(
     baseRef: pr.base.ref,
     author: pr.user?.login ?? 'unknown',
     isFork,
+    title: pr.title,
   };
 }
 
@@ -798,11 +859,20 @@ export async function execMerge(
     details: !noConflicts ? getMergeableStateDescription(prData.mergeableState) : undefined,
   });
 
+  // Optional: Conventional Commits check for PR title
+  const isConventionalTitle = isConventionalCommitTitle(prData.title);
+  checks.push({
+    name: 'PR title follows [Conventional Commits](https://www.conventionalcommits.org/)',
+    passed: isConventionalTitle,
+    details: !isConventionalTitle ? 'title does not follow conventional format' : undefined,
+    optional: true,
+  });
+
   // Determine merge method
   const mergeMethodResult = determineMergeMethod(prData.headRef, prData.baseRef, config);
 
   // Build results markdown
-  // Reorder checks to match workflow order: open, unlocked, ready, threads, approval, conflicts
+  // Reorder checks to match workflow order: open, unlocked, ready, threads, approval, conflicts, optional checks
   const orderedChecks = [
     checks.find((c) => c.name === 'PR is open')!,
     checks.find((c) => c.name === 'PR is unlocked')!,
@@ -810,9 +880,11 @@ export async function execMerge(
     checks.find((c) => c.name === 'All review conversations are resolved')!,
     checks.find((c) => c.name === 'At least one valid approval from another user')!,
     checks.find((c) => c.name === 'No merge conflicts')!,
+    checks.find((c) => c.name.includes('Conventional Commits'))!,
   ];
   const checksMarkdown = buildCheckResultsMarkdown(orderedChecks);
-  const allPassed = orderedChecks.every((c) => c.passed);
+  // Only required (non-optional) checks must pass
+  const allPassed = orderedChecks.filter((c) => !c.optional).every((c) => c.passed);
 
   // -------------------------------------------------------------------------
   // Step 4: Report results and merge if all passed
