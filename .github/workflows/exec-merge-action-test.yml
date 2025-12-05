@@ -61,8 +61,7 @@ jobs:
               # Extract data rows after "File" header line and format as Markdown table rows
               # First sed: skip header line, loop through data rows, stop at separator line starting with "-"
               # Second sed: strip ANSI codes, trim spaces, normalize column separators, add table delimiters
-              sed -n '/^File/{ n; :loop; n; /^-/{q}; p; b loop; }' /tmp/coverage-${{ github.run_id }}.txt \
-              | sed 's/\x1b\[[0-9;]*m//g; s/^ *//; s/ *$//; s/ *| */ | /g; s/^/| /; s/$/ |/'
+              sed -n '/^File/{ n; :loop; n; /^-/{q}; p; b loop; }' /tmp/coverage-${{ github.run_id }}.txt
             else
               echo '_Coverage data not available_'
             fi
