@@ -7,9 +7,10 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
-  # npm依存関係の更新では、「挙動を原則変えずに何らかの (潜在的な不具合に関する) 修正が
-  # 行われた」可能性が高いと想定し、パッチバージョンのインクリメントを促すために
-  # prefix を "fix" 固定で安全側に倒しています。
+  # For npm dependency updates, we assume there is a high probability that
+  # "some fix (related to potential bugs) was made without fundamentally changing
+  # behavior". We use the "fix" prefix to promote patch version increments,
+  # erring on the safe side.
   - package-ecosystem: "npm"
     directory: "/.github/actions/exec-merge"
     schedule:
