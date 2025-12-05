@@ -561,6 +561,10 @@ describe('isConventionalCommitTitle', () => {
       expect(isConventionalCommitTitle('feat: ')).toBe(false);
     });
 
+    it('rejects empty scope', () => {
+      expect(isConventionalCommitTitle('feat(): description')).toBe(false);
+    });
+
     it('rejects when type has leading text', () => {
       expect(isConventionalCommitTitle('prefix feat: add feature')).toBe(false);
     });

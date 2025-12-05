@@ -174,6 +174,8 @@ export const VALID_PERMISSIONS = ['admin', 'maintain', 'write'] as const;
 /**
  * Valid Conventional Commits types for PR title validation.
  * See https://www.conventionalcommits.org/
+ * 
+ * Note: `ux` is a project-specific additional custom type for user experience improvements.
  */
 export const CONVENTIONAL_COMMIT_TYPES = [
   'build',
@@ -187,7 +189,7 @@ export const CONVENTIONAL_COMMIT_TYPES = [
   'revert',
   'style',
   'test',
-  'ux',
+  'ux', // project-specific additional custom type
 ] as const;
 
 /**

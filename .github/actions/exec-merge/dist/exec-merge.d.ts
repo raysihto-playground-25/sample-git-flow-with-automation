@@ -151,6 +151,8 @@ export declare const VALID_PERMISSIONS: readonly ["admin", "maintain", "write"];
 /**
  * Valid Conventional Commits types for PR title validation.
  * See https://www.conventionalcommits.org/
+ *
+ * Note: `ux` is a project-specific additional custom type for user experience improvements.
  */
 export declare const CONVENTIONAL_COMMIT_TYPES: readonly ["build", "chore", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test", "ux"];
 /**
