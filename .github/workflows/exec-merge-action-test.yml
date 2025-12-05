@@ -49,16 +49,19 @@ jobs:
       - name: Report coverage to summary
         if: success()
         run: |
-          echo "## Test Coverage Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          if [ -f /tmp/coverage-${{ github.run_id }}.txt ] && grep -q "Coverage report" /tmp/coverage-${{ github.run_id }}.txt; then
-            # Extract coverage table and strip ANSI escape sequences
-            awk '/Coverage report/{found=1} found; found && /^-----------/ && ++count==3{exit}' /tmp/coverage-${{ github.run_id }}.txt | sed 's/\x1b\[[0-9;]*m//g' >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Test Coverage Report"
+            echo ""
+
+            if [ -f /tmp/coverage-${{ github.run_id }}.txt ] && grep -q "Coverage report" /tmp/coverage-${{ github.run_id }}.txt; then
+              echo '| File | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s |'
+              echo '|:-----|--------:|---------:|--------:|--------:|--------------------|'
+              sed -n '/^File/{n;:loop;n;/^-/q;p;b loop;}' /tmp/coverage-${{ github.run_id }}.txt
+            else
+              echo '_Coverage data not available_'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
           rm -f /tmp/coverage-${{ github.run_id }}.txt
 
       - name: Build action
