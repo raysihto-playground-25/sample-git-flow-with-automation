@@ -4,9 +4,11 @@ name: exec-merge-action-test
 # Runs unit tests for the exec-merge TypeScript action
 # =============================================================================
 # This workflow ensures that:
-# 1. The TypeScript action compiles successfully
-# 2. All unit tests pass
-# 3. The action is ready for use
+# 1. Code is properly formatted with Prettier
+# 2. Linting passes with ESLint
+# 3. All unit tests pass
+# 4. The TypeScript action compiles successfully
+# 5. The action is ready for use
 # =============================================================================
 
 on:
@@ -41,6 +43,9 @@ jobs:
 
       - name: Run linter
         run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
 
       - name: Run tests with coverage
         run: |

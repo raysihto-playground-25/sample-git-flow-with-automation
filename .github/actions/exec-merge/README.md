@@ -48,21 +48,21 @@ jobs:
 
 ## Inputs
 
-| Input | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `github-token` | string | Yes | - | GitHub token for API authentication |
-| `release_branch_prefix` | string | No | `release/` | Prefix for release branches |
-| `develop_branch` | string | No | `develop` | Name of the develop branch |
-| `sync_branch_prefix` | string | No | `fix/sync/` | Prefix for sync branches (back-merges) |
-| `mergeable_retry_count` | number | No | `5` | Number of retries for mergeable status calculation |
-| `mergeable_retry_interval` | number | No | `10` | Interval in seconds between retries |
+| Input                      | Type   | Required | Default     | Description                                        |
+| -------------------------- | ------ | -------- | ----------- | -------------------------------------------------- |
+| `github-token`             | string | Yes      | -           | GitHub token for API authentication                |
+| `release_branch_prefix`    | string | No       | `release/`  | Prefix for release branches                        |
+| `develop_branch`           | string | No       | `develop`   | Name of the develop branch                         |
+| `sync_branch_prefix`       | string | No       | `fix/sync/` | Prefix for sync branches (back-merges)             |
+| `mergeable_retry_count`    | number | No       | `5`         | Number of retries for mergeable status calculation |
+| `mergeable_retry_interval` | number | No       | `10`        | Interval in seconds between retries                |
 
 ## Outputs
 
-| Output | Description |
-|--------|-------------|
-| `result` | Result of the operation: `merged`, `skipped`, `failed`, or `already_merged` |
-| `merge_method` | Merge method used: `squash` or `merge` (only set when merged) |
+| Output         | Description                                                                 |
+| -------------- | --------------------------------------------------------------------------- |
+| `result`       | Result of the operation: `merged`, `skipped`, `failed`, or `already_merged` |
+| `merge_method` | Merge method used: `squash` or `merge` (only set when merged)               |
 
 ## Usage
 
@@ -72,13 +72,13 @@ Comment `/exec merge` on any PR to trigger the merge action.
 
 The action automatically selects the appropriate merge method:
 
-| Condition | Merge Method | Reason |
-|-----------|--------------|--------|
-| Head branch is `release/*` | Merge commit | Preserve release history |
-| Head branch is `fix/sync/*` | Merge commit | Preserve back-merge history |
-| Base branch is `release/*` | Squash | Clean release branch history |
-| Base branch is `develop` | Squash | Clean develop branch history |
-| Otherwise | Merge commit | Default behavior |
+| Condition                   | Merge Method | Reason                       |
+| --------------------------- | ------------ | ---------------------------- |
+| Head branch is `release/*`  | Merge commit | Preserve release history     |
+| Head branch is `fix/sync/*` | Merge commit | Preserve back-merge history  |
+| Base branch is `release/*`  | Squash       | Clean release branch history |
+| Base branch is `develop`    | Squash       | Clean develop branch history |
+| Otherwise                   | Merge commit | Default behavior             |
 
 ## Pre-merge Checks
 
@@ -120,11 +120,11 @@ npm run build   # Build with ncc
 
 This action uses **Vitest** for unit testing. The test suite focuses on testing pure logic functions and mocking GitHub API interactions for isolation.
 
-| Test Type | Status | Description |
-|-----------|--------|-------------|
-| **Unit Tests** | ✅ Implemented | Covers command parsing, permissions, merge logic, and API interactions |
-| **Integration Tests** | ❌ Not implemented | Would test GitHub API interactions with real tokens |
-| **E2E Tests** | ❌ Not implemented | Would test full workflow execution on real PRs |
+| Test Type             | Status             | Description                                                            |
+| --------------------- | ------------------ | ---------------------------------------------------------------------- |
+| **Unit Tests**        | ✅ Implemented     | Covers command parsing, permissions, merge logic, and API interactions |
+| **Integration Tests** | ❌ Not implemented | Would test GitHub API interactions with real tokens                    |
+| **E2E Tests**         | ❌ Not implemented | Would test full workflow execution on real PRs                         |
 
 ### Running Tests
 

@@ -1,18 +1,22 @@
 /**
  * main.ts - Entry point for the exec-merge GitHub Action
- * 
+ *
  * This file is the main entry point that:
  * 1. Reads inputs from the GitHub Actions environment
  * 2. Constructs the event context from github.context
  * 3. Calls the main execMerge function
  * 4. Sets outputs and handles errors
- * 
+ *
  * The actual business logic is in exec-merge.ts for testability.
  */
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { execMerge, type ExecMergeConfig, type EventContext } from './exec-merge';
+import {
+  execMerge,
+  type ExecMergeConfig,
+  type EventContext,
+} from './exec-merge';
 
 /**
  * Writes a summary of the exec-merge operation to the GitHub Actions step summary.
@@ -24,7 +28,7 @@ function writeSummary(
   headRef?: string,
   baseRef?: string,
   mergeMethod?: string,
-  headSha?: string
+  headSha?: string,
 ): void {
   let summary = `## exec-merge Summary\n\n`;
   summary += `| Item | Value |\n`;
@@ -60,8 +64,14 @@ async function run(): Promise<void> {
       releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
       developBranch: core.getInput('develop_branch') || 'develop',
       syncBranchPrefix: core.getInput('sync_branch_prefix') || 'fix/sync/',
-      mergeableRetryCount: parseInt(core.getInput('mergeable_retry_count') || '5', 10),
-      mergeableRetryInterval: parseInt(core.getInput('mergeable_retry_interval') || '10', 10),
+      mergeableRetryCount: parseInt(
+        core.getInput('mergeable_retry_count') || '5',
+        10,
+      ),
+      mergeableRetryInterval: parseInt(
+        core.getInput('mergeable_retry_interval') || '10',
+        10,
+      ),
     };
 
     // Get event context
@@ -122,7 +132,7 @@ async function run(): Promise<void> {
       undefined, // headRef not available in this scope
       undefined, // baseRef not available in this scope
       result.mergeMethod,
-      undefined // headSha not available in this scope
+      undefined, // headSha not available in this scope
     );
 
     // Log result
@@ -131,7 +141,9 @@ async function run(): Promise<void> {
     // Mark as failed if the result status is failed
     if (result.status === 'failed') {
       // Don't fail the workflow - failures are communicated via PR comments
-      core.info('Merge checks or operation failed. See PR comments for details.');
+      core.info(
+        'Merge checks or operation failed. See PR comments for details.',
+      );
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
