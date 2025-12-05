@@ -52,7 +52,7 @@ docs(contributing): add commit message guidelines
 
 ## Code Style Policy
 
-This project employs a clear separation of concerns between code formatting and code quality analysis. We kindly ask all contributors to familiarize themselves with the following principles before submitting changes.
+This project employs a clear separation of concerns between code formatting and code quality analysis. These guidelines apply to all code in this repository, including source code in `.github/actions` and any other directories containing JavaScript or TypeScript. We kindly ask all contributors to familiarize themselves with the following principles before submitting changes.
 
 ### Formatting with Prettier
 
