@@ -746,7 +746,6 @@ export async function execMerge(
   // Approval check - fetch and validate reviews
   const approvedReviews = await fetchApprovedReviews(octokit, owner, repo, prNumber);
   let validApprovals = 0;
-  const staleMessages: string[] = [];
   const dismissFailures: string[] = [];
 
   for (const review of approvedReviews) {
@@ -759,11 +758,7 @@ export async function execMerge(
     if (review.commit_id !== prData.headSha) {
       const message = `Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${review.commit_id?.slice(0, 7)}, current HEAD: ${prData.headSha.slice(0, 7)}).`;
       const dismissed = await dismissReview(octokit, owner, repo, prNumber, review.id, message);
-      if (dismissed) {
-        staleMessages.push(
-          `- Dismissed approval from @${review.user?.login} (reviewed commit: ${review.commit_id}, current HEAD: ${prData.headSha})`
-        );
-      } else {
+      if (!dismissed) {
         dismissFailures.push(
           `- Failed to dismiss approval from @${review.user?.login} (insufficient permissions or branch protection settings)`
         );
@@ -773,18 +768,10 @@ export async function execMerge(
     }
   }
 
-  // Post stale dismissal notification if any
-  if (staleMessages.length > 0 || dismissFailures.length > 0) {
-    let staleComment = '';
-    if (staleMessages.length > 0) {
-      staleComment = `## Stale approvals dismissed\n\nThe following approvals were dismissed because new commits were pushed after the reviews:\n\n${staleMessages.join('\n')}`;
-    }
-    if (dismissFailures.length > 0) {
-      const header = staleComment
-        ? '\n\n### Dismiss failures'
-        : '## Stale approval dismiss failures';
-      staleComment += `${header}\n\nThe following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n\n${dismissFailures.join('\n')}`;
-    }
+  // Post stale dismissal notification only when there are failures
+  // Success notifications are redundant with GitHub's native "approval dismissed" notification
+  if (dismissFailures.length > 0) {
+    const staleComment = `## Stale approval dismiss failures\n\nThe following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n\n${dismissFailures.join('\n')}`;
     await postComment(octokit, owner, repo, prNumber, staleComment);
   }
 

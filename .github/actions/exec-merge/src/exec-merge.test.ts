@@ -867,7 +867,7 @@ describe('execMerge', () => {
       expect(result.message).toContain('checks failed');
     });
 
-    it('dismisses stale approvals and posts notification', async () => {
+    it('dismisses stale approvals without posting success notification (GitHub shows native notification)', async () => {
       const octokit = createMockOctokit();
 
       // Mock PR with current HEAD
@@ -910,8 +910,14 @@ describe('execMerge', () => {
       // Should dismiss the stale review
       expect(octokit.rest.pulls.dismissReview).toHaveBeenCalled();
 
-      // Should post comment about stale dismissal
-      expect(octokit.rest.issues.createComment).toHaveBeenCalled();
+      // Should NOT post "Stale approvals dismissed" comment (redundant with GitHub's native notification)
+      // But SHOULD post "Merge checks failed" comment
+      const commentCalls = (octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>).mock.calls;
+      const hasStaleSuccessComment = commentCalls.some(call => {
+        const body = call[0]?.body;
+        return body?.includes('Stale approvals dismissed');
+      });
+      expect(hasStaleSuccessComment).toBe(false);
 
       // Should fail because no valid approvals remain
       expect(result.status).toBe('failed');
