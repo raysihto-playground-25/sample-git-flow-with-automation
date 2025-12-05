@@ -867,7 +867,7 @@ describe('execMerge', () => {
       expect(result.message).toContain('checks failed');
     });
 
-    it('dismisses stale approvals without posting success notification (GitHub shows native notification)', async () => {
+    it('dismisses stale approvals without posting success notification', async () => {
       const octokit = createMockOctokit();
 
       // Mock PR with current HEAD
