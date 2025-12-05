@@ -1,6 +1,6 @@
 /**
  * exec-merge.test.ts - Unit tests for exec-merge action
- * 
+ *
  * Tests cover all pure logic functions and validate the core business rules.
  * GitHub API interactions are mocked for isolation.
  */
@@ -117,7 +117,9 @@ function createMockOctokit(): Octokit {
         }),
         listReviews: vi.fn().mockResolvedValue({ data: [] }),
         dismissReview: vi.fn().mockResolvedValue({}),
-        merge: vi.fn().mockResolvedValue({ data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' } }),
+        merge: vi.fn().mockResolvedValue({
+          data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' },
+        }),
       },
     },
     paginate: vi.fn().mockResolvedValue([]),
@@ -444,9 +446,7 @@ describe('buildCheckResultsMarkdown', () => {
   });
 
   it('should include cross icon for failed checks', () => {
-    const checks: CheckResult[] = [
-      { name: 'Test check', passed: false, details: 'reason' },
-    ];
+    const checks: CheckResult[] = [{ name: 'Test check', passed: false, details: 'reason' }];
     const markdown = buildCheckResultsMarkdown(checks);
 
     expect(markdown).toContain(TWEMOJI.CROSS);
@@ -469,9 +469,7 @@ describe('buildCheckResultsMarkdown', () => {
   });
 
   it('should include warning icon for failed optional checks', () => {
-    const checks: CheckResult[] = [
-      { name: 'Optional check', passed: false, details: 'not required', optional: true },
-    ];
+    const checks: CheckResult[] = [{ name: 'Optional check', passed: false, details: 'not required', optional: true }];
     const markdown = buildCheckResultsMarkdown(checks);
 
     expect(markdown).toContain(TWEMOJI.WARNING);
@@ -480,9 +478,7 @@ describe('buildCheckResultsMarkdown', () => {
   });
 
   it('should include check icon for passed optional checks', () => {
-    const checks: CheckResult[] = [
-      { name: 'Optional check', passed: true, optional: true },
-    ];
+    const checks: CheckResult[] = [{ name: 'Optional check', passed: true, optional: true }];
     const markdown = buildCheckResultsMarkdown(checks);
 
     expect(markdown).toContain(TWEMOJI.CHECK);
@@ -527,7 +523,20 @@ describe('isConventionalCommitTitle', () => {
     });
 
     it('matches all 12 supported types', () => {
-      const types = ['build', 'chore', 'ci', 'docs', 'feat', 'fix', 'perf', 'refactor', 'revert', 'style', 'test', 'ux'];
+      const types = [
+        'build',
+        'chore',
+        'ci',
+        'docs',
+        'feat',
+        'fix',
+        'perf',
+        'refactor',
+        'revert',
+        'style',
+        'test',
+        'ux',
+      ];
       for (const type of types) {
         expect(isConventionalCommitTitle(`${type}: some description`)).toBe(true);
         expect(isConventionalCommitTitle(`${type}(scope): some description`)).toBe(true);
@@ -581,7 +590,20 @@ describe('CONVENTIONAL_COMMIT_TYPES', () => {
   });
 
   it('should include all required types', () => {
-    const expectedTypes = ['build', 'chore', 'ci', 'docs', 'feat', 'fix', 'perf', 'refactor', 'revert', 'style', 'test', 'ux'];
+    const expectedTypes = [
+      'build',
+      'chore',
+      'ci',
+      'docs',
+      'feat',
+      'fix',
+      'perf',
+      'refactor',
+      'revert',
+      'style',
+      'test',
+      'ux',
+    ];
     for (const type of expectedTypes) {
       expect(CONVENTIONAL_COMMIT_TYPES).toContain(type);
     }
@@ -677,9 +699,11 @@ describe('addReaction', () => {
 
   it('should not throw on error', async () => {
     const octokit = createMockOctokit();
-    (octokit.rest.reactions.createForIssueComment as MockedFunction<typeof octokit.rest.reactions.createForIssueComment>).mockRejectedValue(
-      new Error('Already exists')
-    );
+    (
+      octokit.rest.reactions.createForIssueComment as MockedFunction<
+        typeof octokit.rest.reactions.createForIssueComment
+      >
+    ).mockRejectedValue(new Error('Already exists'));
 
     // Should not throw
     await expect(addReaction(octokit, 'owner', 'repo', 123, 'eyes')).resolves.toBeUndefined();
@@ -710,9 +734,11 @@ describe('getCollaboratorPermission', () => {
 
   it('should return none on error', async () => {
     const octokit = createMockOctokit();
-    (octokit.rest.repos.getCollaboratorPermissionLevel as MockedFunction<typeof octokit.rest.repos.getCollaboratorPermissionLevel>).mockRejectedValue(
-      new Error('Not found')
-    );
+    (
+      octokit.rest.repos.getCollaboratorPermissionLevel as MockedFunction<
+        typeof octokit.rest.repos.getCollaboratorPermissionLevel
+      >
+    ).mockRejectedValue(new Error('Not found'));
 
     const permission = await getCollaboratorPermission(octokit, 'owner', 'repo', 'user');
     expect(permission).toBe('none');
@@ -774,7 +800,7 @@ describe('dismissReview', () => {
   it('should return false on error', async () => {
     const octokit = createMockOctokit();
     (octokit.rest.pulls.dismissReview as MockedFunction<typeof octokit.rest.pulls.dismissReview>).mockRejectedValue(
-      new Error('Forbidden')
+      new Error('Forbidden'),
     );
 
     const result = await dismissReview(octokit, 'owner', 'repo', 1, 123, 'Stale');
@@ -794,10 +820,7 @@ describe('countUnresolvedThreads', () => {
             pullRequest: {
               reviewThreads: {
                 pageInfo: { hasNextPage: true, endCursor: 'cursor1' },
-                nodes: [
-                  { isResolved: false },
-                  { isResolved: true },
-                ],
+                nodes: [{ isResolved: false }, { isResolved: true }],
               },
             },
           },
@@ -808,9 +831,7 @@ describe('countUnresolvedThreads', () => {
           pullRequest: {
             reviewThreads: {
               pageInfo: { hasNextPage: false, endCursor: null },
-              nodes: [
-                { isResolved: false },
-              ],
+              nodes: [{ isResolved: false }],
             },
           },
         },
@@ -825,15 +846,7 @@ describe('countUnresolvedThreads', () => {
 describe('mergePullRequest', () => {
   it('should return success on successful merge', async () => {
     const octokit = createMockOctokit();
-    const result = await mergePullRequest(
-      octokit,
-      'owner',
-      'repo',
-      1,
-      'squash',
-      'abc123',
-      'Merge message'
-    );
+    const result = await mergePullRequest(octokit, 'owner', 'repo', 1, 'squash', 'abc123', 'Merge message');
 
     expect(result.success).toBe(true);
     expect(result.mergeCommitSha).toBe('merge123456789');
@@ -842,18 +855,10 @@ describe('mergePullRequest', () => {
   it('should return error message on failure', async () => {
     const octokit = createMockOctokit();
     (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mockRejectedValue(
-      new Error('Merge conflict')
+      new Error('Merge conflict'),
     );
 
-    const result = await mergePullRequest(
-      octokit,
-      'owner',
-      'repo',
-      1,
-      'squash',
-      'abc123',
-      'Merge message'
-    );
+    const result = await mergePullRequest(octokit, 'owner', 'repo', 1, 'squash', 'abc123', 'Merge message');
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('Merge conflict');
@@ -901,7 +906,11 @@ describe('execMerge', () => {
 
     it('fails for users without write permission', async () => {
       const octokit = createMockOctokit();
-      (octokit.rest.repos.getCollaboratorPermissionLevel as MockedFunction<typeof octokit.rest.repos.getCollaboratorPermissionLevel>).mockResolvedValue({
+      (
+        octokit.rest.repos.getCollaboratorPermissionLevel as MockedFunction<
+          typeof octokit.rest.repos.getCollaboratorPermissionLevel
+        >
+      ).mockResolvedValue({
         data: { permission: 'read' },
       } as Awaited<ReturnType<typeof octokit.rest.repos.getCollaboratorPermissionLevel>>);
       const context = createEventContext();
@@ -1063,8 +1072,10 @@ describe('execMerge', () => {
 
       // Should NOT post "Stale approvals dismissed" comment (redundant with GitHub's native notification)
       // But SHOULD post "Merge checks failed" comment
-      const commentCalls = (octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>).mock.calls;
-      const hasStaleSuccessComment = commentCalls.some(call => {
+      const commentCalls = (
+        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
+      ).mock.calls;
+      const hasStaleSuccessComment = commentCalls.some((call) => {
         const body = call[0]?.body;
         return body?.includes('Stale approvals dismissed');
       });
@@ -1112,7 +1123,7 @@ describe('execMerge', () => {
 
       // Mock dismissReview to fail
       (octokit.rest.pulls.dismissReview as MockedFunction<typeof octokit.rest.pulls.dismissReview>).mockRejectedValue(
-        new Error('Forbidden')
+        new Error('Forbidden'),
       );
 
       const context = createEventContext();
@@ -1122,8 +1133,10 @@ describe('execMerge', () => {
 
       // Should post comment about dismiss failure
       expect(octokit.rest.issues.createComment).toHaveBeenCalled();
-      const commentCalls = (octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>).mock.calls;
-      const hasFailureComment = commentCalls.some(call => {
+      const commentCalls = (
+        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
+      ).mock.calls;
+      const hasFailureComment = commentCalls.some((call) => {
         const body = call[0]?.body;
         return body?.includes('Failed to dismiss') || body?.includes('Dismiss failures');
       });
@@ -1179,8 +1192,10 @@ describe('execMerge', () => {
       expect(result.mergeMethod).toBe('squash');
 
       // Verify the warning icon was used in the comment
-      const commentCalls = (octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>).mock.calls;
-      const hasConventionalCommitsCheck = commentCalls.some(call => {
+      const commentCalls = (
+        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
+      ).mock.calls;
+      const hasConventionalCommitsCheck = commentCalls.some((call) => {
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes(TWEMOJI.WARNING);
       });
@@ -1209,8 +1224,10 @@ describe('execMerge', () => {
       expect(result.status).toBe('merged');
 
       // Verify the check icon was used for conventional commits
-      const commentCalls = (octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>).mock.calls;
-      const hasConventionalCommitsCheck = commentCalls.some(call => {
+      const commentCalls = (
+        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
+      ).mock.calls;
+      const hasConventionalCommitsCheck = commentCalls.some((call) => {
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes(TWEMOJI.CHECK);
       });
@@ -1436,7 +1453,7 @@ describe('execMerge', () => {
 
       // Mock merge to fail
       (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mockRejectedValue(
-        new Error('Merge conflict')
+        new Error('Merge conflict'),
       );
 
       const context = createEventContext();

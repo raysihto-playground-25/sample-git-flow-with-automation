@@ -1,6 +1,6 @@
 /**
  * exec-merge.ts - Core logic for automated PR merging
- * 
+ *
  * FLOW OVERVIEW:
  * 1. Command validation - Check if comment is "/exec merge" (skip bots)
  * 2. Permission check - Verify OWNER/MEMBER/COLLABORATOR + write permission
@@ -10,12 +10,12 @@
  * 6. Mergeability check - Wait for GitHub to compute, verify no conflicts
  * 7. TOCTOU check - Re-verify HEAD SHA hasn't changed before merge
  * 8. Execute merge - Use squash or merge commit based on branch patterns
- * 
+ *
  * The code is structured to be easily testable by:
  * - Separating pure logic functions from I/O operations
  * - Using dependency injection for GitHub API calls
  * - Using TypeScript interfaces for type safety
- * 
+ *
  * THIRD-PARTY LICENSES:
  * - Twemoji graphics (https://github.com/twitter/twemoji) are used for emoji
  *   display compatibility. Licensed under CC-BY 4.0.
@@ -151,9 +151,12 @@ export const COMMAND_REGEX = /^\s*\/exec\s+merge\s*$/;
  * https://github.com/twitter/twemoji (CC-BY 4.0 licensed)
  */
 export const TWEMOJI = {
-  CHECK: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg" width="20" height="20" alt="OK">',
-  CROSS: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg" width="20" height="20" alt="NG">',
-  WARNING: '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/26a0.svg" width="20" height="20" alt="Warning">',
+  CHECK:
+    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg" width="20" height="20" alt="OK">',
+  CROSS:
+    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg" width="20" height="20" alt="NG">',
+  WARNING:
+    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/26a0.svg" width="20" height="20" alt="Warning">',
 } as const;
 
 /**
@@ -174,7 +177,7 @@ export const VALID_PERMISSIONS = ['admin', 'maintain', 'write'] as const;
 /**
  * Valid Conventional Commits types for PR title validation.
  * See https://www.conventionalcommits.org/
- * 
+ *
  * Note: `ux` is a project-specific additional custom type for user experience improvements.
  */
 export const CONVENTIONAL_COMMIT_TYPES = [
@@ -202,7 +205,7 @@ export const CONVENTIONAL_COMMIT_TYPES = [
  * - docs(readme): update installation guide
  */
 export const CONVENTIONAL_COMMIT_REGEX = new RegExp(
-  `^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)]+\\))?:\\s*\\S.*$`
+  `^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)]+\\))?:\\s*\\S.*$`,
 );
 
 // =============================================================================
@@ -211,10 +214,10 @@ export const CONVENTIONAL_COMMIT_REGEX = new RegExp(
 
 /**
  * Checks if a PR title follows the Conventional Commits format.
- * 
+ *
  * @param title - The PR title to validate
  * @returns true if the title follows Conventional Commits format
- * 
+ *
  * @example
  * isConventionalCommitTitle('feat: add new feature')           // true
  * isConventionalCommitTitle('fix(auth): resolve login issue')  // true
@@ -226,10 +229,10 @@ export function isConventionalCommitTitle(title: string): boolean {
 
 /**
  * Checks if a comment matches the `/exec merge` command pattern.
- * 
+ *
  * @param commentBody - The body of the comment to check
  * @returns true if the comment is the exec merge command
- * 
+ *
  * @example
  * isExecMergeCommand('/exec merge')     // true
  * isExecMergeCommand('  /exec merge  ') // true
@@ -241,7 +244,7 @@ export function isExecMergeCommand(commentBody: string): boolean {
 
 /**
  * Checks if the user type indicates a bot.
- * 
+ *
  * @param userType - The type of user from GitHub API
  * @returns true if the user is a bot
  */
@@ -251,7 +254,7 @@ export function isBot(userType: string): boolean {
 
 /**
  * Checks if the author association is valid for using the merge command.
- * 
+ *
  * @param association - The author_association from GitHub API
  * @returns true if the association allows merge command usage
  */
@@ -261,7 +264,7 @@ export function hasValidAuthorAssociation(association: string): boolean {
 
 /**
  * Checks if the permission level allows merge command usage.
- * 
+ *
  * @param permission - The permission level from GitHub API
  * @returns true if the permission level is sufficient
  */
@@ -271,24 +274,20 @@ export function hasValidPermission(permission: string): boolean {
 
 /**
  * Determines the merge method based on branch names.
- * 
+ *
  * Logic:
  * 1. If head branch starts with release prefix → merge (preserve release history)
  * 2. If head branch starts with sync prefix → merge (preserve back-merge history)
  * 3. If base branch starts with release prefix → squash (clean release branch)
  * 4. If base branch is develop → squash (clean develop branch)
  * 5. Otherwise → merge (default)
- * 
+ *
  * @param headRef - Head (source) branch name
  * @param baseRef - Base (target) branch name
  * @param config - Configuration with branch prefixes
  * @returns The merge method and reason
  */
-export function determineMergeMethod(
-  headRef: string,
-  baseRef: string,
-  config: ExecMergeConfig
-): MergeMethodResult {
+export function determineMergeMethod(headRef: string, baseRef: string, config: ExecMergeConfig): MergeMethodResult {
   // Check head branch patterns first
   if (headRef.startsWith(config.releaseBranchPrefix)) {
     return {
@@ -326,7 +325,7 @@ export function determineMergeMethod(
 
 /**
  * Validates the PR state for merging.
- * 
+ *
  * @param prData - Pull request data from GitHub API
  * @returns Array of check results
  */
@@ -359,7 +358,7 @@ export function validatePRState(prData: PullRequestData): CheckResult[] {
 
 /**
  * Generates a human-readable description for a mergeable state.
- * 
+ *
  * @param state - The mergeable_state from GitHub API
  * @returns Human-readable description
  */
@@ -378,7 +377,7 @@ export function getMergeableStateDescription(state: string): string {
 
 /**
  * Builds the check results markdown for PR comments.
- * 
+ *
  * @param checks - Array of check results
  * @returns Formatted markdown string
  */
@@ -403,7 +402,7 @@ export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
  * Waits for a specified number of milliseconds before retrying.
  * This is a custom utility function specific to exec-merge action,
  * used for retry intervals when waiting for mergeable status.
- * 
+ *
  * @param ms - Milliseconds to wait
  */
 export function waitBeforeRetryMs(ms: number): Promise<void> {
@@ -416,7 +415,7 @@ export function waitBeforeRetryMs(ms: number): Promise<void> {
 
 /**
  * Adds a reaction to a comment.
- * 
+ *
  * @param octokit - GitHub API client
  * @param owner - Repository owner
  * @param repo - Repository name
@@ -428,7 +427,7 @@ export async function addReaction(
   owner: string,
   repo: string,
   commentId: number,
-  reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes'
+  reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes',
 ): Promise<void> {
   try {
     await octokit.rest.reactions.createForIssueComment({
@@ -444,7 +443,7 @@ export async function addReaction(
 
 /**
  * Posts a comment on a PR.
- * 
+ *
  * @param octokit - GitHub API client
  * @param owner - Repository owner
  * @param repo - Repository name
@@ -456,7 +455,7 @@ export async function postComment(
   owner: string,
   repo: string,
   prNumber: number,
-  body: string
+  body: string,
 ): Promise<void> {
   await octokit.rest.issues.createComment({
     owner,
@@ -468,7 +467,7 @@ export async function postComment(
 
 /**
  * Gets the collaborator permission level for a user.
- * 
+ *
  * @param octokit - GitHub API client
  * @param owner - Repository owner
  * @param repo - Repository name
@@ -479,7 +478,7 @@ export async function getCollaboratorPermission(
   octokit: Octokit,
   owner: string,
   repo: string,
-  username: string
+  username: string,
 ): Promise<string> {
   try {
     const response = await octokit.rest.repos.getCollaboratorPermissionLevel({
@@ -495,7 +494,7 @@ export async function getCollaboratorPermission(
 
 /**
  * Fetches PR data from GitHub API.
- * 
+ *
  * @param octokit - GitHub API client
  * @param owner - Repository owner
  * @param repo - Repository name
@@ -506,7 +505,7 @@ export async function fetchPullRequestData(
   octokit: Octokit,
   owner: string,
   repo: string,
-  prNumber: number
+  prNumber: number,
 ): Promise<PullRequestData> {
   const response = await octokit.rest.pulls.get({
     owner,
@@ -517,9 +516,7 @@ export async function fetchPullRequestData(
 
   // Detect fork using robust logic: check fork flag OR compare owner IDs
   // This handles cases where head.repo is null (e.g., fork repo deleted)
-  const isFork =
-    pr.head.repo?.fork === true ||
-    (pr.head.repo?.owner?.id ?? 0) !== (pr.base.repo?.owner?.id ?? 0);
+  const isFork = pr.head.repo?.fork === true || (pr.head.repo?.owner?.id ?? 0) !== (pr.base.repo?.owner?.id ?? 0);
 
   return {
     state: pr.state,
@@ -539,7 +536,7 @@ export async function fetchPullRequestData(
 
 /**
  * Fetches all approved reviews for a PR.
- * 
+ *
  * @param octokit - GitHub API client
  * @param owner - Repository owner
  * @param repo - Repository name
@@ -550,7 +547,7 @@ export async function fetchApprovedReviews(
   octokit: Octokit,
   owner: string,
   repo: string,
-  prNumber: number
+  prNumber: number,
 ): Promise<RestEndpointMethodTypes['pulls']['listReviews']['response']['data']> {
   const reviews = await octokit.paginate(octokit.rest.pulls.listReviews, {
     owner,
@@ -563,7 +560,7 @@ export async function fetchApprovedReviews(
 
 /**
  * Dismisses a stale review.
- * 
+ *
  * @param octokit - GitHub API client
  * @param owner - Repository owner
  * @param repo - Repository name
@@ -578,7 +575,7 @@ export async function dismissReview(
   repo: string,
   prNumber: number,
   reviewId: number,
-  message: string
+  message: string,
 ): Promise<boolean> {
   try {
     await octokit.rest.pulls.dismissReview({
@@ -599,7 +596,7 @@ export async function dismissReview(
  * Why: REST API doesn't provide review thread resolution status, GraphQL is required.
  * Note: Counts ALL unresolved threads including outdated ones, matching GitHub's
  * "Require conversations to be resolved" branch protection behavior.
- * 
+ *
  * @param octokit - GitHub API client
  * @param owner - Repository owner
  * @param repo - Repository name
@@ -610,7 +607,7 @@ export async function countUnresolvedThreads(
   octokit: Octokit,
   owner: string,
   repo: string,
-  prNumber: number
+  prNumber: number,
 ): Promise<number> {
   let unresolvedCount = 0;
   let hasNextPage = true;
@@ -662,7 +659,7 @@ export async function countUnresolvedThreads(
 
 /**
  * Performs the merge operation.
- * 
+ *
  * @param octokit - GitHub API client
  * @param owner - Repository owner
  * @param repo - Repository name
@@ -679,7 +676,7 @@ export async function mergePullRequest(
   prNumber: number,
   method: 'squash' | 'merge',
   sha: string,
-  commitMessage: string
+  commitMessage: string,
 ): Promise<{ success: boolean; error?: string; mergeCommitSha?: string }> {
   try {
     const response = await octokit.rest.pulls.merge({
@@ -703,13 +700,13 @@ export async function mergePullRequest(
 
 /**
  * Main function that orchestrates the exec-merge operation.
- * 
+ *
  * This function:
  * 1. Validates the command and permissions
  * 2. Checks PR state and approval status
  * 3. Performs the merge if all checks pass
  * 4. Posts appropriate comments for feedback
- * 
+ *
  * @param octokit - GitHub API client
  * @param context - Event context from GitHub Actions
  * @param config - Configuration options
@@ -718,7 +715,7 @@ export async function mergePullRequest(
 export async function execMerge(
   octokit: Octokit,
   context: EventContext,
-  config: ExecMergeConfig
+  config: ExecMergeConfig,
 ): Promise<ExecMergeResult> {
   const { owner, repo, prNumber, commentId, commentBody, actor, userType, authorAssociation } = context;
 
@@ -746,7 +743,7 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      `## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`/exec merge\` command.\n\nYour association: \`${authorAssociation}\``
+      `## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`/exec merge\` command.\n\nYour association: \`${authorAssociation}\``,
     );
     return { status: 'failed', message: 'Invalid author association' };
   }
@@ -759,7 +756,7 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      `## Permission denied\n\nYou need at least **write** permission on this repository to use the \`/exec merge\` command.\n\nYour association: \`${authorAssociation}\`\nYour permission level: \`${permission}\``
+      `## Permission denied\n\nYou need at least **write** permission on this repository to use the \`/exec merge\` command.\n\nYour association: \`${authorAssociation}\`\nYour permission level: \`${permission}\``,
     );
     return { status: 'failed', message: 'Insufficient permissions' };
   }
@@ -778,20 +775,14 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      '## Fork PR not supported\n\nThe `/exec merge` command is not supported for PRs from forked repositories.\n\nThis is because the GITHUB_TOKEN has limited write permissions for fork-originated PRs by default.'
+      '## Fork PR not supported\n\nThe `/exec merge` command is not supported for PRs from forked repositories.\n\nThis is because the GITHUB_TOKEN has limited write permissions for fork-originated PRs by default.',
     );
     return { status: 'failed', message: 'Fork PR not supported' };
   }
 
   // Check if already merged
   if (prData.merged) {
-    await postComment(
-      octokit,
-      owner,
-      repo,
-      prNumber,
-      '## Already merged\n\nThis PR has already been merged.'
-    );
+    await postComment(octokit, owner, repo, prNumber, '## Already merged\n\nThis PR has already been merged.');
     return { status: 'already_merged', message: 'PR already merged' };
   }
 
@@ -821,7 +812,7 @@ export async function execMerge(
       const dismissed = await dismissReview(octokit, owner, repo, prNumber, review.id, message);
       if (!dismissed) {
         dismissFailures.push(
-          `- Failed to dismiss approval from @${review.user?.login} (insufficient permissions or branch protection settings)`
+          `- Failed to dismiss approval from @${review.user?.login} (insufficient permissions or branch protection settings)`,
         );
       }
     } else {
@@ -896,7 +887,7 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      `## Merge checks failed\n\nThe following checks must pass before merging:\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`
+      `## Merge checks failed\n\nThe following checks must pass before merging:\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`,
     );
     return { status: 'failed', message: 'Merge checks failed' };
   }
@@ -907,7 +898,7 @@ export async function execMerge(
     owner,
     repo,
     prNumber,
-    `## Merge checks passed\n\nAll checks passed. Proceeding to merge...\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`
+    `## Merge checks passed\n\nAll checks passed. Proceeding to merge...\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`,
   );
 
   // -------------------------------------------------------------------------
@@ -925,7 +916,7 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      `## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: ${originalHeadSha}\n- Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`
+      `## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: ${originalHeadSha}\n- Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`,
     );
     return { status: 'failed', message: 'TOCTOU violation' };
   }
@@ -945,7 +936,7 @@ export async function execMerge(
         owner,
         repo,
         prNumber,
-        `## New commits detected\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: ${originalHeadSha}\n- Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`
+        `## New commits detected\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: ${originalHeadSha}\n- Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`,
       );
       return { status: 'failed', message: 'TOCTOU violation during retry' };
     }
@@ -974,7 +965,7 @@ export async function execMerge(
     prNumber,
     mergeMethodResult.method,
     originalHeadSha,
-    commitMessage
+    commitMessage,
   );
 
   if (!mergeResult.success) {
@@ -983,7 +974,7 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      `## Merge failed\n\nFailed to merge PR:\n\n- Error: ${mergeResult.error}\n\nPlease check the PR status and try again.`
+      `## Merge failed\n\nFailed to merge PR:\n\n- Error: ${mergeResult.error}\n\nPlease check the PR status and try again.`,
     );
     return { status: 'failed', message: `Merge failed: ${mergeResult.error}` };
   }
@@ -999,7 +990,7 @@ export async function execMerge(
     owner,
     repo,
     prNumber,
-    `## Merged by exec-merge\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** ${originalHeadSha}${mergeCommitInfo}`
+    `## Merged by exec-merge\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** ${originalHeadSha}${mergeCommitInfo}`,
   );
 
   return {
