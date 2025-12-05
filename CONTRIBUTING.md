@@ -58,9 +58,19 @@ This project employs a clear separation of concerns between code formatting and 
 
 Prettier serves as the sole and authoritative code formatter for this repository. All formatting decisions—including indentation, line length, quote style, and other stylistic concerns—are delegated entirely to Prettier. Contributors are encouraged to configure their development environment to format code with Prettier on save, ensuring consistency across the codebase.
 
+When introducing Prettier to the project, contributors should:
+
+- Add a `.prettierrc` configuration file to define project-wide formatting rules
+- Install Prettier as a development dependency in `package.json`
+
 ### Linting with ESLint
 
-ESLint is responsible for enforcing semantic, logical, and safety-related rules. Rather than concerning itself with formatting, ESLint focuses on catching potential bugs, enforcing best practices, and maintaining code quality. Our configuration is built upon `@typescript-eslint/recommended` as a foundation, with additional plugins such as `import/order` applied where appropriate to ensure well-organized imports.
+ESLint is responsible for enforcing semantic, logical, and safety-related rules. Rather than concerning itself with formatting, ESLint focuses on catching potential bugs, enforcing best practices, and maintaining code quality. Our configuration should be built upon `@typescript-eslint/recommended` as a foundation, with additional plugins such as `eslint-plugin-import` applied where appropriate to ensure well-organized imports.
+
+When introducing ESLint to the project, contributors should:
+
+- Add an `eslint.config.js` (or equivalent configuration file) extending `@typescript-eslint/recommended`
+- Install ESLint and related plugins as development dependencies in `package.json`
 
 ### Selective Adoption of Style Guides
 
@@ -69,6 +79,11 @@ While industry-standard style guides such as the Airbnb JavaScript Style Guide o
 ### Resolving Conflicts Between Prettier and ESLint
 
 To prevent any conflicts between Prettier's formatting rules and ESLint's linting rules, this project uses `eslint-config-prettier`. This configuration disables all ESLint rules that are unnecessary or might conflict with Prettier, ensuring that both tools work harmoniously together.
+
+When configuring ESLint, contributors should:
+
+- Install `eslint-config-prettier` as a development dependency
+- Include `eslint-config-prettier` in the ESLint configuration to disable conflicting rules
 
 ### Expectations for Contributors
 
