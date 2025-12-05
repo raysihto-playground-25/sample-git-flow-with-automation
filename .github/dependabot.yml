@@ -4,7 +4,16 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+  # npm依存関係の更新では、「挙動を原則変えずに何らかの (潜在的な不具合に関する) 修正が
+  # 行われた」可能性が高いと想定し、パッチバージョンのインクリメントを促すために
+  # prefix を "fix" 固定で安全側に倒しています。
   - package-ecosystem: "npm"
     directory: "/.github/actions/exec-merge"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "fix"
+      include: "scope"
