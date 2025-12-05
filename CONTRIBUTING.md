@@ -50,40 +50,53 @@ fix(release): correct version bump logic
 docs(contributing): add commit message guidelines
 ```
 
-## Code Style Policy
+## JavaScript / TypeScript Style and Linting
 
-This project employs a clear separation of concerns between code formatting and code quality analysis. These guidelines apply to all code in this repository, including source code in `.github/actions` and any other directories containing JavaScript or TypeScript. We kindly ask all contributors to familiarize themselves with the following principles before submitting changes.
+This repository contains JavaScript/TypeScript code in reusable GitHub Actions under `.github/actions/**`.
+All of these follow the same style and linting policy.
 
-### Formatting with Prettier
+### Baseline and Goals
 
-Prettier serves as the sole and authoritative code formatter for this repository. All formatting decisions—including indentation, line length, quote style, and other stylistic concerns—are delegated entirely to Prettier. Contributors are encouraged to configure their development environment to format code with Prettier on save, ensuring consistency across the codebase.
+Our configuration employs a clear separation of concerns between code formatting and code quality analysis:
 
-When introducing Prettier to the project, contributors should:
+- **Prettier** serves as the sole and authoritative code formatter. All formatting decisions—including indentation, line length, quote style, and other stylistic concerns—are delegated entirely to Prettier.
+- **ESLint** is responsible for enforcing semantic, logical, and safety-related rules. It is based on the **official recommended presets** (ESLint and TypeScript-ESLint). We only add a **small number of project-specific rules** when they clearly improve **readability, correctness, or maintainability**.
+- **eslint-config-prettier** disables all ESLint rules that are unnecessary or might conflict with Prettier, ensuring that both tools work harmoniously together.
 
-- Add a `.prettierrc` configuration file to define project-wide formatting rules
-- Install Prettier as a development dependency in `package.json`
+We do **not** aim for strict compliance with large third-party style presets (e.g., "Airbnb config") across this repository. For a relatively small, Node-focused TypeScript codebase and GitHub Actions, mirroring such presets in full tends to add complexity without a proportional benefit.
 
-### Linting with ESLint
+Our primary goals are:
 
-ESLint is responsible for enforcing semantic, logical, and safety-related rules. Rather than concerning itself with formatting, ESLint focuses on catching potential bugs, enforcing best practices, and maintaining code quality. Our configuration should be built upon `@typescript-eslint/recommended` as a foundation, with additional plugins such as `eslint-plugin-import` applied where appropriate to ensure well-organized imports.
+- A predictable, easy-to-understand rule set
+- Consistent style across all JS/TS code (including `.github/actions/**`)
+- Fewer opportunities for subtle bugs (especially around types and async code)
 
-When introducing ESLint to the project, contributors should:
+### What This Means in Practice
 
-- Add an `eslint.config.js` (or equivalent configuration file) extending `@typescript-eslint/recommended`
-- Install ESLint and related plugins as development dependencies in `package.json`
+When working on JavaScript/TypeScript code (including Actions under `.github/actions/**`), please:
 
-### Selective Adoption of Style Guides
+- Follow the existing ESLint and formatter configuration instead of introducing your own personal style.
+- Avoid adding new rules or presets purely for aesthetic reasons (e.g., "I prefer this quote style" is not sufficient).
+- Prefer **small, targeted rule changes** that demonstrably:
+  - prevent a real class of bugs, or
+  - make the code easier to read and maintain for others.
 
-While industry-standard style guides such as the Airbnb JavaScript Style Guide offer valuable guidance, we do not adopt them in their entirety. Instead, we selectively incorporate conceptual elements that enhance code safety and maintainability—such as guidelines for safe coding patterns and import organization—while deliberately avoiding any stylistic rules that would conflict with Prettier's formatting decisions.
+If you propose changes to the linting or formatting setup, your PR description should explain:
 
-### Resolving Conflicts Between Prettier and ESLint
+1. **What problem** the change is trying to solve, and
+2. **Why this rule/preset** is an appropriate solution for this project.
 
-To prevent any conflicts between Prettier's formatting rules and ESLint's linting rules, this project uses `eslint-config-prettier`. This configuration disables all ESLint rules that are unnecessary or might conflict with Prettier, ensuring that both tools work harmoniously together.
+Large stylistic rewrites that do not clearly improve correctness or maintainability are generally not accepted.
 
-When configuring ESLint, contributors should:
+### AI Coding Assistants (e.g. GitHub Copilot)
 
-- Install `eslint-config-prettier` as a development dependency
-- Include `eslint-config-prettier` in the ESLint configuration to disable conflicting rules
+If you use AI tools such as GitHub Copilot or other code assistants:
+
+- Treat the generated code as if you had written it yourself.
+- Ensure the suggestions **conform to this policy** and to the existing code style in the repository.
+- Do not accept suggestions that introduce new formatting styles, new lint presets, or opinionated patterns that conflict with our configuration.
+
+In short: AI tools are welcome, but they must **follow** the project's style and linting policy, not define it.
 
 ### Expectations for Contributors
 
