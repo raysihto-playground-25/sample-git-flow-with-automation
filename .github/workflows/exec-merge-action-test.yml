@@ -59,7 +59,7 @@ jobs:
               echo '|:-----|--------:|---------:|--------:|--------:|--------------------|'
 
               # table body
-              grep -A999 '^File' /tmp/coverage-${{ github.run_id }}.txt | tail -n +3 | sed '/^-/q'
+              sed -n '/^File/,$ {1,2d; /^-/q; p}' /tmp/coverage-${{ github.run_id }}.txt
             else
               echo '_Coverage data not available_'
             fi
