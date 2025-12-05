@@ -54,12 +54,9 @@ jobs:
             echo ""
 
             if [ -f /tmp/coverage-${{ github.run_id }}.txt ] && grep -q "Coverage report" /tmp/coverage-${{ github.run_id }}.txt; then
-              # Fixed header row for Markdown table
               echo '| File | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s |'
               echo '|:-----|--------:|---------:|--------:|--------:|--------------------|'
-
-              # table body
-              sed -n '/^File/,$ {1,2d; /^-/q; p}' /tmp/coverage-${{ github.run_id }}.txt
+              sed -n '/^File/{n;:loop;n;/^-/q;p;b loop;}' /tmp/coverage-${{ github.run_id }}.txt
             else
               echo '_Coverage data not available_'
             fi
