@@ -60,4 +60,4 @@ Runtime (production) dependency updates use the `fix` type rather than `build` o
 
 3. **Enabling fine-grained patch releases**: This approach allows for more granular patch releases, ensuring that any behavioral changes or fixes in dependencies are properly versioned.
 
-While the Conventional Commits specification defines `build` for changes affecting the build system or external dependencies, it does not strictly prohibit using `fix` when dependency updates may contain bug fixes. Since runtime dependencies can directly affect application behavior and stability, treating their updates as `fix` is a pragmatic choice that prioritizes safety and proper versioning.
+The Conventional Commits specification only mandates `feat` and `fix` types; other types such as `build`, `chore`, and `ci` are conventions adopted from sources like the Angular convention, not requirements of the specification itself. This project chooses to use `fix` for runtime dependency updates because these updates can directly affect application behavior and stability. Treating them as potential bug fixes is a pragmatic choice that prioritizes safety and proper versioning.
