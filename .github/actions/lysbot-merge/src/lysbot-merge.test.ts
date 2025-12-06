@@ -1,5 +1,5 @@
 /**
- * exec-merge.test.ts - Unit tests for exec-merge action
+ * lysbot-merge.test.ts - Unit tests for lysbot-merge action
  *
  * Tests cover all pure logic functions and validate the core business rules.
  * GitHub API interactions are mocked for isolation.
@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 import {
-  isExecMergeCommand,
+  isLysbotMergeCommand,
   isBot,
   hasValidAuthorAssociation,
   hasValidPermission,
@@ -21,7 +21,7 @@ import {
   COMMAND_REGEX,
   CONVENTIONAL_COMMIT_TYPES,
   CONVENTIONAL_COMMIT_REGEX,
-  type ExecMergeConfig,
+  type LysbotMergeConfig,
   type PullRequestData,
   type CheckResult,
   type Octokit,
@@ -32,10 +32,10 @@ import {
   dismissReview,
   countUnresolvedThreads,
   mergePullRequest,
-  execMerge,
+  lysbotMerge,
   waitBeforeRetryMs,
   type EventContext,
-} from './exec-merge';
+} from './lysbot-merge';
 
 // =============================================================================
 // Test Utilities
@@ -44,7 +44,7 @@ import {
 /**
  * Creates a default config for tests.
  */
-function createConfig(overrides: Partial<ExecMergeConfig> = {}): ExecMergeConfig {
+function createConfig(overrides: Partial<LysbotMergeConfig> = {}): LysbotMergeConfig {
   return {
     releaseBranchPrefix: 'release/',
     developBranch: 'develop',
@@ -145,7 +145,7 @@ function createEventContext(overrides: Partial<EventContext> = {}): EventContext
     repo: 'testrepo',
     prNumber: 1,
     commentId: 123,
-    commentBody: '/exec merge',
+    commentBody: '/lysbot merge',
     actor: 'testactor',
     userType: 'User',
     authorAssociation: 'MEMBER',
@@ -156,54 +156,54 @@ function createEventContext(overrides: Partial<EventContext> = {}): EventContext
 }
 
 // =============================================================================
-// Tests for isExecMergeCommand
+// Tests for isLysbotMergeCommand
 // =============================================================================
 
-describe('isExecMergeCommand', () => {
+describe('isLysbotMergeCommand', () => {
   describe('valid command patterns', () => {
-    it('matches exact "/exec merge" command', () => {
-      expect(isExecMergeCommand('/exec merge')).toBe(true);
+    it('matches exact "/lysbot merge" command', () => {
+      expect(isLysbotMergeCommand('/lysbot merge')).toBe(true);
     });
 
     it('matches with leading whitespace (space/tab/newline)', () => {
-      expect(isExecMergeCommand('  /exec merge')).toBe(true);
-      expect(isExecMergeCommand('\t/exec merge')).toBe(true);
-      expect(isExecMergeCommand('\n/exec merge')).toBe(true);
+      expect(isLysbotMergeCommand('  /lysbot merge')).toBe(true);
+      expect(isLysbotMergeCommand('\t/lysbot merge')).toBe(true);
+      expect(isLysbotMergeCommand('\n/lysbot merge')).toBe(true);
     });
 
     it('matches with trailing whitespace (space/tab/newline)', () => {
-      expect(isExecMergeCommand('/exec merge  ')).toBe(true);
-      expect(isExecMergeCommand('/exec merge\t')).toBe(true);
-      expect(isExecMergeCommand('/exec merge\n')).toBe(true);
+      expect(isLysbotMergeCommand('/lysbot merge  ')).toBe(true);
+      expect(isLysbotMergeCommand('/lysbot merge\t')).toBe(true);
+      expect(isLysbotMergeCommand('/lysbot merge\n')).toBe(true);
     });
 
     it('matches with multiple spaces between words', () => {
-      expect(isExecMergeCommand('/exec  merge')).toBe(true);
-      expect(isExecMergeCommand('/exec   merge')).toBe(true);
-      expect(isExecMergeCommand('/exec\tmerge')).toBe(true);
+      expect(isLysbotMergeCommand('/lysbot  merge')).toBe(true);
+      expect(isLysbotMergeCommand('/lysbot   merge')).toBe(true);
+      expect(isLysbotMergeCommand('/lysbot\tmerge')).toBe(true);
     });
   });
 
   describe('invalid command patterns', () => {
     it('rejects command with extra arguments (no flags allowed)', () => {
-      expect(isExecMergeCommand('/exec merge now')).toBe(false);
-      expect(isExecMergeCommand('/exec merge --force')).toBe(false);
+      expect(isLysbotMergeCommand('/lysbot merge now')).toBe(false);
+      expect(isLysbotMergeCommand('/lysbot merge --force')).toBe(false);
     });
 
     it('rejects partial or malformed commands', () => {
-      expect(isExecMergeCommand('/exec')).toBe(false);
-      expect(isExecMergeCommand('/exec merg')).toBe(false);
-      expect(isExecMergeCommand('exec merge')).toBe(false);
+      expect(isLysbotMergeCommand('/lysbot')).toBe(false);
+      expect(isLysbotMergeCommand('/lysbot merg')).toBe(false);
+      expect(isLysbotMergeCommand('lysbot merge')).toBe(false);
     });
 
     it('rejects when command is embedded in other text', () => {
-      expect(isExecMergeCommand('Please /exec merge this')).toBe(false);
-      expect(isExecMergeCommand('Run /exec merge')).toBe(false);
+      expect(isLysbotMergeCommand('Please /lysbot merge this')).toBe(false);
+      expect(isLysbotMergeCommand('Run /lysbot merge')).toBe(false);
     });
 
     it('is case-sensitive (uppercase rejected)', () => {
-      expect(isExecMergeCommand('/EXEC MERGE')).toBe(false);
-      expect(isExecMergeCommand('/Exec Merge')).toBe(false);
+      expect(isLysbotMergeCommand('/LYSBOT MERGE')).toBe(false);
+      expect(isLysbotMergeCommand('/Lysbot Merge')).toBe(false);
     });
   });
 });
@@ -233,7 +233,7 @@ describe('isBot', () => {
 // =============================================================================
 
 describe('hasValidAuthorAssociation', () => {
-  describe('allowed associations (can use /exec merge)', () => {
+  describe('allowed associations (can use /lysbot merge)', () => {
     it('allows OWNER (repository/org owner)', () => {
       expect(hasValidAuthorAssociation('OWNER')).toBe(true);
     });
@@ -271,7 +271,7 @@ describe('hasValidAuthorAssociation', () => {
 // =============================================================================
 
 describe('hasValidPermission', () => {
-  describe('allowed permissions (can use /exec merge)', () => {
+  describe('allowed permissions (can use /lysbot merge)', () => {
     it('allows admin permission', () => {
       expect(hasValidPermission('admin')).toBe(true);
     });
@@ -642,14 +642,14 @@ describe('COMMAND_REGEX', () => {
     expect(COMMAND_REGEX).toBeInstanceOf(RegExp);
   });
 
-  it('should match the same patterns as isExecMergeCommand', () => {
+  it('should match the same patterns as isLysbotMergeCommand', () => {
     const testCases = [
-      { input: '/exec merge', expected: true },
-      { input: '  /exec merge', expected: true },
-      { input: '/exec merge  ', expected: true },
-      { input: '/exec  merge', expected: true },
-      { input: '/exec merge now', expected: false },
-      { input: 'run /exec merge', expected: false },
+      { input: '/lysbot merge', expected: true },
+      { input: '  /lysbot merge', expected: true },
+      { input: '/lysbot merge  ', expected: true },
+      { input: '/lysbot  merge', expected: true },
+      { input: '/lysbot merge now', expected: false },
+      { input: 'run /lysbot merge', expected: false },
     ];
 
     for (const { input, expected } of testCases) {
@@ -866,17 +866,17 @@ describe('mergePullRequest', () => {
 });
 
 // =============================================================================
-// Tests for execMerge main function
+// Tests for lysbotMerge main function
 // =============================================================================
 
-describe('execMerge', () => {
+describe('lysbotMerge', () => {
   describe('command and user validation', () => {
     it('skips processing for bot comments', async () => {
       const octokit = createMockOctokit();
       const context = createEventContext({ userType: 'Bot' });
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('skipped');
       expect(result.message).toContain('bot');
@@ -887,7 +887,7 @@ describe('execMerge', () => {
       const context = createEventContext({ commentBody: 'Hello world' });
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('skipped');
       expect(result.message).toContain('not matched');
@@ -898,7 +898,7 @@ describe('execMerge', () => {
       const context = createEventContext({ authorAssociation: 'NONE' });
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('author association');
@@ -916,7 +916,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('permissions');
@@ -950,7 +950,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('Fork');
@@ -982,7 +982,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('already_merged');
     });
@@ -1005,7 +1005,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('merged');
       expect(result.mergeMethod).toBe('squash'); // base is develop
@@ -1020,7 +1020,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('checks failed');
@@ -1065,7 +1065,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       // Should dismiss the stale review
       expect(octokit.rest.pulls.dismissReview).toHaveBeenCalled();
@@ -1129,7 +1129,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       // Should post comment about dismiss failure
       expect(octokit.rest.issues.createComment).toHaveBeenCalled();
@@ -1185,7 +1185,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       // Should still merge successfully (conventional commits is optional)
       expect(result.status).toBe('merged');
@@ -1218,7 +1218,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       // Should merge successfully
       expect(result.status).toBe('merged');
@@ -1279,7 +1279,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('TOCTOU');
@@ -1336,7 +1336,7 @@ describe('execMerge', () => {
         mergeableRetryInterval: 0, // No delay in tests
       });
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('merged');
     });
@@ -1389,7 +1389,7 @@ describe('execMerge', () => {
         mergeableRetryInterval: 0,
       });
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('Not mergeable');
@@ -1433,7 +1433,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('failed');
     });
@@ -1459,7 +1459,7 @@ describe('execMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await execMerge(octokit, context, config);
+      const result = await lysbotMerge(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('Merge failed');

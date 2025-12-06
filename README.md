@@ -15,7 +15,7 @@ This repository provides reusable GitHub Actions workflows and actions for autom
 
 For details on actions that encapsulate specific automation logic, see [`.github/actions/`](.github/actions/).
 
-- **exec-merge**: A TypeScript-based action for automated PR merging via the `/exec merge` command in PR comments. See [exec-merge README](.github/actions/exec-merge/README.md) for details.
+- **lysbot-merge**: A TypeScript-based action for automated PR merging via the `/lysbot merge` command in PR comments. See [lysbot-merge README](.github/actions/lysbot-merge/README.md) for details.
 
 ## License
 

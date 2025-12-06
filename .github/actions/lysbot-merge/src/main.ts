@@ -1,21 +1,21 @@
 /**
- * main.ts - Entry point for the exec-merge GitHub Action
+ * main.ts - Entry point for the lysbot-merge GitHub Action
  *
  * This file is the main entry point that:
  * 1. Reads inputs from the GitHub Actions environment
  * 2. Constructs the event context from github.context
- * 3. Calls the main execMerge function
+ * 3. Calls the main lysbotMerge function
  * 4. Sets outputs and handles errors
  *
- * The actual business logic is in exec-merge.ts for testability.
+ * The actual business logic is in lysbot-merge.ts for testability.
  */
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { execMerge, type ExecMergeConfig, type EventContext } from './exec-merge';
+import { lysbotMerge, type LysbotMergeConfig, type EventContext } from './lysbot-merge';
 
 /**
- * Writes a summary of the exec-merge operation to the GitHub Actions step summary.
+ * Writes a summary of the lysbot-merge operation to the GitHub Actions step summary.
  */
 function writeSummary(
   result: string,
@@ -26,7 +26,7 @@ function writeSummary(
   mergeMethod?: string,
   headSha?: string,
 ): void {
-  let summary = `## exec-merge Summary\n\n`;
+  let summary = `## lysbot-merge Summary\n\n`;
   summary += `| Item | Value |\n`;
   summary += `|------|-------|\n`;
   summary += `| **Result** | ${result} |\n`;
@@ -56,7 +56,7 @@ async function run(): Promise<void> {
   try {
     // Get inputs
     const token = core.getInput('github-token', { required: true });
-    const config: ExecMergeConfig = {
+    const config: LysbotMergeConfig = {
       releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
       developBranch: core.getInput('develop_branch') || 'develop',
       syncBranchPrefix: core.getInput('sync_branch_prefix') || 'fix/sync/',
@@ -99,7 +99,7 @@ async function run(): Promise<void> {
     const octokit = github.getOctokit(token);
 
     // Run the main logic
-    const result = await execMerge(octokit, context, config);
+    const result = await lysbotMerge(octokit, context, config);
 
     // Set outputs
     core.setOutput('result', result.status);
@@ -126,7 +126,7 @@ async function run(): Promise<void> {
     );
 
     // Log result
-    core.info(`exec-merge result: ${result.status} - ${result.message}`);
+    core.info(`lysbot-merge result: ${result.status} - ${result.message}`);
 
     // Mark as failed if the result status is failed
     if (result.status === 'failed') {
@@ -135,7 +135,7 @@ async function run(): Promise<void> {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    core.setFailed(`exec-merge action failed: ${message}`);
+    core.setFailed(`lysbot-merge action failed: ${message}`);
   }
 }
 

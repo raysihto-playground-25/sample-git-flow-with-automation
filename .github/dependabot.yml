@@ -12,7 +12,7 @@ updates:
   # behavior". We use the "fix" prefix to promote patch version increments,
   # erring on the safe side.
   - package-ecosystem: "npm"
-    directory: "/.github/actions/exec-merge"
+    directory: "/.github/actions/lysbot-merge"
     schedule:
       interval: "weekly"
     commit-message:

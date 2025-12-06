@@ -1,13 +1,13 @@
-name: on-comment-exec
+name: on-comment
 
 # =============================================================================
-# on-comment-exec - Project-Specific Exec Commands Caller
+# on-comment - Project-Specific lysbot Commands Caller
 # =============================================================================
-# This is the project-specific caller workflow that invokes exec-related
+# This is the project-specific caller workflow that invokes lysbot-related
 # actions with project-specific configuration.
 #
 # Currently supported commands:
-# - /exec merge - See .github/actions/exec-merge/action.yml for details
+# - /lysbot merge - See .github/actions/lysbot-merge/action.yml for details
 #
 # CUSTOMIZATION:
 # - Modify the `with` inputs below to match your project's branching strategy
@@ -21,12 +21,12 @@ on:
 
 # Concurrency per PR number to avoid parallel execution
 concurrency:
-  group: exec-merge-pr-${{ github.event.issue.number }}
+  group: lysbot-merge-pr-${{ github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
-  exec-merge:
-    name: exec-merge
+  lysbot-merge:
+    name: lysbot-merge
     # Only run if this is a PR comment (not an issue)
     if: github.event.issue.pull_request
     runs-on: ubuntu-latest
@@ -38,8 +38,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Run exec-merge action
-        uses: ./.github/actions/exec-merge
+      - name: Run lysbot-merge action
+        uses: ./.github/actions/lysbot-merge
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Project-specific branch naming configuration
