@@ -528,7 +528,7 @@ describe('isConventionalCommitTitle', () => {
       expect(isConventionalCommitTitle('docs!: update readme')).toBe(true);
     });
 
-    it('matches breaking changes with scope using "type(scope)!: description', () => {
+    it('matches breaking changes with scope using "type(scope)!: description"', () => {
       expect(isConventionalCommitTitle('feat(auth)!: add login')).toBe(true);
       expect(isConventionalCommitTitle('fix(api)!: resolve error')).toBe(true);
       expect(isConventionalCommitTitle('docs(readme)!: update installation')).toBe(true);
