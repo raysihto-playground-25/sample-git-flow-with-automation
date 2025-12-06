@@ -522,6 +522,18 @@ describe('isConventionalCommitTitle', () => {
       expect(isConventionalCommitTitle('docs(readme): update installation')).toBe(true);
     });
 
+    it('matches breaking changes without scope using "type!: description', () => {
+      expect(isConventionalCommitTitle('feat!: add new feature')).toBe(true);
+      expect(isConventionalCommitTitle('fix!: resolve bug')).toBe(true);
+      expect(isConventionalCommitTitle('docs!: update readme')).toBe(true);
+    });
+
+    it('matches breaking changes with scope using "type(scope)!: description', () => {
+      expect(isConventionalCommitTitle('feat(auth)!: add login')).toBe(true);
+      expect(isConventionalCommitTitle('fix(api)!: resolve error')).toBe(true);
+      expect(isConventionalCommitTitle('docs(readme)!: update installation')).toBe(true);
+    });
+
     it('matches all 12 supported types', () => {
       const types = [
         'build',
@@ -540,6 +552,8 @@ describe('isConventionalCommitTitle', () => {
       for (const type of types) {
         expect(isConventionalCommitTitle(`${type}: some description`)).toBe(true);
         expect(isConventionalCommitTitle(`${type}(scope): some description`)).toBe(true);
+        expect(isConventionalCommitTitle(`${type}!: some description`)).toBe(true);
+        expect(isConventionalCommitTitle(`${type}(scope)!: some description`)).toBe(true);
       }
     });
 
@@ -576,6 +590,18 @@ describe('isConventionalCommitTitle', () => {
 
     it('rejects when type has leading text', () => {
       expect(isConventionalCommitTitle('prefix feat: add feature')).toBe(false);
+    });
+
+    it('rejects missing colon with "!"', () => {
+      expect(isConventionalCommitTitle('feat! breaking change')).toBe(false);
+      expect(isConventionalCommitTitle('feat(scope)! breaking change')).toBe(false);
+    });
+
+    it('rejects misplaced "!" marker', () => {
+      expect(isConventionalCommitTitle('feat !: breaking change')).toBe(false);
+      expect(isConventionalCommitTitle('feat(!): breaking change')).toBe(false);
+      expect(isConventionalCommitTitle('feat(scope!): breaking change')).toBe(false);
+      expect(isConventionalCommitTitle('feat(scope)! : breaking change')).toBe(false);
     });
   });
 });
