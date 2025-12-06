@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "chore"
+      prefix: "ci"
       include: "scope"
   # For npm dependency updates, we assume there is a high probability that
   # "some fix (related to potential bugs) was made without fundamentally changing

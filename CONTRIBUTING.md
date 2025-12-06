@@ -17,7 +17,7 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 ### Types
 
 - `feat`: A new feature
-- `fix`: A bug fix
+- `fix`: A bug fix (also used for runtime dependency updates; see below)
 - `docs`: Documentation only changes
 - `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc.)
 - `refactor`: A code change that neither fixes a bug nor adds a feature
@@ -49,3 +49,15 @@ feat(mergebot): add PR merge automation workflow
 fix(release): correct version bump logic
 docs(contributing): add commit message guidelines
 ```
+
+### Dependency Updates
+
+Runtime (production) dependency updates use the `fix` type rather than `build` or `chore`. This is a deliberate design choice for the following reasons:
+
+1. **Treating dependency updates as potential bug fixes**: Runtime dependency updates may contain implicit bug fixes or security patches that are not always explicitly documented. By treating them as `fix`, we err on the safe side.
+
+2. **Ensuring security fixes reach users promptly**: Using `fix` ensures that vulnerability patches trigger patch version increments, making it easier to release security updates to users.
+
+3. **Enabling fine-grained patch releases**: This approach allows for more granular patch releases, ensuring that any behavioral changes or fixes in dependencies are properly versioned.
+
+While the Conventional Commits specification defines `build` for changes affecting the build system or external dependencies, it does not strictly prohibit using `fix` when dependency updates may contain bug fixes. Since runtime dependencies can directly affect application behavior and stability, treating their updates as `fix` is a pragmatic choice that prioritizes safety and proper versioning.
