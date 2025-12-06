@@ -522,7 +522,7 @@ describe('isConventionalCommitTitle', () => {
       expect(isConventionalCommitTitle('docs(readme): update installation')).toBe(true);
     });
 
-    it('matches breaking changes without scope using "type!: description', () => {
+    it('matches breaking changes without scope using "type!: description"', () => {
       expect(isConventionalCommitTitle('feat!: add new feature')).toBe(true);
       expect(isConventionalCommitTitle('fix!: resolve bug')).toBe(true);
       expect(isConventionalCommitTitle('docs!: update readme')).toBe(true);
