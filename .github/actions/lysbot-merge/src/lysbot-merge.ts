@@ -205,7 +205,7 @@ export const CONVENTIONAL_COMMIT_TYPES = [
  * - docs(readme): update installation guide
  */
 export const CONVENTIONAL_COMMIT_REGEX = new RegExp(
-  `^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)]+\\))?:\\s*\\S.*$`,
+  `^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)!]+\\))?!?:\\s*\\S.*$`,
 );
 
 // =============================================================================
