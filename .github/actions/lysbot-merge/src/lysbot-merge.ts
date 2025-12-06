@@ -241,33 +241,9 @@ export function isConventionalCommitTitle(title: string): boolean {
 }
 
 /**
- * Checks if a comment matches the `/lysbot merge` command pattern.
- * Now also accepts optional flags like `--override-approval-requirement`.
- *
- * @param commentBody - The body of the comment to check
- * @returns true if the comment is the lysbot merge command
- *
- * @example
- * isLysbotMergeCommand('/lysbot merge')     // true
- * isLysbotMergeCommand('  /lysbot merge  ') // true
- * isLysbotMergeCommand('/lysbot merge --override-approval-requirement') // true
- * isLysbotMergeCommand('/lysbot merge now') // false (invalid flag)
+ * List of valid command flags for `/lysbot merge`.
  */
-export function isLysbotMergeCommand(commentBody: string): boolean {
-  const match = COMMAND_REGEX.exec(commentBody);
-  if (!match) return false;
-
-  // If there are flags, validate them
-  const flagsStr = match[1]?.trim();
-  if (flagsStr) {
-    // Only allow known flags
-    const validFlags = ['--override-approval-requirement'];
-    const flags = flagsStr.split(/\s+/);
-    return flags.every((flag) => validFlags.includes(flag));
-  }
-
-  return true;
-}
+const VALID_FLAGS = ['--override-approval-requirement'] as const;
 
 /**
  * Parses the `/lysbot merge` command and extracts options.
@@ -284,17 +260,39 @@ export function isLysbotMergeCommand(commentBody: string): boolean {
  *   // null
  */
 export function parseLysbotMergeCommand(commentBody: string): MergeOptions | null {
-  if (!isLysbotMergeCommand(commentBody)) {
+  const match = COMMAND_REGEX.exec(commentBody);
+  if (!match) return null;
+
+  // Parse and validate flags
+  const flagsStr = match[1]?.trim() ?? '';
+  const flags = flagsStr ? flagsStr.split(/\s+/) : [];
+
+  // Validate that all flags are known
+  const validFlagsArray: readonly string[] = VALID_FLAGS;
+  if (!flags.every((flag) => validFlagsArray.includes(flag))) {
     return null;
   }
-
-  const match = COMMAND_REGEX.exec(commentBody);
-  const flagsStr = match?.[1]?.trim() ?? '';
-  const flags = flagsStr ? flagsStr.split(/\s+/) : [];
 
   return {
     overrideApprovalRequirement: flags.includes('--override-approval-requirement'),
   };
+}
+
+/**
+ * Checks if a comment matches the `/lysbot merge` command pattern.
+ * Now also accepts optional flags like `--override-approval-requirement`.
+ *
+ * @param commentBody - The body of the comment to check
+ * @returns true if the comment is the lysbot merge command
+ *
+ * @example
+ * isLysbotMergeCommand('/lysbot merge')     // true
+ * isLysbotMergeCommand('  /lysbot merge  ') // true
+ * isLysbotMergeCommand('/lysbot merge --override-approval-requirement') // true
+ * isLysbotMergeCommand('/lysbot merge now') // false (invalid flag)
+ */
+export function isLysbotMergeCommand(commentBody: string): boolean {
+  return parseLysbotMergeCommand(commentBody) !== null;
 }
 
 /**

@@ -189,20 +189,6 @@ export declare const CONVENTIONAL_COMMIT_REGEX: RegExp;
  */
 export declare function isConventionalCommitTitle(title: string): boolean;
 /**
- * Checks if a comment matches the `/lysbot merge` command pattern.
- * Now also accepts optional flags like `--override-approval-requirement`.
- *
- * @param commentBody - The body of the comment to check
- * @returns true if the comment is the lysbot merge command
- *
- * @example
- * isLysbotMergeCommand('/lysbot merge')     // true
- * isLysbotMergeCommand('  /lysbot merge  ') // true
- * isLysbotMergeCommand('/lysbot merge --override-approval-requirement') // true
- * isLysbotMergeCommand('/lysbot merge now') // false (invalid flag)
- */
-export declare function isLysbotMergeCommand(commentBody: string): boolean;
-/**
  * Parses the `/lysbot merge` command and extracts options.
  *
  * @param commentBody - The body of the comment containing the command
@@ -217,6 +203,20 @@ export declare function isLysbotMergeCommand(commentBody: string): boolean;
  *   // null
  */
 export declare function parseLysbotMergeCommand(commentBody: string): MergeOptions | null;
+/**
+ * Checks if a comment matches the `/lysbot merge` command pattern.
+ * Now also accepts optional flags like `--override-approval-requirement`.
+ *
+ * @param commentBody - The body of the comment to check
+ * @returns true if the comment is the lysbot merge command
+ *
+ * @example
+ * isLysbotMergeCommand('/lysbot merge')     // true
+ * isLysbotMergeCommand('  /lysbot merge  ') // true
+ * isLysbotMergeCommand('/lysbot merge --override-approval-requirement') // true
+ * isLysbotMergeCommand('/lysbot merge now') // false (invalid flag)
+ */
+export declare function isLysbotMergeCommand(commentBody: string): boolean;
 /**
  * Checks if the user type indicates a bot.
  *
