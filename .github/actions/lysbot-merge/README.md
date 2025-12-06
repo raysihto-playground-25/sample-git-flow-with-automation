@@ -1,6 +1,6 @@
-# exec-merge Action
+# lysbot-merge Action
 
-A TypeScript-based GitHub Action that provides automated PR merging via the `/exec merge` command in PR comments.
+A TypeScript-based GitHub Action that provides automated PR merging via the `/lysbot merge` command in PR comments.
 
 ## Features
 
@@ -14,21 +14,21 @@ A TypeScript-based GitHub Action that provides automated PR merging via the `/ex
 
 ## Quick Start
 
-Create a caller workflow in your project (e.g., `.github/workflows/on-comment-exec.yml`):
+Create a caller workflow in your project (e.g., `.github/workflows/on-comment.yml`):
 
 ```yaml
-name: on-comment-exec
+name: on-comment
 
 on:
   issue_comment:
     types: [created]
 
 concurrency:
-  group: exec-merge-pr-${{ github.event.issue.number }}
+  group: lysbot-merge-pr-${{ github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
-  exec-merge:
+  lysbot-merge:
     if: github.event.issue.pull_request
     runs-on: ubuntu-latest
     permissions:
@@ -36,7 +36,7 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: {ORG}/{REPO}/.github/actions/exec-merge@master
+      - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           release_branch_prefix: "release/"
@@ -66,7 +66,7 @@ jobs:
 
 ## Usage
 
-Comment `/exec merge` on any PR to trigger the merge action.
+Comment `/lysbot merge` on any PR to trigger the merge action.
 
 ## Merge Method Selection
 
@@ -106,12 +106,13 @@ The workflow must have the following permissions:
 
 ## Development
 
-To work on the exec-merge action:
+To work on the lysbot-merge action:
 
 ```bash
-cd .github/actions/exec-merge
+cd .github/actions/lysbot-merge
 npm install
 npm test        # Run unit tests
+npm run format  # Run formatter (format:check for checking only)
 npm run lint    # Run ESLint
 npm run build   # Build with ncc
 ```
