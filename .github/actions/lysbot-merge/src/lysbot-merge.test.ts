@@ -9,6 +9,7 @@ import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 import {
   isLysbotMergeCommand,
+  parseLysbotMergeCommand,
   isBot,
   hasValidAuthorAssociation,
   hasValidPermission,
@@ -25,6 +26,7 @@ import {
   type PullRequestData,
   type CheckResult,
   type Octokit,
+  type MergeOptions,
   addReaction,
   postComment,
   getCollaboratorPermission,
@@ -182,12 +184,18 @@ describe('isLysbotMergeCommand', () => {
       expect(isLysbotMergeCommand('/lysbot   merge')).toBe(true);
       expect(isLysbotMergeCommand('/lysbot\tmerge')).toBe(true);
     });
+
+    it('matches with --override-approval-requirement flag', () => {
+      expect(isLysbotMergeCommand('/lysbot merge --override-approval-requirement')).toBe(true);
+      expect(isLysbotMergeCommand('  /lysbot merge --override-approval-requirement  ')).toBe(true);
+    });
   });
 
   describe('invalid command patterns', () => {
-    it('rejects command with extra arguments (no flags allowed)', () => {
+    it('rejects command with unknown arguments or flags', () => {
       expect(isLysbotMergeCommand('/lysbot merge now')).toBe(false);
       expect(isLysbotMergeCommand('/lysbot merge --force')).toBe(false);
+      expect(isLysbotMergeCommand('/lysbot merge --unknown-flag')).toBe(false);
     });
 
     it('rejects partial or malformed commands', () => {
@@ -204,6 +212,47 @@ describe('isLysbotMergeCommand', () => {
     it('is case-sensitive (uppercase rejected)', () => {
       expect(isLysbotMergeCommand('/LYSBOT MERGE')).toBe(false);
       expect(isLysbotMergeCommand('/Lysbot Merge')).toBe(false);
+    });
+  });
+});
+
+// =============================================================================
+// Tests for parseLysbotMergeCommand
+// =============================================================================
+
+describe('parseLysbotMergeCommand', () => {
+  describe('valid commands', () => {
+    it('parses basic command without flags', () => {
+      const result = parseLysbotMergeCommand('/lysbot merge');
+      expect(result).not.toBeNull();
+      expect(result?.overrideApprovalRequirement).toBe(false);
+    });
+
+    it('parses command with --override-approval-requirement flag', () => {
+      const result = parseLysbotMergeCommand('/lysbot merge --override-approval-requirement');
+      expect(result).not.toBeNull();
+      expect(result?.overrideApprovalRequirement).toBe(true);
+    });
+
+    it('parses command with flag and extra whitespace', () => {
+      const result = parseLysbotMergeCommand('  /lysbot merge   --override-approval-requirement  ');
+      expect(result).not.toBeNull();
+      expect(result?.overrideApprovalRequirement).toBe(true);
+    });
+  });
+
+  describe('invalid commands', () => {
+    it('returns null for non-command text', () => {
+      expect(parseLysbotMergeCommand('hello world')).toBeNull();
+    });
+
+    it('returns null for command with unknown flags', () => {
+      expect(parseLysbotMergeCommand('/lysbot merge --unknown-flag')).toBeNull();
+    });
+
+    it('returns null for malformed commands', () => {
+      expect(parseLysbotMergeCommand('/lysbot')).toBeNull();
+      expect(parseLysbotMergeCommand('lysbot merge')).toBeNull();
     });
   });
 });
@@ -668,19 +717,28 @@ describe('COMMAND_REGEX', () => {
     expect(COMMAND_REGEX).toBeInstanceOf(RegExp);
   });
 
-  it('should match the same patterns as isLysbotMergeCommand', () => {
+  it('should match basic command patterns and capture optional flags', () => {
+    // Note: COMMAND_REGEX now captures optional flags after "merge"
+    // The actual flag validation is done in isLysbotMergeCommand
     const testCases = [
       { input: '/lysbot merge', expected: true },
       { input: '  /lysbot merge', expected: true },
       { input: '/lysbot merge  ', expected: true },
       { input: '/lysbot  merge', expected: true },
-      { input: '/lysbot merge now', expected: false },
-      { input: 'run /lysbot merge', expected: false },
+      { input: '/lysbot merge --override-approval-requirement', expected: true },
+      { input: '/lysbot merge now', expected: true }, // Regex matches, but isLysbotMergeCommand rejects
+      { input: 'run /lysbot merge', expected: false }, // Text before command
     ];
 
     for (const { input, expected } of testCases) {
       expect(COMMAND_REGEX.test(input)).toBe(expected);
     }
+  });
+
+  it('should capture flags from command', () => {
+    const match = COMMAND_REGEX.exec('/lysbot merge --override-approval-requirement');
+    expect(match).not.toBeNull();
+    expect(match?.[1]?.trim()).toBe('--override-approval-requirement');
   });
 });
 
@@ -1050,6 +1108,159 @@ describe('lysbotMerge', () => {
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('checks failed');
+    });
+
+    it('Case A: fails when no approvals and no override flag, shows cross icon', async () => {
+      const octokit = createMockOctokit();
+
+      // No approved reviews
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
+
+      const context = createEventContext({ commentBody: '/lysbot merge' });
+      const config = createConfig();
+
+      const result = await lysbotMerge(octokit, context, config);
+
+      expect(result.status).toBe('failed');
+      expect(result.message).toContain('checks failed');
+
+      // Verify the cross icon is used for approval check
+      const commentCalls = (
+        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
+      ).mock.calls;
+      const mergeCheckComment = commentCalls.find((call) => {
+        const body = call[0]?.body;
+        return body?.includes('Merge checks failed');
+      });
+      expect(mergeCheckComment).toBeDefined();
+      const commentBody = mergeCheckComment?.[0]?.body ?? '';
+      expect(commentBody).toContain(TWEMOJI.CROSS);
+      expect(commentBody).toContain('At least one valid approval');
+      expect(commentBody).toContain('no valid approvals found');
+    });
+
+    it('Case B: succeeds with override flag when no approvals, shows warning icon', async () => {
+      const octokit = createMockOctokit();
+
+      // No approved reviews
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
+
+      const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
+      const config = createConfig();
+
+      const result = await lysbotMerge(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+
+      // Verify the warning icon is used for approval check
+      const commentCalls = (
+        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
+      ).mock.calls;
+      const mergeCheckComment = commentCalls.find((call) => {
+        const body = call[0]?.body;
+        return body?.includes('Merge checks passed');
+      });
+      expect(mergeCheckComment).toBeDefined();
+      const commentBody = mergeCheckComment?.[0]?.body ?? '';
+      expect(commentBody).toContain(TWEMOJI.WARNING);
+      expect(commentBody).toContain('At least one valid approval');
+      expect(commentBody).toContain('approval requirement overridden');
+      expect(commentBody).toContain('--override-approval-requirement');
+    });
+
+    it('Case C: fails with override flag when other checks fail (e.g., unresolved threads)', async () => {
+      const octokit = createMockOctokit();
+
+      // No approved reviews
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
+
+      // Mock unresolved threads
+      (octokit.graphql as unknown as MockedFunction<typeof octokit.graphql>).mockResolvedValue({
+        repository: {
+          pullRequest: {
+            reviewThreads: {
+              pageInfo: { hasNextPage: false, endCursor: null },
+              nodes: [{ isResolved: false }], // 1 unresolved thread
+            },
+          },
+        },
+      });
+
+      const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
+      const config = createConfig();
+
+      const result = await lysbotMerge(octokit, context, config);
+
+      expect(result.status).toBe('failed');
+      expect(result.message).toContain('checks failed');
+
+      // Verify the threads check failed with cross icon
+      const commentCalls = (
+        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
+      ).mock.calls;
+      const mergeCheckComment = commentCalls.find((call) => {
+        const body = call[0]?.body;
+        return body?.includes('Merge checks failed');
+      });
+      expect(mergeCheckComment).toBeDefined();
+      const commentBody = mergeCheckComment?.[0]?.body ?? '';
+      expect(commentBody).toContain('review conversations are resolved');
+      expect(commentBody).toContain(TWEMOJI.CROSS);
+    });
+
+    it('Case D: title warning behavior - non-conventional title shows warning but does not block', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock PR with non-conventional title
+      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+        data: {
+          state: 'open',
+          locked: false,
+          draft: false,
+          merged: false,
+          mergeable: true,
+          mergeable_state: 'clean',
+          head: {
+            sha: 'abc1234567890',
+            ref: 'feature/test',
+            repo: { fork: false, owner: { id: 1 } },
+          },
+          base: {
+            ref: 'develop',
+            repo: { owner: { id: 1 } },
+          },
+          user: { login: 'testuser' },
+          title: 'Update README', // Non-conventional title
+        },
+      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
+
+      // Mock approved review from another user
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await lysbotMerge(octokit, context, config);
+
+      // Should still merge successfully (conventional commits is optional)
+      expect(result.status).toBe('merged');
+
+      // Verify the warning icon was used for conventional commits check
+      const commentCalls = (
+        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
+      ).mock.calls;
+      const hasConventionalCommitsWarning = commentCalls.some((call) => {
+        const body = call[0]?.body;
+        return body?.includes('Conventional Commits') && body?.includes(TWEMOJI.WARNING);
+      });
+      expect(hasConventionalCommitsWarning).toBe(true);
     });
 
     it('dismisses stale approvals without posting success notification', async () => {

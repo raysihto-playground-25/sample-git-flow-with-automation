@@ -68,6 +68,20 @@ jobs:
 
 Comment `/lysbot merge` on any PR to trigger the merge action.
 
+### Command Options
+
+| Option | Description |
+|--------|-------------|
+| `--override-approval-requirement` | Skip the review approval requirement for this merge only. All other checks (status checks, merge conflicts, unresolved threads, etc.) still apply. |
+
+**Example with flag:**
+
+```
+/lysbot merge --override-approval-requirement
+```
+
+> **Note:** The `--override-approval-requirement` flag only bypasses the review approval requirement and does **not** bypass any other checks. It applies only to the current merge command invocation and does not change repository settings.
+
 ## Merge Method Selection
 
 The action automatically selects the appropriate merge method:
@@ -90,6 +104,16 @@ Before merging, the action validates:
 4. ✅ All review conversations are resolved
 5. ✅ At least one valid approval from another user
 6. ✅ No merge conflicts
+
+### Check Status Icons
+
+The merge check comment uses three icon states:
+
+| Icon | Meaning |
+|------|---------|
+| ✅ | Check passed |
+| ❌ | Check failed and blocks merge |
+| ⚠️ | Check did not pass but is explicitly tolerated (e.g., overridden approval requirement or accepted title warning) |
 
 ## Permissions Required
 
