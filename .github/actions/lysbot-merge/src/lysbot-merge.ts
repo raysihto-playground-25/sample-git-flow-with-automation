@@ -1,8 +1,8 @@
 /**
- * exec-merge.ts - Core logic for automated PR merging
+ * lysbot-merge.ts - Core logic for automated PR merging
  *
  * FLOW OVERVIEW:
- * 1. Command validation - Check if comment is "/exec merge" (skip bots)
+ * 1. Command validation - Check if comment is "/lysbot merge" (skip bots)
  * 2. Permission check - Verify OWNER/MEMBER/COLLABORATOR + write permission
  * 3. PR state check - Ensure PR is open, unlocked, not draft, not from fork
  * 4. Review check - Dismiss stale approvals, require 1+ valid approval
@@ -30,10 +30,10 @@ import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-meth
 // =============================================================================
 
 /**
- * Configuration options for the exec-merge action.
+ * Configuration options for the lysbot-merge action.
  * These are passed from the workflow inputs.
  */
-export interface ExecMergeConfig {
+export interface LysbotMergeConfig {
   /** Prefix for release branches (e.g., "release/") */
   releaseBranchPrefix: string;
   /** Name of the develop branch */
@@ -122,9 +122,9 @@ export interface MergeMethodResult {
 }
 
 /**
- * Overall result of the exec-merge operation.
+ * Overall result of the lysbot-merge operation.
  */
-export interface ExecMergeResult {
+export interface LysbotMergeResult {
   /** Final status of the operation */
   status: 'merged' | 'skipped' | 'failed' | 'already_merged';
   /** Detailed message about what happened */
@@ -141,10 +141,10 @@ export type Octokit = InstanceType<typeof GitHub>;
 // =============================================================================
 
 /**
- * Command regex for matching `/exec merge` comments.
+ * Command regex for matching `/lysbot merge` comments.
  * Uses simple regex pattern compatible with JavaScript.
  */
-export const COMMAND_REGEX = /^\s*\/exec\s+merge\s*$/;
+export const COMMAND_REGEX = /^\s*\/lysbot\s+merge\s*$/;
 
 /**
  * Twemoji images for cross-browser emoji compatibility.
@@ -160,7 +160,7 @@ export const TWEMOJI = {
 } as const;
 
 /**
- * Valid author associations that can use the /exec merge command.
+ * Valid author associations that can use the /lysbot merge command.
  * Why: Only trusted users with write access should be able to trigger merges.
  * OWNER/MEMBER have org-level trust, COLLABORATOR has explicit repo access.
  * CONTRIBUTOR and others may have submitted PRs but lack merge authority.
@@ -168,7 +168,7 @@ export const TWEMOJI = {
 export const VALID_AUTHOR_ASSOCIATIONS = ['OWNER', 'MEMBER', 'COLLABORATOR'] as const;
 
 /**
- * Valid permission levels that can use the /exec merge command.
+ * Valid permission levels that can use the /lysbot merge command.
  * Why: Maps to GitHub's permission model - admin/maintain/write can merge PRs.
  * Read-only users should not be able to trigger merges even if they can comment.
  */
@@ -228,17 +228,17 @@ export function isConventionalCommitTitle(title: string): boolean {
 }
 
 /**
- * Checks if a comment matches the `/exec merge` command pattern.
+ * Checks if a comment matches the `/lysbot merge` command pattern.
  *
  * @param commentBody - The body of the comment to check
- * @returns true if the comment is the exec merge command
+ * @returns true if the comment is the lysbot merge command
  *
  * @example
- * isExecMergeCommand('/exec merge')     // true
- * isExecMergeCommand('  /exec merge  ') // true
- * isExecMergeCommand('/exec merge now') // false
+ * isLysbotMergeCommand('/lysbot merge')     // true
+ * isLysbotMergeCommand('  /lysbot merge  ') // true
+ * isLysbotMergeCommand('/lysbot merge now') // false
  */
-export function isExecMergeCommand(commentBody: string): boolean {
+export function isLysbotMergeCommand(commentBody: string): boolean {
   return COMMAND_REGEX.test(commentBody);
 }
 
@@ -287,7 +287,7 @@ export function hasValidPermission(permission: string): boolean {
  * @param config - Configuration with branch prefixes
  * @returns The merge method and reason
  */
-export function determineMergeMethod(headRef: string, baseRef: string, config: ExecMergeConfig): MergeMethodResult {
+export function determineMergeMethod(headRef: string, baseRef: string, config: LysbotMergeConfig): MergeMethodResult {
   // Check head branch patterns first
   if (headRef.startsWith(config.releaseBranchPrefix)) {
     return {
@@ -400,7 +400,7 @@ export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
 
 /**
  * Waits for a specified number of milliseconds before retrying.
- * This is a custom utility function specific to exec-merge action,
+ * This is a custom utility function specific to lysbot-merge action,
  * used for retry intervals when waiting for mergeable status.
  *
  * @param ms - Milliseconds to wait
@@ -699,7 +699,7 @@ export async function mergePullRequest(
 // =============================================================================
 
 /**
- * Main function that orchestrates the exec-merge operation.
+ * Main function that orchestrates the lysbot-merge operation.
  *
  * This function:
  * 1. Validates the command and permissions
@@ -712,11 +712,11 @@ export async function mergePullRequest(
  * @param config - Configuration options
  * @returns Result of the operation
  */
-export async function execMerge(
+export async function lysbotMerge(
   octokit: Octokit,
   context: EventContext,
-  config: ExecMergeConfig,
-): Promise<ExecMergeResult> {
+  config: LysbotMergeConfig,
+): Promise<LysbotMergeResult> {
   const { owner, repo, prNumber, commentId, commentBody, actor, userType, authorAssociation } = context;
 
   // -------------------------------------------------------------------------
@@ -728,8 +728,8 @@ export async function execMerge(
     return { status: 'skipped', message: 'Comment is from a bot' };
   }
 
-  // Check if this is the exec merge command
-  if (!isExecMergeCommand(commentBody)) {
+  // Check if this is the lysbot merge command
+  if (!isLysbotMergeCommand(commentBody)) {
     return { status: 'skipped', message: 'Command not matched' };
   }
 
@@ -743,7 +743,7 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      `## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`/exec merge\` command.\n\nYour association: \`${authorAssociation}\``,
+      `## Permission denied\n\nOnly repository owners, members, and collaborators can use the \`/lysbot merge\` command.\n\nYour association: \`${authorAssociation}\``,
     );
     return { status: 'failed', message: 'Invalid author association' };
   }
@@ -756,7 +756,7 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      `## Permission denied\n\nYou need at least **write** permission on this repository to use the \`/exec merge\` command.\n\nYour association: \`${authorAssociation}\`\nYour permission level: \`${permission}\``,
+      `## Permission denied\n\nYou need at least **write** permission on this repository to use the \`/lysbot merge\` command.\n\nYour association: \`${authorAssociation}\`\nYour permission level: \`${permission}\``,
     );
     return { status: 'failed', message: 'Insufficient permissions' };
   }
@@ -775,7 +775,7 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      '## Fork PR not supported\n\nThe `/exec merge` command is not supported for PRs from forked repositories.\n\nThis is because the GITHUB_TOKEN has limited write permissions for fork-originated PRs by default.',
+      '## Fork PR not supported\n\nThe `/lysbot merge` command is not supported for PRs from forked repositories.\n\nThis is because the GITHUB_TOKEN has limited write permissions for fork-originated PRs by default.',
     );
     return { status: 'failed', message: 'Fork PR not supported' };
   }
@@ -916,7 +916,7 @@ export async function execMerge(
       owner,
       repo,
       prNumber,
-      `## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: ${originalHeadSha}\n- Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`,
+      `## New commits detected\n\nNew commits were pushed while validating this PR.\n\n- Original HEAD SHA: ${originalHeadSha}\n- Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/lysbot merge\` again after the new commits are reviewed and approved.`,
     );
     return { status: 'failed', message: 'TOCTOU violation' };
   }
@@ -936,7 +936,7 @@ export async function execMerge(
         owner,
         repo,
         prNumber,
-        `## New commits detected\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: ${originalHeadSha}\n- Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/exec merge\` again after the new commits are reviewed and approved.`,
+        `## New commits detected\n\nNew commits were pushed while validating this PR (after waiting for mergeable status).\n\n- Original HEAD SHA: ${originalHeadSha}\n- Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/lysbot merge\` again after the new commits are reviewed and approved.`,
       );
       return { status: 'failed', message: 'TOCTOU violation during retry' };
     }
@@ -946,7 +946,7 @@ export async function execMerge(
   if (prData.mergeable === false || prData.mergeable === null || prData.mergeableState === 'dirty') {
     let errorComment: string;
     if (prData.mergeable === null) {
-      errorComment = `## Mergeability status pending\n\nGitHub is still calculating mergeability for this PR.\n\n- Mergeable: \`null\`\n- Mergeable State: \`${prData.mergeableState}\`\n- Retries: count=${config.mergeableRetryCount}, interval=${config.mergeableRetryInterval}s\n\nPlease try \`/exec merge\` again shortly.`;
+      errorComment = `## Mergeability status pending\n\nGitHub is still calculating mergeability for this PR.\n\n- Mergeable: \`null\`\n- Mergeable State: \`${prData.mergeableState}\`\n- Retries: count=${config.mergeableRetryCount}, interval=${config.mergeableRetryInterval}s\n\nPlease try \`/lysbot merge\` again shortly.`;
     } else if (prData.mergeableState === 'dirty') {
       errorComment = `## Conflicts detected\n\nThis PR has merge conflicts that must be resolved before merging.\n\n- Mergeable: \`${prData.mergeable}\`\n- Mergeable State: \`${prData.mergeableState}\`\n\nPlease resolve the conflicts and try again.`;
     } else {
@@ -957,7 +957,7 @@ export async function execMerge(
   }
 
   // Perform merge
-  const commitMessage = `Merged-by: exec-merge (on behalf of @${actor})`;
+  const commitMessage = `Merged-by: lysbot-merge (on behalf of @${actor})`;
   const mergeResult = await mergePullRequest(
     octokit,
     owner,
@@ -990,7 +990,7 @@ export async function execMerge(
     owner,
     repo,
     prNumber,
-    `## Merged by exec-merge\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** ${originalHeadSha}${mergeCommitInfo}`,
+    `## Merged by lysbot-merge\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** ${originalHeadSha}${mergeCommitInfo}`,
   );
 
   return {

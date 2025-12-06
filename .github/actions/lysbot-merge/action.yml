@@ -1,7 +1,7 @@
 # =============================================================================
-# exec-merge - PR Merge Automation Action
+# lysbot-merge - PR Merge Automation Action
 # =============================================================================
-# A composite action that provides automated PR merging via the `/exec merge`
+# A composite action that provides automated PR merging via the `/lysbot merge`
 # command in PR comments. This action encapsulates all the validation and
 # merge logic previously in the reusable workflow.
 #
@@ -13,7 +13,7 @@
 #       types: [created]
 #
 #   jobs:
-#     exec-merge:
+#     lysbot-merge:
 #       runs-on: ubuntu-latest
 #       permissions:
 #         contents: write
@@ -21,7 +21,7 @@
 #         issues: write
 #       steps:
 #         - uses: actions/checkout@v4
-#         - uses: ./.github/actions/exec-merge
+#         - uses: ./.github/actions/lysbot-merge
 #           with:
 #             github-token: ${{ secrets.GITHUB_TOKEN }}
 #             release_branch_prefix: "release/"
@@ -31,15 +31,15 @@
 # LIMITATIONS:
 # - Fork PRs are NOT supported (GITHUB_TOKEN has limited permissions)
 # - Only organization owners, members, or collaborators with write access
-#   can use the `/exec merge` command
+#   can use the `/lysbot merge` command
 #
 # THIRD-PARTY LICENSES:
 # - Twemoji graphics (https://github.com/twitter/twemoji) are used for emoji
 #   display compatibility. Licensed under CC-BY 4.0.
 # =============================================================================
 
-name: 'exec-merge'
-description: 'Automated PR merging with validation checks via /exec merge command'
+name: 'lysbot-merge'
+description: 'Automated PR merging with validation checks via /lysbot merge command'
 author: 'GitHub Copilot'
 
 inputs:

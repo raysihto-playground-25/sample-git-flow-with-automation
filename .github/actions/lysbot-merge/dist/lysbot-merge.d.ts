@@ -1,8 +1,8 @@
 /**
- * exec-merge.ts - Core logic for automated PR merging
+ * lysbot-merge.ts - Core logic for automated PR merging
  *
  * FLOW OVERVIEW:
- * 1. Command validation - Check if comment is "/exec merge" (skip bots)
+ * 1. Command validation - Check if comment is "/lysbot merge" (skip bots)
  * 2. Permission check - Verify OWNER/MEMBER/COLLABORATOR + write permission
  * 3. PR state check - Ensure PR is open, unlocked, not draft, not from fork
  * 4. Review check - Dismiss stale approvals, require 1+ valid approval
@@ -24,10 +24,10 @@
 import type { GitHub } from '@actions/github/lib/utils';
 import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 /**
- * Configuration options for the exec-merge action.
+ * Configuration options for the lysbot-merge action.
  * These are passed from the workflow inputs.
  */
-export interface ExecMergeConfig {
+export interface LysbotMergeConfig {
     /** Prefix for release branches (e.g., "release/") */
     releaseBranchPrefix: string;
     /** Name of the develop branch */
@@ -110,9 +110,9 @@ export interface MergeMethodResult {
     reason: string;
 }
 /**
- * Overall result of the exec-merge operation.
+ * Overall result of the lysbot-merge operation.
  */
-export interface ExecMergeResult {
+export interface LysbotMergeResult {
     /** Final status of the operation */
     status: 'merged' | 'skipped' | 'failed' | 'already_merged';
     /** Detailed message about what happened */
@@ -122,7 +122,7 @@ export interface ExecMergeResult {
 }
 export type Octokit = InstanceType<typeof GitHub>;
 /**
- * Command regex for matching `/exec merge` comments.
+ * Command regex for matching `/lysbot merge` comments.
  * Uses simple regex pattern compatible with JavaScript.
  */
 export declare const COMMAND_REGEX: RegExp;
@@ -136,14 +136,14 @@ export declare const TWEMOJI: {
     readonly WARNING: "<img src=\"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/26a0.svg\" width=\"20\" height=\"20\" alt=\"Warning\">";
 };
 /**
- * Valid author associations that can use the /exec merge command.
+ * Valid author associations that can use the /lysbot merge command.
  * Why: Only trusted users with write access should be able to trigger merges.
  * OWNER/MEMBER have org-level trust, COLLABORATOR has explicit repo access.
  * CONTRIBUTOR and others may have submitted PRs but lack merge authority.
  */
 export declare const VALID_AUTHOR_ASSOCIATIONS: readonly ["OWNER", "MEMBER", "COLLABORATOR"];
 /**
- * Valid permission levels that can use the /exec merge command.
+ * Valid permission levels that can use the /lysbot merge command.
  * Why: Maps to GitHub's permission model - admin/maintain/write can merge PRs.
  * Read-only users should not be able to trigger merges even if they can comment.
  */
@@ -178,17 +178,17 @@ export declare const CONVENTIONAL_COMMIT_REGEX: RegExp;
  */
 export declare function isConventionalCommitTitle(title: string): boolean;
 /**
- * Checks if a comment matches the `/exec merge` command pattern.
+ * Checks if a comment matches the `/lysbot merge` command pattern.
  *
  * @param commentBody - The body of the comment to check
- * @returns true if the comment is the exec merge command
+ * @returns true if the comment is the lysbot merge command
  *
  * @example
- * isExecMergeCommand('/exec merge')     // true
- * isExecMergeCommand('  /exec merge  ') // true
- * isExecMergeCommand('/exec merge now') // false
+ * isLysbotMergeCommand('/lysbot merge')     // true
+ * isLysbotMergeCommand('  /lysbot merge  ') // true
+ * isLysbotMergeCommand('/lysbot merge now') // false
  */
-export declare function isExecMergeCommand(commentBody: string): boolean;
+export declare function isLysbotMergeCommand(commentBody: string): boolean;
 /**
  * Checks if the user type indicates a bot.
  *
@@ -225,7 +225,7 @@ export declare function hasValidPermission(permission: string): boolean;
  * @param config - Configuration with branch prefixes
  * @returns The merge method and reason
  */
-export declare function determineMergeMethod(headRef: string, baseRef: string, config: ExecMergeConfig): MergeMethodResult;
+export declare function determineMergeMethod(headRef: string, baseRef: string, config: LysbotMergeConfig): MergeMethodResult;
 /**
  * Validates the PR state for merging.
  *
@@ -249,7 +249,7 @@ export declare function getMergeableStateDescription(state: string): string;
 export declare function buildCheckResultsMarkdown(checks: CheckResult[]): string;
 /**
  * Waits for a specified number of milliseconds before retrying.
- * This is a custom utility function specific to exec-merge action,
+ * This is a custom utility function specific to lysbot-merge action,
  * used for retry intervals when waiting for mergeable status.
  *
  * @param ms - Milliseconds to wait
@@ -348,7 +348,7 @@ export declare function mergePullRequest(octokit: Octokit, owner: string, repo: 
     mergeCommitSha?: string;
 }>;
 /**
- * Main function that orchestrates the exec-merge operation.
+ * Main function that orchestrates the lysbot-merge operation.
  *
  * This function:
  * 1. Validates the command and permissions
@@ -361,4 +361,4 @@ export declare function mergePullRequest(octokit: Octokit, owner: string, repo: 
  * @param config - Configuration options
  * @returns Result of the operation
  */
-export declare function execMerge(octokit: Octokit, context: EventContext, config: ExecMergeConfig): Promise<ExecMergeResult>;
+export declare function lysbotMerge(octokit: Octokit, context: EventContext, config: LysbotMergeConfig): Promise<LysbotMergeResult>;

@@ -18,6 +18,28 @@ export default tseslint.config(
     },
   },
   {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      sourceType: 'module', // ES Modules support
+      parserOptions: {
+        project: null, // Disable type checking
+      },
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        __dirname: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
+      },
+    },
+    rules: {
+      // Additional rules for JS
+      'no-unused-vars': 'warn',
+      // Allow console for Node.js scripts
+      'no-console': 'off',
+    },
+  },
+  {
     ignores: ['dist/', 'node_modules/', '**/*.test.ts'],
   },
 );
