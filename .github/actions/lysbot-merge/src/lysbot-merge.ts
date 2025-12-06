@@ -22,6 +22,7 @@
  *   Copyright 2020 Twitter, Inc and other contributors
  */
 
+import * as core from '@actions/core';
 import type { GitHub } from '@actions/github/lib/utils';
 import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 
@@ -142,9 +143,21 @@ export type Octokit = InstanceType<typeof GitHub>;
 
 /**
  * Command regex for matching `/lysbot merge` comments.
+ * Captures optional flags after the merge command.
  * Uses simple regex pattern compatible with JavaScript.
  */
-export const COMMAND_REGEX = /^\s*\/lysbot\s+merge\s*$/;
+export const COMMAND_REGEX = /^\s*\/lysbot\s+merge(?:\s+(.*))?\s*$/;
+
+/**
+ * Options parsed from the `/lysbot merge` command.
+ */
+export interface MergeOptions {
+  /**
+   * When true, skip the "sufficient approvals" requirement.
+   * All other checks (status checks, merge conflicts, labels, etc.) still apply.
+   */
+  overrideApprovalRequirement: boolean;
+}
 
 /**
  * Twemoji images for cross-browser emoji compatibility.
@@ -228,7 +241,46 @@ export function isConventionalCommitTitle(title: string): boolean {
 }
 
 /**
+ * List of valid command flags for `/lysbot merge`.
+ */
+const VALID_FLAGS = ['--override-approval-requirement'] as const;
+
+/**
+ * Parses the `/lysbot merge` command and extracts options.
+ *
+ * @param commentBody - The body of the comment containing the command
+ * @returns MergeOptions with parsed flags, or null if not a valid command
+ *
+ * @example
+ * parseLysbotMergeCommand('/lysbot merge')
+ *   // { overrideApprovalRequirement: false }
+ * parseLysbotMergeCommand('/lysbot merge --override-approval-requirement')
+ *   // { overrideApprovalRequirement: true }
+ * parseLysbotMergeCommand('hello')
+ *   // null
+ */
+export function parseLysbotMergeCommand(commentBody: string): MergeOptions | null {
+  const match = COMMAND_REGEX.exec(commentBody);
+  if (!match) return null;
+
+  // Parse and validate flags
+  const flagsStr = match[1]?.trim() ?? '';
+  const flags = flagsStr ? flagsStr.split(/\s+/) : [];
+
+  // Validate that all flags are known
+  const validFlagsArray: readonly string[] = VALID_FLAGS;
+  if (!flags.every((flag) => validFlagsArray.includes(flag))) {
+    return null;
+  }
+
+  return {
+    overrideApprovalRequirement: flags.includes('--override-approval-requirement'),
+  };
+}
+
+/**
  * Checks if a comment matches the `/lysbot merge` command pattern.
+ * Now also accepts optional flags like `--override-approval-requirement`.
  *
  * @param commentBody - The body of the comment to check
  * @returns true if the comment is the lysbot merge command
@@ -236,10 +288,11 @@ export function isConventionalCommitTitle(title: string): boolean {
  * @example
  * isLysbotMergeCommand('/lysbot merge')     // true
  * isLysbotMergeCommand('  /lysbot merge  ') // true
- * isLysbotMergeCommand('/lysbot merge now') // false
+ * isLysbotMergeCommand('/lysbot merge --override-approval-requirement') // true
+ * isLysbotMergeCommand('/lysbot merge now') // false (invalid flag)
  */
 export function isLysbotMergeCommand(commentBody: string): boolean {
-  return COMMAND_REGEX.test(commentBody);
+  return parseLysbotMergeCommand(commentBody) !== null;
 }
 
 /**
@@ -733,6 +786,12 @@ export async function lysbotMerge(
     return { status: 'skipped', message: 'Command not matched' };
   }
 
+  // Parse merge options from the command
+  const mergeOptions = parseLysbotMergeCommand(commentBody);
+  if (!mergeOptions) {
+    return { status: 'skipped', message: 'Command not matched' };
+  }
+
   // Add eyes reaction for immediate feedback
   await addReaction(octokit, owner, repo, commentId, 'eyes');
 
@@ -828,10 +887,31 @@ export async function lysbotMerge(
     await postComment(octokit, owner, repo, prNumber, staleComment);
   }
 
+  // Determine if approval requirement is overridden
+  const approvalCheckPassed = validApprovals >= 1;
+  const approvalOverridden = mergeOptions.overrideApprovalRequirement && !approvalCheckPassed;
+
+  // Log when approval requirement is overridden
+  if (approvalOverridden) {
+    core.info('Approval requirement overridden by command flag (--override-approval-requirement).');
+  }
+
+  // Build approval check result
+  let approvalDetails: string | undefined;
+  if (approvalCheckPassed) {
+    approvalDetails = undefined;
+  } else if (approvalOverridden) {
+    approvalDetails = 'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
+  } else {
+    approvalDetails = 'no valid approvals found';
+  }
+
   checks.push({
     name: 'At least one valid approval from another user',
-    passed: validApprovals >= 1,
-    details: validApprovals < 1 ? 'no valid approvals found' : undefined,
+    passed: approvalCheckPassed,
+    details: approvalDetails,
+    // Mark as optional when override flag is used, so it shows warning instead of failure
+    optional: approvalOverridden,
   });
 
   // Unresolved threads check

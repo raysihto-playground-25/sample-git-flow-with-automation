@@ -123,9 +123,20 @@ export interface LysbotMergeResult {
 export type Octokit = InstanceType<typeof GitHub>;
 /**
  * Command regex for matching `/lysbot merge` comments.
+ * Captures optional flags after the merge command.
  * Uses simple regex pattern compatible with JavaScript.
  */
 export declare const COMMAND_REGEX: RegExp;
+/**
+ * Options parsed from the `/lysbot merge` command.
+ */
+export interface MergeOptions {
+    /**
+     * When true, skip the "sufficient approvals" requirement.
+     * All other checks (status checks, merge conflicts, labels, etc.) still apply.
+     */
+    overrideApprovalRequirement: boolean;
+}
 /**
  * Twemoji images for cross-browser emoji compatibility.
  * https://github.com/twitter/twemoji (CC-BY 4.0 licensed)
@@ -178,7 +189,23 @@ export declare const CONVENTIONAL_COMMIT_REGEX: RegExp;
  */
 export declare function isConventionalCommitTitle(title: string): boolean;
 /**
+ * Parses the `/lysbot merge` command and extracts options.
+ *
+ * @param commentBody - The body of the comment containing the command
+ * @returns MergeOptions with parsed flags, or null if not a valid command
+ *
+ * @example
+ * parseLysbotMergeCommand('/lysbot merge')
+ *   // { overrideApprovalRequirement: false }
+ * parseLysbotMergeCommand('/lysbot merge --override-approval-requirement')
+ *   // { overrideApprovalRequirement: true }
+ * parseLysbotMergeCommand('hello')
+ *   // null
+ */
+export declare function parseLysbotMergeCommand(commentBody: string): MergeOptions | null;
+/**
  * Checks if a comment matches the `/lysbot merge` command pattern.
+ * Now also accepts optional flags like `--override-approval-requirement`.
  *
  * @param commentBody - The body of the comment to check
  * @returns true if the comment is the lysbot merge command
@@ -186,7 +213,8 @@ export declare function isConventionalCommitTitle(title: string): boolean;
  * @example
  * isLysbotMergeCommand('/lysbot merge')     // true
  * isLysbotMergeCommand('  /lysbot merge  ') // true
- * isLysbotMergeCommand('/lysbot merge now') // false
+ * isLysbotMergeCommand('/lysbot merge --override-approval-requirement') // true
+ * isLysbotMergeCommand('/lysbot merge now') // false (invalid flag)
  */
 export declare function isLysbotMergeCommand(commentBody: string): boolean;
 /**
