@@ -44,7 +44,8 @@ jobs:
           sync_branch_prefix: "fix/sync/"
 ```
 
-> **Note:** Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
+> [!NOTE]
+> Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
 
 ## Inputs
 
@@ -80,7 +81,8 @@ Comment `/lysbot merge` on any PR to trigger the merge action.
 /lysbot merge --override-approval-requirement
 ```
 
-> **⚠️ Important Notes on `--override-approval-requirement`:**
+> [!CAUTION]
+> **Important Notes on `--override-approval-requirement`:**
 >
 > - **This is an exceptional, privileged option**: Use this option sparingly and only when you have a valid reason to bypass the normal approval workflow.
 > - **Command executor takes reviewer responsibility**: By using this flag, you are acting as a reviewer proxy and asserting that you have reviewed and approved the changes yourself.
@@ -150,8 +152,11 @@ The workflow must have the following permissions:
 
 ## Limitations
 
-- **Fork PRs are NOT supported**: `GITHUB_TOKEN` has limited write permissions for fork-originated PRs
-- **Authorization required**: Only organization owners, members, or collaborators with write access can use the command
+> [!WARNING]
+> **Fork PRs are NOT supported**: `GITHUB_TOKEN` has limited write permissions for fork-originated PRs
+
+> [!NOTE]
+> **Authorization required**: Only organization owners, members, or collaborators with write access can use the command
 
 ## Development
 
