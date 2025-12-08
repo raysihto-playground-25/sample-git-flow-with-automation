@@ -1,5 +1,5 @@
 /**
- * merge-orchestrator.test.ts - Integration tests for merge orchestration logic
+ * main.test.ts - Integration tests for merge orchestration logic
  *
  * Tests cover the main lysbotMerge function with all validation and merge flows.
  * GitHub API interactions are mocked for isolation.
@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 import type { LysbotMergeConfig, EventContext, PullRequestData, Octokit } from './types';
 import { TWEMOJI } from './constants';
-import { lysbotMerge } from './merge-orchestrator';
+import { lysbotMerge } from './main';
 
 // =============================================================================
 // Test Utilities
