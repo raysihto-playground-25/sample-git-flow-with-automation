@@ -21,7 +21,7 @@
  * - This file is a thin integration layer with GitHub Actions runtime
  * - Testing this would require mocking the entire GitHub Actions environment, which provides
  *   no value since it only contains simple pass-through code with no conditional logic
- * - The real functionality is tested in action.test.ts with 94%+ coverage
+ * - The real functionality is tested in action.test.ts with high coverage
  *
  * All testable logic has been moved to action.ts.
  */
