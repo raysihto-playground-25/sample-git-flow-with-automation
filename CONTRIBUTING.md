@@ -80,6 +80,8 @@ To reduce maintenance burden and prevent documentation drift, **do not include s
 - ✅ "The codebase follows modular design principles"
 - ✅ "Multiple TypeScript files implement the functionality"
 
+**Note**: Quantitative metrics should appear in CI or generated reports, not in manually-maintained documentation.
+
 ### Specific Metrics in PR Descriptions
 
 While specific metrics should be avoided in documentation, **PR descriptions are exempt from this policy**. You may (and should) include specific details about "this change" or "at this time" in PR descriptions.
@@ -100,7 +102,8 @@ When addressing individual review comments in a PR conversation, **always refere
 **How to respond**:
 - Reply to each conversation thread with the commit hash (short or full form) that addresses that specific feedback
 - A simple hash-only reply is acceptable (e.g., `abc1234`)
-- For multiple related changes, you may list multiple hashes or provide brief context
+- If the comment is addressed across multiple commits, reference all relevant hashes or provide a brief explanation (e.g., "Fixed across a1b2c3d and b2c3d4e due to refactoring split")
+- Do not resolve the review thread until the reviewer has confirmed the fix
 
 **Examples**:
 - ✅ `a1b2c3d`
