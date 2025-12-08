@@ -174,7 +174,7 @@ export async function lysbotMerge(
   // Success notifications are skipped because GitHub's native "approval dismissed"
   // notification already appears in the PR timeline when reviews are dismissed.
   if (dismissFailures.length > 0) {
-    const staleComment = `## Stale approval dismiss failures\n\n> [!WARNING]\n> The following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n>\n${dismissFailures.map(f => `> ${f}`).join('\n')}`;
+    const staleComment = `## Stale approval dismiss failures\n\n> [!WARNING]\n> The following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n>\n${dismissFailures.map((f) => `> ${f}`).join('\n')}`;
     await postComment(octokit, owner, repo, prNumber, staleComment);
   }
 
