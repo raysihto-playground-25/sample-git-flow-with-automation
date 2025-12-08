@@ -166,6 +166,106 @@ npm run lint    # Run ESLint
 npm run build   # Build with ncc
 ```
 
+### Code Structure
+
+The codebase has been modularized for better maintainability, following the **Single Responsibility Principle**. Each module focuses on a specific concern:
+
+#### Current File Structure
+
+```
+src/
+├── main.ts                 # Entry point (GitHub Actions integration)
+├── lysbot-merge.ts         # Re-export module (backward compatibility)
+├── types.ts                # Type definitions and interfaces
+├── constants.ts            # Configuration constants and regex patterns
+├── validation.ts           # Pure validation and business logic functions
+├── github-api.ts           # GitHub API interaction wrappers
+└── merge-orchestrator.ts   # Main orchestration logic
+```
+
+**Module Responsibilities:**
+
+1. **`types.ts`**
+   - All TypeScript type definitions and interfaces
+   - No runtime logic, purely type declarations
+   - Imported by all other modules as needed
+
+2. **`constants.ts`**
+   - Configuration constants (regex patterns, valid flags, emoji)
+   - Immutable reference data
+   - No dependencies on other modules except types
+
+3. **`validation.ts`**
+   - Pure functions for validation and business logic
+   - Command parsing, permission checks, merge method determination
+   - Easily testable with no side effects
+   - Depends on: types, constants
+
+4. **`github-api.ts`**
+   - All functions that interact with GitHub API
+   - API calls, data fetching, mutations (reactions, comments, merges)
+   - Depends on: types
+
+5. **`merge-orchestrator.ts`**
+   - Main `lysbotMerge` function that coordinates the merge flow
+   - Orchestrates validation, checks, and merge execution
+   - Depends on: types, validation, github-api
+
+6. **`lysbot-merge.ts`**
+   - Re-exports all public APIs from other modules
+   - Maintains backward compatibility with existing code
+   - Central export point for the package
+
+7. **`main.ts`** (entry point)
+   - GitHub Actions integration layer
+   - Reads inputs, constructs context, calls lysbotMerge
+   - Sets outputs and writes summaries
+
+#### Refactoring Principles
+
+The refactoring follows these principles to maintain code quality:
+
+1. **Single Responsibility Principle (SRP)**
+   - Each module has one clear reason to change
+   - Pure logic is separated from I/O operations
+   - Business rules are isolated from infrastructure
+
+2. **Dependency Direction**
+   - Dependencies flow inward: infrastructure → orchestration → logic → types
+   - No circular dependencies
+   - Pure modules (validation) don't depend on I/O modules (github-api)
+
+3. **Testability**
+   - Pure functions are in separate modules for easy unit testing
+   - API interactions are grouped for easy mocking
+   - Orchestration logic can be tested with mocked dependencies
+
+#### Future Refactoring Guidelines
+
+When adding new features or making changes, follow these guidelines:
+
+1. **When to Create a New Module**
+   - When a logical grouping exceeds ~300 lines
+   - When a distinct new responsibility emerges (e.g., notification system, metrics)
+   - When multiple files start duplicating similar code
+
+2. **When NOT to Split Further**
+   - Don't create modules with fewer than ~50 lines
+   - Don't split functions that are tightly coupled (modify together frequently)
+   - Don't create "utils" grab-bags without clear responsibility
+
+3. **Maintaining the Structure**
+   - Keep types centralized in `types.ts`
+   - Keep constants centralized in `constants.ts`
+   - Add new pure functions to `validation.ts` or create domain-specific validation modules
+   - Add new API calls to `github-api.ts` or create endpoint-specific modules
+   - Keep orchestration focused on coordinating, not implementing logic
+
+4. **Breaking Changes**
+   - Always re-export new functions from `lysbot-merge.ts` for backward compatibility
+   - Update tests when splitting modules
+   - Document architectural decisions in commit messages
+
 ## Testing
 
 This action uses **Vitest** for unit testing. The test suite focuses on testing pure logic functions and mocking GitHub API interactions for isolation.

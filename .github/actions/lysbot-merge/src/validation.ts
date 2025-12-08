@@ -1,0 +1,249 @@
+/**
+ * validation.ts - Pure validation and business logic functions
+ *
+ * This module contains all pure functions for validation, formatting,
+ * and business logic that don't require external I/O operations.
+ * These functions are easily testable and have no side effects.
+ */
+
+import type { LysbotMergeConfig, PullRequestData, CheckResult, MergeMethodResult, MergeOptions } from './types';
+import {
+  COMMAND_REGEX,
+  VALID_FLAGS,
+  TWEMOJI,
+  VALID_AUTHOR_ASSOCIATIONS,
+  VALID_PERMISSIONS,
+  CONVENTIONAL_COMMIT_REGEX,
+} from './constants';
+
+/**
+ * Checks if a PR title follows the Conventional Commits format.
+ *
+ * @param title - The PR title to validate
+ * @returns true if the title follows Conventional Commits format
+ *
+ * @example
+ * isConventionalCommitTitle('feat: add new feature')           // true
+ * isConventionalCommitTitle('fix(auth): resolve login issue')  // true
+ * isConventionalCommitTitle('Update README')                   // false
+ */
+export function isConventionalCommitTitle(title: string): boolean {
+  return CONVENTIONAL_COMMIT_REGEX.test(title);
+}
+
+/**
+ * Parses the `/lysbot merge` command and extracts options.
+ *
+ * @param commentBody - The body of the comment containing the command
+ * @returns MergeOptions with parsed flags, or null if not a valid command
+ *
+ * @example
+ * parseLysbotMergeCommand('/lysbot merge')
+ *   // { overrideApprovalRequirement: false }
+ * parseLysbotMergeCommand('/lysbot merge --override-approval-requirement')
+ *   // { overrideApprovalRequirement: true }
+ * parseLysbotMergeCommand('hello')
+ *   // null
+ */
+export function parseLysbotMergeCommand(commentBody: string): MergeOptions | null {
+  const match = COMMAND_REGEX.exec(commentBody);
+  if (!match) return null;
+
+  // Parse and validate flags
+  const flagsStr = match[1]?.trim() ?? '';
+  const flags = flagsStr ? flagsStr.split(/\s+/) : [];
+
+  // Validate that all flags are known
+  const validFlagsArray: readonly string[] = VALID_FLAGS;
+  if (!flags.every((flag) => validFlagsArray.includes(flag))) {
+    return null;
+  }
+
+  return {
+    overrideApprovalRequirement: flags.includes('--override-approval-requirement'),
+  };
+}
+
+/**
+ * Checks if a comment matches the `/lysbot merge` command pattern.
+ * Now also accepts optional flags like `--override-approval-requirement`.
+ *
+ * @param commentBody - The body of the comment to check
+ * @returns true if the comment is the lysbot merge command
+ *
+ * @example
+ * isLysbotMergeCommand('/lysbot merge')     // true
+ * isLysbotMergeCommand('  /lysbot merge  ') // true
+ * isLysbotMergeCommand('/lysbot merge --override-approval-requirement') // true
+ * isLysbotMergeCommand('/lysbot merge now') // false (invalid flag)
+ */
+export function isLysbotMergeCommand(commentBody: string): boolean {
+  return parseLysbotMergeCommand(commentBody) !== null;
+}
+
+/**
+ * Checks if the user type indicates a bot.
+ *
+ * @param userType - The type of user from GitHub API
+ * @returns true if the user is a bot
+ */
+export function isBot(userType: string): boolean {
+  return userType === 'Bot';
+}
+
+/**
+ * Checks if the author association is valid for using the merge command.
+ *
+ * @param association - The author_association from GitHub API
+ * @returns true if the association allows merge command usage
+ */
+export function hasValidAuthorAssociation(association: string): boolean {
+  return (VALID_AUTHOR_ASSOCIATIONS as readonly string[]).includes(association);
+}
+
+/**
+ * Checks if the permission level allows merge command usage.
+ *
+ * @param permission - The permission level from GitHub API
+ * @returns true if the permission level is sufficient
+ */
+export function hasValidPermission(permission: string): boolean {
+  return (VALID_PERMISSIONS as readonly string[]).includes(permission);
+}
+
+/**
+ * Determines the merge method based on branch names.
+ *
+ * Logic:
+ * 1. If head branch starts with release prefix → merge (preserve release history)
+ * 2. If head branch starts with sync prefix → merge (preserve back-merge history)
+ * 3. If base branch starts with release prefix → squash (clean release branch)
+ * 4. If base branch is develop → squash (clean develop branch)
+ * 5. Otherwise → merge (default)
+ *
+ * @param headRef - Head (source) branch name
+ * @param baseRef - Base (target) branch name
+ * @param config - Configuration with branch prefixes
+ * @returns The merge method and reason
+ */
+export function determineMergeMethod(headRef: string, baseRef: string, config: LysbotMergeConfig): MergeMethodResult {
+  // Check head branch patterns first
+  if (headRef.startsWith(config.releaseBranchPrefix)) {
+    return {
+      method: 'merge',
+      reason: `Head branch \`${headRef}\` is a release branch (merge commit to preserve release history)`,
+    };
+  }
+  if (headRef.startsWith(config.syncBranchPrefix)) {
+    return {
+      method: 'merge',
+      reason: `Head branch \`${headRef}\` is a sync branch (merge commit to preserve back-merge history)`,
+    };
+  }
+
+  // Check base branch patterns
+  if (baseRef.startsWith(config.releaseBranchPrefix)) {
+    return {
+      method: 'squash',
+      reason: `Base branch \`${baseRef}\` is a release branch`,
+    };
+  }
+  if (baseRef === config.developBranch) {
+    return {
+      method: 'squash',
+      reason: `Base branch is \`${baseRef}\``,
+    };
+  }
+
+  // Default to merge commit
+  return {
+    method: 'merge',
+    reason: `Default merge commit for \`${headRef}\` into \`${baseRef}\``,
+  };
+}
+
+/**
+ * Validates the PR state for merging.
+ *
+ * @param prData - Pull request data from GitHub API
+ * @returns Array of check results
+ */
+export function validatePRState(prData: PullRequestData): CheckResult[] {
+  const checks: CheckResult[] = [];
+
+  // Check 1: PR is open
+  checks.push({
+    name: 'PR is open',
+    passed: prData.state === 'open',
+    details: prData.state !== 'open' ? 'currently closed' : undefined,
+  });
+
+  // Check 2: PR is unlocked
+  checks.push({
+    name: 'PR is unlocked',
+    passed: !prData.locked,
+    details: prData.locked ? 'currently locked' : undefined,
+  });
+
+  // Check 3: PR is not a draft
+  checks.push({
+    name: 'PR is ready for review',
+    passed: !prData.draft,
+    details: prData.draft ? 'currently a draft' : undefined,
+  });
+
+  return checks;
+}
+
+/**
+ * Generates a human-readable description for a mergeable state.
+ *
+ * @param state - The mergeable_state from GitHub API
+ * @returns Human-readable description
+ */
+export function getMergeableStateDescription(state: string): string {
+  const descriptions: Record<string, string> = {
+    dirty: 'has unresolved conflicts',
+    blocked: 'blocked by status checks or branch protection',
+    unstable: 'has failing status checks',
+    behind: 'branch is behind base branch',
+    unknown: 'mergeability not yet computed, please retry',
+    has_hooks: 'blocked by external hooks',
+    clean: 'ready to merge',
+  };
+  return descriptions[state] ?? `mergeable_state: ${state}`;
+}
+
+/**
+ * Builds the check results markdown for PR comments.
+ *
+ * @param checks - Array of check results
+ * @returns Formatted markdown string
+ */
+export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
+  return checks
+    .map((check) => {
+      let icon: string;
+      if (check.passed) {
+        icon = TWEMOJI.CHECK;
+      } else if (check.optional) {
+        icon = TWEMOJI.WARNING;
+      } else {
+        icon = TWEMOJI.CROSS;
+      }
+      const detail = check.details ? ` (${check.details})` : '';
+      return `- ${icon} ${check.name}${detail}`;
+    })
+    .join('\n');
+}
+
+/**
+ * Waits for a specified number of milliseconds before retrying.
+ * This is a custom utility function specific to lysbot-merge action,
+ * used for retry intervals when waiting for mergeable status.
+ *
+ * @param ms - Milliseconds to wait
+ */
+export function waitBeforeRetryMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
