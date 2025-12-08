@@ -185,33 +185,33 @@ src/
 
 **Module Responsibilities:**
 
-1. **`types.ts`** (~130 lines)
+1. **`types.ts`**
    - All TypeScript type definitions and interfaces
    - No runtime logic, purely type declarations
    - Imported by all other modules as needed
 
-2. **`constants.ts`** (~75 lines)
+2. **`constants.ts`**
    - Configuration constants (regex patterns, valid flags, emoji)
    - Immutable reference data
    - No dependencies on other modules except types
 
-3. **`validation.ts`** (~240 lines)
+3. **`validation.ts`**
    - Pure functions for validation and business logic
    - Command parsing, permission checks, merge method determination
    - Easily testable with no side effects
    - Depends on: types, constants
 
-4. **`github-api.ts`** (~230 lines)
+4. **`github-api.ts`**
    - All functions that interact with GitHub API
    - API calls, data fetching, mutations (reactions, comments, merges)
    - Depends on: types
 
-5. **`merge-orchestrator.ts`** (~340 lines)
+5. **`merge-orchestrator.ts`**
    - Main `lysbotMerge` function that coordinates the merge flow
    - Orchestrates validation, checks, and merge execution
    - Depends on: types, validation, github-api
 
-6. **`lysbot-merge.ts`** (~75 lines)
+6. **`lysbot-merge.ts`**
    - Re-exports all public APIs from other modules
    - Maintains backward compatibility with existing code
    - Central export point for the package
