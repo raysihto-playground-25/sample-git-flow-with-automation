@@ -367,7 +367,7 @@ export declare function countUnresolvedThreads(octokit: Octokit, owner: string, 
  * @param prNumber - PR number
  * @param method - Merge method (squash or merge)
  * @param sha - Expected head SHA for TOCTOU check
- * @param commitMessage - Additional commit message
+ * @param commitMessage - Additional commit message to append to GitHub's default message
  * @returns Object containing success status, error message, and merge commit SHA
  */
 export declare function mergePullRequest(octokit: Octokit, owner: string, repo: string, prNumber: number, method: 'squash' | 'merge', sha: string, commitMessage: string): Promise<{
