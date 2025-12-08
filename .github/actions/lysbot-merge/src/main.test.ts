@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 import type { LysbotMergeConfig, EventContext, PullRequestData, Octokit } from './types';
 import { TWEMOJI } from './constants';
-import { lysbotMerge } from './main';
+import { lysbotMerge } from './action';
 
 // =============================================================================
 // Test Utilities
