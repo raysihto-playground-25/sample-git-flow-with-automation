@@ -10,7 +10,7 @@ A TypeScript-based GitHub Action that provides automated PR merging via the `/ly
 - 🔀 **Smart merge method** - Automatically selects squash or merge commit based on branch patterns
 - 🔒 **Stale approval handling** - Dismisses approvals on outdated commits
 - 📊 **Detailed feedback** - Posts clear status messages to PR comments
-- ✅ **Unit tested** - Comprehensive test suite with 60+ test cases
+- ✅ **Unit tested** - Comprehensive test suite with extensive test coverage
 
 ## Quick Start
 
@@ -24,7 +24,7 @@ on:
     types: [created]
 
 concurrency:
-  group: lysbot-merge-pr-${{ github.event.issue.number }}
+  group: on-comment-${{ github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
@@ -72,7 +72,7 @@ Comment `/lysbot merge` on any PR to trigger the merge action.
 
 | Option | Description |
 |--------|-------------|
-| `--override-approval-requirement` | Skip the review approval requirement for this merge only. All other checks (status checks, merge conflicts, unresolved threads, etc.) still apply. |
+| `--override-approval-requirement` | **Exceptional/privileged option**: Skip the review approval requirement for this merge only. The command executor acts as a reviewer proxy, taking responsibility for approving the changes. All other checks (status checks, merge conflicts, unresolved threads, etc.) still apply. |
 
 **Example with flag:**
 
@@ -80,7 +80,13 @@ Comment `/lysbot merge` on any PR to trigger the merge action.
 /lysbot merge --override-approval-requirement
 ```
 
-> **Note:** The `--override-approval-requirement` flag only bypasses the review approval requirement and does **not** bypass any other checks. It applies only to the current merge command invocation and does not change repository settings.
+> **⚠️ Important Notes on `--override-approval-requirement`:**
+>
+> - **This is an exceptional, privileged option**: Use this option sparingly and only when you have a valid reason to bypass the normal approval workflow.
+> - **Command executor takes reviewer responsibility**: By using this flag, you are acting as a reviewer proxy and asserting that you have reviewed and approved the changes yourself.
+> - **Temporary and explicit**: This override applies only to the current merge command invocation and does not change repository settings or branch protection rules.
+> - **Limited scope**: This flag only bypasses the approval requirement. All other checks (merge conflicts, unresolved conversations, status checks, etc.) must still pass.
+> - **Commit message marker**: When this flag is used and actually takes effect (i.e., when there are no valid approvals), the merge commit message will include a marker indicating the exceptional approval override.
 
 ## Merge Method Selection
 
@@ -93,6 +99,25 @@ The action automatically selects the appropriate merge method:
 | Base branch is `release/*` | Squash | Clean release branch history |
 | Base branch is `develop` | Squash | Clean develop branch history |
 | Otherwise | Merge commit | Default behavior |
+
+## Commit Message Behavior
+
+The action's commit message behavior is **equivalent to GitHub's default merge behavior**:
+
+- **For merge commits**: GitHub generates a default commit message with the PR title and description. The action appends additional metadata to this default message (e.g., `Merged-by: lysbot-merge (on behalf of @username)`).
+- **For squash merges**: GitHub uses the PR title as the commit title and the PR body as the commit message, with the action's metadata appended.
+
+This ensures that merge commits created by lysbot-merge are consistent with those created through GitHub's web interface.
+
+### Special Commit Message Markers
+
+When the `--override-approval-requirement` flag is used **and actually takes effect** (i.e., when there are no valid approvals), the merge commit message will include a marker:
+
+```
+⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement
+```
+
+This marker is **not** added if the override flag was specified but didn't take effect (e.g., when there were already valid approvals).
 
 ## Pre-merge Checks
 

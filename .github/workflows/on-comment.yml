@@ -21,7 +21,7 @@ on:
 
 # Concurrency per PR number to avoid parallel execution
 concurrency:
-  group: lysbot-merge-pr-${{ github.event.issue.number }}
+  group: on-comment-${{ github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:

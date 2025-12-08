@@ -1701,5 +1701,55 @@ describe('lysbotMerge', () => {
       expect(result.status).toBe('failed');
       expect(result.message).toContain('Merge failed');
     });
+
+    it('includes exceptional merge marker when override flag is used and takes effect', async () => {
+      const octokit = createMockOctokit();
+
+      // No approved reviews (override will take effect)
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
+
+      const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
+      const config = createConfig();
+
+      const result = await lysbotMerge(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+
+      // Verify the merge was called with the exceptional merge marker
+      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      expect(mergeCalls.length).toBe(1);
+      const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
+      expect(commitMessage).toContain('Merged-by: lysbot-merge');
+      expect(commitMessage).toContain('EXCEPTIONAL MERGE');
+      expect(commitMessage).toContain('--override-approval-requirement');
+    });
+
+    it('does NOT include exceptional merge marker when override flag is used but does not take effect', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock valid approval (override will NOT take effect)
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
+      const config = createConfig();
+
+      const result = await lysbotMerge(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+
+      // Verify the merge was called WITHOUT the exceptional merge marker
+      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      expect(mergeCalls.length).toBe(1);
+      const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
+      expect(commitMessage).toContain('Merged-by: lysbot-merge');
+      expect(commitMessage).not.toContain('EXCEPTIONAL MERGE');
+    });
   });
 });

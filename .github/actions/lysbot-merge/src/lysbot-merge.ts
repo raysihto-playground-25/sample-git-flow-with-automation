@@ -719,7 +719,7 @@ export async function countUnresolvedThreads(
  * @param prNumber - PR number
  * @param method - Merge method (squash or merge)
  * @param sha - Expected head SHA for TOCTOU check
- * @param commitMessage - Additional commit message
+ * @param commitMessage - Additional commit message to append to GitHub's default message
  * @returns Object containing success status, error message, and merge commit SHA
  */
 export async function mergePullRequest(
@@ -1037,7 +1037,14 @@ export async function lysbotMerge(
   }
 
   // Perform merge
-  const commitMessage = `Merged-by: lysbot-merge (on behalf of @${actor})`;
+  // Build commit message that will be appended to GitHub's automatic message
+  let commitMessage = `Merged-by: lysbot-merge (on behalf of @${actor})`;
+
+  // Add marker if approval requirement was overridden
+  if (approvalOverridden) {
+    commitMessage += `\n\n⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement`;
+  }
+
   const mergeResult = await mergePullRequest(
     octokit,
     owner,
