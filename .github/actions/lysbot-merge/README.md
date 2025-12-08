@@ -179,13 +179,11 @@ The codebase has been modularized for better maintainability, following the **Si
 
 ```
 src/
-├── main.ts                 # Entry point (GitHub Actions integration)
-├── lysbot-merge.ts         # Re-export module (backward compatibility)
-├── types.ts                # Type definitions and interfaces
-├── constants.ts            # Configuration constants and regex patterns
-├── validation.ts           # Pure validation and business logic functions
-├── github-api.ts           # GitHub API interaction wrappers
-└── merge-orchestrator.ts   # Main orchestration logic
+├── constants.ts + constants.test.ts    # Configuration constants and regex patterns
+├── types.ts                            # Type definitions and interfaces
+├── validation.ts + validation.test.ts  # Pure validation and business logic functions
+├── github-api.ts + github-api.test.ts  # GitHub API interaction wrappers
+└── main.ts + main.test.ts              # Entry point and merge orchestration logic
 ```
 
 **Module Responsibilities:**
@@ -211,20 +209,12 @@ src/
    - API calls, data fetching, mutations (reactions, comments, merges)
    - Depends on: types
 
-5. **`merge-orchestrator.ts`**
-   - Main `lysbotMerge` function that coordinates the merge flow
-   - Orchestrates validation, checks, and merge execution
-   - Depends on: types, validation, github-api
-
-6. **`lysbot-merge.ts`**
-   - Re-exports all public APIs from other modules
-   - Maintains backward compatibility with existing code
-   - Central export point for the package
-
-7. **`main.ts`** (entry point)
+5. **`main.ts`** (entry point and orchestration)
    - GitHub Actions integration layer
-   - Reads inputs, constructs context, calls lysbotMerge
+   - Main `lysbotMerge` function that coordinates the merge flow
+   - Reads inputs, constructs context, orchestrates validation, checks, and merge execution
    - Sets outputs and writes summaries
+   - Depends on: types, validation, github-api
 
 #### Refactoring Principles
 
@@ -264,10 +254,9 @@ When adding new features or making changes, follow these guidelines:
    - Keep constants centralized in `constants.ts`
    - Add new pure functions to `validation.ts` or create domain-specific validation modules
    - Add new API calls to `github-api.ts` or create endpoint-specific modules
-   - Keep orchestration focused on coordinating, not implementing logic
+   - Keep orchestration in `main.ts` focused on coordinating, not implementing logic
 
 4. **Breaking Changes**
-   - Always re-export new functions from `lysbot-merge.ts` for backward compatibility
    - Update tests when splitting modules
    - Document architectural decisions in commit messages
 
