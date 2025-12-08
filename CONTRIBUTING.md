@@ -54,6 +54,9 @@ docs(contributing): add commit message guidelines
 
 Runtime (production) dependency updates use the `fix` type rather than `build` or `chore`. This is a deliberate design choice for the following reasons:
 
+> [!IMPORTANT]
+> This project uses `fix` for runtime dependency updates instead of the more common `build` or `chore` types.
+
 1. **Treating dependency updates as potential bug fixes**: Runtime dependency updates may contain implicit bug fixes or security patches that are not always explicitly documented. By treating them as `fix`, we err on the safe side.
 
 2. **Ensuring security fixes reach users promptly**: Using `fix` ensures that vulnerability patches trigger patch version increments, making it easier to release security updates to users.
@@ -80,7 +83,8 @@ To reduce maintenance burden and prevent documentation drift, **do not include s
 - ✅ "The codebase follows modular design principles"
 - ✅ "Multiple TypeScript files implement the functionality"
 
-**Note**: Quantitative metrics should appear in CI or generated reports, not in manually-maintained documentation.
+> [!NOTE]
+> Quantitative metrics should appear in CI or generated reports, not in manually-maintained documentation.
 
 ### Specific Metrics in PR Descriptions
 
