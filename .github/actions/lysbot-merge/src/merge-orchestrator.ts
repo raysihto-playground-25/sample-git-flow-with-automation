@@ -174,7 +174,7 @@ export async function lysbotMerge(
   // Success notifications are skipped because GitHub's native "approval dismissed"
   // notification already appears in the PR timeline when reviews are dismissed.
   if (dismissFailures.length > 0) {
-    const staleComment = `## Stale approval dismiss failures\n\n> [!WARNING]\n> The following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n\n${dismissFailures.join('\n')}`;
+    const staleComment = `## Stale approval dismiss failures\n\n> [!WARNING]\n> The following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n>\n${dismissFailures.map(f => `> ${f}`).join('\n')}`;
     await postComment(octokit, owner, repo, prNumber, staleComment);
   }
 
@@ -287,7 +287,7 @@ export async function lysbotMerge(
       owner,
       repo,
       prNumber,
-      `## New commits detected\n\n> [!WARNING]\n> New commits were pushed while validating this PR.\n>\n> - Original HEAD SHA: ${originalHeadSha}\n> - Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/lysbot merge\` again after the new commits are reviewed and approved.`,
+      `## New commits detected\n\n> [!WARNING]\n> New commits were pushed while validating this PR.\n>\n> - Original HEAD SHA: ${originalHeadSha}\n> - Current HEAD SHA: ${prData.headSha}\n>\n> Please run \`/lysbot merge\` again after the new commits are reviewed and approved.`,
     );
     return { status: 'failed', message: 'TOCTOU violation' };
   }
@@ -307,7 +307,7 @@ export async function lysbotMerge(
         owner,
         repo,
         prNumber,
-        `## New commits detected\n\n> [!WARNING]\n> New commits were pushed while validating this PR (after waiting for mergeable status).\n>\n> - Original HEAD SHA: ${originalHeadSha}\n> - Current HEAD SHA: ${prData.headSha}\n\nPlease run \`/lysbot merge\` again after the new commits are reviewed and approved.`,
+        `## New commits detected\n\n> [!WARNING]\n> New commits were pushed while validating this PR (after waiting for mergeable status).\n>\n> - Original HEAD SHA: ${originalHeadSha}\n> - Current HEAD SHA: ${prData.headSha}\n>\n> Please run \`/lysbot merge\` again after the new commits are reviewed and approved.`,
       );
       return { status: 'failed', message: 'TOCTOU violation during retry' };
     }
@@ -317,11 +317,11 @@ export async function lysbotMerge(
   if (prData.mergeable === false || prData.mergeable === null || prData.mergeableState === 'dirty') {
     let errorComment: string;
     if (prData.mergeable === null) {
-      errorComment = `## Mergeability status pending\n\n> [!NOTE]\n> GitHub is still calculating mergeability for this PR.\n>\n> - Mergeable: \`null\`\n> - Mergeable State: \`${prData.mergeableState}\`\n> - Retries: count=${config.mergeableRetryCount}, interval=${config.mergeableRetryInterval}s\n\nPlease try \`/lysbot merge\` again shortly.`;
+      errorComment = `## Mergeability status pending\n\n> [!NOTE]\n> GitHub is still calculating mergeability for this PR.\n>\n> - Mergeable: \`null\`\n> - Mergeable State: \`${prData.mergeableState}\`\n> - Retries: count=${config.mergeableRetryCount}, interval=${config.mergeableRetryInterval}s\n>\n> Please try \`/lysbot merge\` again shortly.`;
     } else if (prData.mergeableState === 'dirty') {
-      errorComment = `## Conflicts detected\n\n> [!CAUTION]\n> This PR has merge conflicts that must be resolved before merging.\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\`\n\nPlease resolve the conflicts and try again.`;
+      errorComment = `## Conflicts detected\n\n> [!CAUTION]\n> This PR has merge conflicts that must be resolved before merging.\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\`\n>\n> Please resolve the conflicts and try again.`;
     } else {
-      errorComment = `## Cannot merge\n\n> [!CAUTION]\n> This PR cannot be merged:\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\`\n\nPlease resolve any conflicts or issues before attempting to merge.`;
+      errorComment = `## Cannot merge\n\n> [!CAUTION]\n> This PR cannot be merged:\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\`\n>\n> Please resolve any conflicts or issues before attempting to merge.`;
     }
     await postComment(octokit, owner, repo, prNumber, errorComment);
     return { status: 'failed', message: 'Not mergeable' };
@@ -352,7 +352,7 @@ export async function lysbotMerge(
       owner,
       repo,
       prNumber,
-      `## Merge failed\n\n> [!CAUTION]\n> Failed to merge PR:\n>\n> - Error: ${mergeResult.error}\n\nPlease check the PR status and try again.`,
+      `## Merge failed\n\n> [!CAUTION]\n> Failed to merge PR:\n>\n> - Error: ${mergeResult.error}\n>\n> Please check the PR status and try again.`,
     );
     return { status: 'failed', message: `Merge failed: ${mergeResult.error}` };
   }
