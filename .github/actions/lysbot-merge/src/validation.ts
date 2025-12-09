@@ -38,14 +38,14 @@ export function isConventionalCommitTitle(title: string): boolean {
  * @returns MergeOptions with parsed flags, or null if not a valid command
  *
  * @example
- * parseActionCommand('/lysbot merge')
+ * parseCommand('/lysbot merge')
  *   // { overrideApprovalRequirement: false }
- * parseActionCommand('/lysbot merge --override-approval-requirement')
+ * parseCommand('/lysbot merge --override-approval-requirement')
  *   // { overrideApprovalRequirement: true }
- * parseActionCommand('hello')
+ * parseCommand('hello')
  *   // null
  */
-export function parseActionCommand(commentBody: string): MergeOptions | null {
+export function parseCommand(commentBody: string): MergeOptions | null {
   const match = COMMAND_REGEX.exec(commentBody);
   if (!match) return null;
 
@@ -72,13 +72,13 @@ export function parseActionCommand(commentBody: string): MergeOptions | null {
  * @returns true if the comment is the merge command
  *
  * @example
- * isActionCommand('/lysbot merge')     // true
- * isActionCommand('  /lysbot merge  ') // true
- * isActionCommand('/lysbot merge --override-approval-requirement') // true
- * isActionCommand('/lysbot merge now') // false (invalid flag)
+ * isCommand('/lysbot merge')     // true
+ * isCommand('  /lysbot merge  ') // true
+ * isCommand('/lysbot merge --override-approval-requirement') // true
+ * isCommand('/lysbot merge now') // false (invalid flag)
  */
-export function isActionCommand(commentBody: string): boolean {
-  return parseActionCommand(commentBody) !== null;
+export function isCommand(commentBody: string): boolean {
+  return parseCommand(commentBody) !== null;
 }
 
 /**

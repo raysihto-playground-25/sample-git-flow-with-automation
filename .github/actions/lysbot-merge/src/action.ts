@@ -12,8 +12,8 @@ import * as core from '@actions/core';
 import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types';
 import {
   isBot,
-  isActionCommand,
-  parseActionCommand,
+  isCommand,
+  parseCommand,
   hasValidAuthorAssociation,
   hasValidPermission,
   validatePRState,
@@ -67,12 +67,12 @@ export async function executeAction(
   }
 
   // Check if this is the merge command
-  if (!isActionCommand(commentBody)) {
+  if (!isCommand(commentBody)) {
     return { status: 'skipped', message: 'Command not matched' };
   }
 
   // Parse merge options from the command
-  const mergeOptions = parseActionCommand(commentBody);
+  const mergeOptions = parseCommand(commentBody);
   if (!mergeOptions) {
     return { status: 'skipped', message: 'Command not matched' };
   }
