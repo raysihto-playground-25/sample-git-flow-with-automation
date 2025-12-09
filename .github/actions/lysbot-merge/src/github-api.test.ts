@@ -245,11 +245,13 @@ describe('countUnresolvedThreads', () => {
 });
 
 describe('fetchPullRequestCommits', () => {
-  it('should fetch and return commits from a PR', async () => {
+  it('should fetch and return commits from a PR with author information', async () => {
     const octokit = createMockOctokit();
     const mockCommits = [
-      { commit: { message: 'feat: add new feature' } },
-      { commit: { message: 'fix: fix bug\n\nDetailed description' } },
+      { commit: { message: 'feat: add new feature', author: { name: 'Alice', email: 'alice@example.com' } } },
+      {
+        commit: { message: 'fix: fix bug\n\nDetailed description', author: { name: 'Bob', email: 'bob@example.com' } },
+      },
       { commit: { message: 'docs: update readme' } },
     ];
     (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue(mockCommits);
@@ -258,6 +260,8 @@ describe('fetchPullRequestCommits', () => {
 
     expect(commits).toHaveLength(3);
     expect(commits[0].commit.message).toBe('feat: add new feature');
+    expect(commits[0].commit.author?.name).toBe('Alice');
+    expect(commits[0].commit.author?.email).toBe('alice@example.com');
     expect(commits[1].commit.message).toBe('fix: fix bug\n\nDetailed description');
     expect(commits[2].commit.message).toBe('docs: update readme');
   });

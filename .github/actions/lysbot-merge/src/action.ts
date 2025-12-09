@@ -339,10 +339,10 @@ export async function executeAction(
   } else {
     // For squash commits:
     // Title: {PR_TITLE} (#{PR_NUMBER})
-    // Body: * {COMMIT_TITLE_01}\n* {COMMIT_TITLE_02}\n...\n\n{ADDITIONAL_MESSAGES}
+    // Body: * {COMMIT_TITLE_01}\n* {COMMIT_TITLE_02}\n...\n\nCo-authored-by: ...\n\n{ADDITIONAL_MESSAGES}
     commitTitle = `${prData.title} (#${prNumber})`;
 
-    // Fetch commits to list their titles
+    // Fetch commits to list their titles and collect co-authors
     const commits = await fetchPullRequestCommits(octokit, owner, repo, prNumber);
     const commitTitles = commits
       .map((c) => {
@@ -353,12 +353,30 @@ export async function executeAction(
       })
       .filter((title) => title !== ''); // Filter out empty entries
 
-    // Build commit body with commit titles (if any) followed by additional messages
+    // Collect unique co-authors from commits
+    const coAuthors = new Set<string>();
+    commits.forEach((c) => {
+      const author = c.commit.author;
+      if (author?.name && author?.email) {
+        // Format: Co-authored-by: Name <email>
+        coAuthors.add(`Co-authored-by: ${author.name} <${author.email}>`);
+      }
+    });
+
+    // Build commit body with commit titles, co-authors, and additional messages
+    const bodyParts: string[] = [];
+
     if (commitTitles.length > 0) {
-      commitBody = commitTitles.join('\n') + `\n\n${additionalMessages}`;
-    } else {
-      commitBody = additionalMessages;
+      bodyParts.push(commitTitles.join('\n'));
     }
+
+    if (coAuthors.size > 0) {
+      bodyParts.push(Array.from(coAuthors).sort().join('\n'));
+    }
+
+    bodyParts.push(additionalMessages);
+
+    commitBody = bodyParts.join('\n\n');
   }
 
   const mergeResult = await mergePullRequest(

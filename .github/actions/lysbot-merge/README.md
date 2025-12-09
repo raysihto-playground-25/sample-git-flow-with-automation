@@ -147,12 +147,18 @@ For squash merges (used for PRs targeting `develop` or `release/*` branches):
 * {COMMIT_TITLE_03}
 ...
 
+Co-authored-by: {AUTHOR_NAME_01} <{AUTHOR_EMAIL_01}>
+Co-authored-by: {AUTHOR_NAME_02} <{AUTHOR_EMAIL_02}>
+...
+
 {ADDITIONAL_MESSAGES}
 ```
 
 **Notes:**
 - Only commit titles (first line of each commit message) are listed, not full commit messages
 - Each commit title is prefixed with `* ` (bullet point)
+- Co-authors are extracted from all commits in the PR and listed in alphabetical order
+- Co-authored-by entries follow the Git trailer format: `Co-authored-by: Name <email>`
 
 **Example:**
 ```
@@ -161,6 +167,9 @@ feat: add new authentication system (#456)
 * feat: implement OAuth2 provider
 * fix: handle token expiration
 * docs: update authentication guide
+
+Co-authored-by: Alice Developer <alice@example.com>
+Co-authored-by: Bob Contributor <bob@example.com>
 
 Merged-by: lysbot-merge (on behalf of @username)
 ```

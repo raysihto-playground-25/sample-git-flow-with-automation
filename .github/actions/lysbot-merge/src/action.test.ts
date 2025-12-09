@@ -1039,11 +1039,26 @@ describe('executeAction', () => {
     it('creates proper commit message for squash commits with commit list', async () => {
       const octokit = createMockOctokit();
 
-      // Mock commits in the PR
+      // Mock commits in the PR with author information
       const mockCommits = [
-        { commit: { message: 'feat: add new feature' } },
-        { commit: { message: 'fix: fix bug\n\nDetailed description of the fix' } },
-        { commit: { message: 'docs: update readme' } },
+        {
+          commit: {
+            message: 'feat: add new feature',
+            author: { name: 'Alice Developer', email: 'alice@example.com' },
+          },
+        },
+        {
+          commit: {
+            message: 'fix: fix bug\n\nDetailed description of the fix',
+            author: { name: 'Bob Contributor', email: 'bob@example.com' },
+          },
+        },
+        {
+          commit: {
+            message: 'docs: update readme',
+            author: { name: 'Alice Developer', email: 'alice@example.com' },
+          },
+        },
       ];
 
       let paginateCalls = 0;
@@ -1082,11 +1097,16 @@ describe('executeAction', () => {
       // Title: {PR_TITLE} (#{PR_NUMBER})
       expect(commitTitle).toBe('feat: test pull request (#1)');
 
-      // Body: * {COMMIT_TITLE_01}\n* {COMMIT_TITLE_02}\n...\n\n{ADDITIONAL_MESSAGES}
+      // Body: * {COMMIT_TITLE_01}\n* {COMMIT_TITLE_02}\n...\n\nCo-authored-by: ...\n\n{ADDITIONAL_MESSAGES}
       expect(commitMessage).toContain('* feat: add new feature');
       expect(commitMessage).toContain('* fix: fix bug');
       expect(commitMessage).toContain('* docs: update readme');
       expect(commitMessage).not.toContain('Detailed description of the fix'); // Only titles, not full messages
+
+      // Verify Co-authored-by entries (should be alphabetically sorted)
+      expect(commitMessage).toContain('Co-authored-by: Alice Developer <alice@example.com>');
+      expect(commitMessage).toContain('Co-authored-by: Bob Contributor <bob@example.com>');
+
       expect(commitMessage).toContain('Merged-by: lysbot-merge');
     });
 
@@ -1167,6 +1187,78 @@ describe('executeAction', () => {
       // Verify empty messages are filtered out (shouldn't have extra bullets)
       const bulletCount = (commitMessage.match(/^\*/gm) || []).length;
       expect(bulletCount).toBe(2); // Only 2 valid commits
+    });
+
+    it('includes Co-authored-by entries in squash merge and deduplicates authors', async () => {
+      const octokit = createMockOctokit();
+
+      const mockCommits = [
+        {
+          commit: {
+            message: 'feat: commit by Alice',
+            author: { name: 'Alice Developer', email: 'alice@example.com' },
+          },
+        },
+        {
+          commit: {
+            message: 'fix: commit by Bob',
+            author: { name: 'Bob Contributor', email: 'bob@example.com' },
+          },
+        },
+        {
+          commit: {
+            message: 'chore: another commit by Alice',
+            author: { name: 'Alice Developer', email: 'alice@example.com' },
+          },
+        },
+        {
+          commit: {
+            message: 'docs: commit without author info',
+            // No author info
+          },
+        },
+      ];
+
+      let paginateCalls = 0;
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
+        paginateCalls++;
+        if (paginateCalls === 1) {
+          return [
+            {
+              id: 1,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'reviewer' },
+            },
+          ];
+        } else {
+          return mockCommits;
+        }
+      });
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+
+      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
+
+      // Verify Co-authored-by entries are present and deduplicated
+      expect(commitMessage).toContain('Co-authored-by: Alice Developer <alice@example.com>');
+      expect(commitMessage).toContain('Co-authored-by: Bob Contributor <bob@example.com>');
+
+      // Verify Alice appears only once (deduplicated)
+      const aliceMatches = commitMessage.match(/Co-authored-by: Alice Developer/g) || [];
+      expect(aliceMatches.length).toBe(1);
+
+      // Verify Co-authored-by appears in the correct position (after commit list, before additional messages)
+      const parts = commitMessage.split('\n\n');
+      expect(parts.length).toBeGreaterThanOrEqual(3);
+      expect(parts[1]).toContain('Co-authored-by:');
+      expect(parts[parts.length - 1]).toContain('Merged-by: lysbot-merge');
     });
   });
 });

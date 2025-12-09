@@ -258,14 +258,14 @@ export async function countUnresolvedThreads(
  * @param owner - Repository owner
  * @param repo - Repository name
  * @param prNumber - PR number
- * @returns Array of commit objects with commit message (title) information
+ * @returns Array of commit objects with commit message and author information
  */
 export async function fetchPullRequestCommits(
   octokit: Octokit,
   owner: string,
   repo: string,
   prNumber: number,
-): Promise<Array<{ commit: { message: string } }>> {
+): Promise<Array<{ commit: { message: string; author?: { name?: string; email?: string } | null } }>> {
   const commits = await octokit.paginate(octokit.rest.pulls.listCommits, {
     owner,
     repo,
