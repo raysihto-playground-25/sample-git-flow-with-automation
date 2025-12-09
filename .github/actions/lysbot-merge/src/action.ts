@@ -348,10 +348,10 @@ export async function executeAction(
       .map((c) => {
         // Extract first line of commit message (commit title)
         const message = c.commit.message || '';
-        const firstLine = message.split('\n')[0] || 'Empty commit message';
-        return `* ${firstLine}`;
+        const firstLine = message.split('\n')[0];
+        return firstLine ? `* ${firstLine}` : '';
       })
-      .filter((title) => title !== '* Empty commit message'); // Filter out empty commits if any
+      .filter((title) => title !== ''); // Filter out empty entries
 
     // Build commit body with commit titles (if any) followed by additional messages
     if (commitTitles.length > 0) {

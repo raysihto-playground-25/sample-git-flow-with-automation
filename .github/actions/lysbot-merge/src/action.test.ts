@@ -1089,6 +1089,85 @@ describe('executeAction', () => {
       expect(commitMessage).not.toContain('Detailed description of the fix'); // Only titles, not full messages
       expect(commitMessage).toContain('Merged-by: lysbot-merge');
     });
+
+    it('creates proper commit message for squash commits with no commits', async () => {
+      const octokit = createMockOctokit();
+
+      let paginateCalls = 0;
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
+        paginateCalls++;
+        if (paginateCalls === 1) {
+          return [
+            {
+              id: 1,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'reviewer' },
+            },
+          ];
+        } else {
+          return []; // No commits
+        }
+      });
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
+
+      // Should only contain additional messages, no commit list
+      expect(commitMessage).toBe('Merged-by: lysbot-merge (on behalf of @testactor)');
+      expect(commitMessage).not.toContain('*');
+    });
+
+    it('handles commits with empty messages in squash merge', async () => {
+      const octokit = createMockOctokit();
+
+      const mockCommits = [
+        { commit: { message: 'feat: valid commit' } },
+        { commit: { message: '' } }, // Empty message
+        { commit: { message: '\n\nOnly has body' } }, // Empty first line
+        { commit: { message: 'fix: another valid commit' } },
+      ];
+
+      let paginateCalls = 0;
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
+        paginateCalls++;
+        if (paginateCalls === 1) {
+          return [
+            {
+              id: 1,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'reviewer' },
+            },
+          ];
+        } else {
+          return mockCommits;
+        }
+      });
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+
+      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
+
+      // Verify only valid commit titles are included
+      expect(commitMessage).toContain('* feat: valid commit');
+      expect(commitMessage).toContain('* fix: another valid commit');
+      // Verify empty messages are filtered out (shouldn't have extra bullets)
+      const bulletCount = (commitMessage.match(/^\*/gm) || []).length;
+      expect(bulletCount).toBe(2); // Only 2 valid commits
+    });
   });
 });
 
