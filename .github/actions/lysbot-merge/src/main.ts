@@ -123,12 +123,7 @@ async function run(): Promise<void> {
       already_merged: 'ℹ️ Already merged',
     }[result.status];
 
-    const summaryMarkdown = buildSummaryMarkdown(
-      resultEmoji,
-      context.prNumber,
-      context.actor,
-      result.mergeMethod,
-    );
+    const summaryMarkdown = buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);
     core.summary.addRaw(summaryMarkdown).write();
 
     // Log result

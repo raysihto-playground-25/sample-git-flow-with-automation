@@ -1271,12 +1271,7 @@ describe('executeAction', () => {
 
 describe('buildSummaryMarkdown', () => {
   it('builds summary with all parameters provided', () => {
-    const result = buildSummaryMarkdown(
-      '✅ Merged successfully',
-      123,
-      'testuser',
-      'squash',
-    );
+    const result = buildSummaryMarkdown('✅ Merged successfully', 123, 'testuser', 'squash');
 
     expect(result).toContain('## lysbot-merge Summary');
     expect(result).toContain('| **Result** | ✅ Merged successfully |');
@@ -1296,12 +1291,7 @@ describe('buildSummaryMarkdown', () => {
   });
 
   it('builds summary with only mergeMethod', () => {
-    const result = buildSummaryMarkdown(
-      '✅ Merged successfully',
-      111,
-      'mergeuser',
-      'merge',
-    );
+    const result = buildSummaryMarkdown('✅ Merged successfully', 111, 'mergeuser', 'merge');
 
     expect(result).toContain('| **Merge Method** | `merge` |');
   });

@@ -437,12 +437,7 @@ export async function executeAction(
  * @param mergeMethod - Optional merge method used
  * @returns Markdown string for the summary
  */
-export function buildSummaryMarkdown(
-  result: string,
-  prNumber: number,
-  actor: string,
-  mergeMethod?: string,
-): string {
+export function buildSummaryMarkdown(result: string, prNumber: number, actor: string, mergeMethod?: string): string {
   let summary = `## lysbot-merge Summary\n\n`;
   summary += `| Item | Value |\n`;
   summary += `|------|-------|\n`;
