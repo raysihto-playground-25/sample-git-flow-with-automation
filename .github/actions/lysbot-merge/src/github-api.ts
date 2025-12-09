@@ -252,6 +252,30 @@ export async function countUnresolvedThreads(
 }
 
 /**
+ * Fetches the list of commits in a PR.
+ *
+ * @param octokit - GitHub API client
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param prNumber - PR number
+ * @returns Array of commit objects with commit message (title) information
+ */
+export async function fetchPullRequestCommits(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<Array<{ commit: { message: string } }>> {
+  const commits = await octokit.paginate(octokit.rest.pulls.listCommits, {
+    owner,
+    repo,
+    pull_number: prNumber,
+    per_page: 100,
+  });
+  return commits;
+}
+
+/**
  * Performs the merge operation.
  *
  * @param octokit - GitHub API client
@@ -260,7 +284,8 @@ export async function countUnresolvedThreads(
  * @param prNumber - PR number
  * @param method - Merge method (squash or merge)
  * @param sha - Expected head SHA for TOCTOU check
- * @param commitMessage - Additional commit message to append to GitHub's default message
+ * @param commitTitle - Explicit commit title (first line of commit message)
+ * @param commitMessage - Explicit commit message body (lines after the title and blank line)
  * @returns Object containing success status, error message, and merge commit SHA
  */
 export async function mergePullRequest(
@@ -270,6 +295,7 @@ export async function mergePullRequest(
   prNumber: number,
   method: 'squash' | 'merge',
   sha: string,
+  commitTitle: string,
   commitMessage: string,
 ): Promise<{ success: boolean; error?: string; mergeCommitSha?: string }> {
   try {
@@ -279,6 +305,7 @@ export async function mergePullRequest(
       pull_number: prNumber,
       merge_method: method,
       sha,
+      commit_title: commitTitle,
       commit_message: commitMessage,
     });
     return { success: true, mergeCommitSha: response.data.sha };
