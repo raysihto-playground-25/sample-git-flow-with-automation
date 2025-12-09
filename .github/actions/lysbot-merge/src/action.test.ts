@@ -76,35 +76,7 @@ function createMockOctokit(): Octokit {
         }),
       },
     },
-    paginate: vi.fn().mockImplementation(async (fn: unknown, ...args: unknown[]) => {
-      // Check which endpoint is being paginated
-      // For listCommits, return default commits
-      // For listReviews, return empty array (or whatever is set by the test)
-      const endpoint = fn as { endpoint?: string };
-      const params = args[0] as { pull_number?: number } | undefined;
-      
-      // If this looks like a commits call (has pull_number), return commits
-      // Otherwise return reviews (empty by default)
-      if (params && 'pull_number' in params) {
-        // This could be either listCommits or listReviews
-        // We'll check if listCommits was registered
-        const mockFn = fn as { name?: string };
-        // Try to detect based on what was passed
-        if (typeof fn === 'function') {
-          // Check the function's endpoint property if available
-          try {
-            // Call the function to see what it returns - this is a hack but works with octokit
-            const result = await fn(params);
-            // If it has data property, it's the direct API call, not paginate
-          } catch {
-            // Ignore errors
-          }
-        }
-        // Default: return commits for squash merge
-        return [{ commit: { message: 'Default commit message' } }];
-      }
-      return [];
-    }),
+    paginate: vi.fn().mockResolvedValue([]),
     graphql: vi.fn().mockResolvedValue({
       repository: {
         pullRequest: {

@@ -344,13 +344,21 @@ export async function executeAction(
 
     // Fetch commits to list their titles
     const commits = await fetchPullRequestCommits(octokit, owner, repo, prNumber);
-    const commitTitles = commits.map((c) => {
-      // Extract first line of commit message (commit title)
-      const firstLine = c.commit.message.split('\n')[0];
-      return `* ${firstLine}`;
-    });
+    const commitTitles = commits
+      .map((c) => {
+        // Extract first line of commit message (commit title)
+        const message = c.commit.message || '';
+        const firstLine = message.split('\n')[0] || 'Empty commit message';
+        return `* ${firstLine}`;
+      })
+      .filter((title) => title !== '* Empty commit message'); // Filter out empty commits if any
 
-    commitBody = commitTitles.join('\n') + `\n\n${additionalMessages}`;
+    // Build commit body with commit titles (if any) followed by additional messages
+    if (commitTitles.length > 0) {
+      commitBody = commitTitles.join('\n') + `\n\n${additionalMessages}`;
+    } else {
+      commitBody = additionalMessages;
+    }
   }
 
   const mergeResult = await mergePullRequest(
