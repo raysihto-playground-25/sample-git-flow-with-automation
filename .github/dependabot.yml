@@ -7,14 +7,13 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
-  # For npm dependency updates, we assume there is a high probability that
-  # "some fix (related to potential bugs) was made without fundamentally changing
-  # behavior". We use the "fix" prefix to promote patch version increments,
-  # erring on the safe side.
   - package-ecosystem: "npm"
     directory: "/.github/actions/lysbot-merge"
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "fix"
+      prefix: "ci"
       include: "scope"
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: "version-update:semver-major"

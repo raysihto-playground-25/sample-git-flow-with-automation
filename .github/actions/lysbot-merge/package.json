@@ -13,6 +13,9 @@
     "format:check": "prettier --check src scripts",
     "normalize:sourcemaps": "node scripts/normalize-sourcemaps.mjs"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "keywords": [
     "github-action",
     "merge",
@@ -24,7 +27,7 @@
     "@actions/github": "^6.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
+    "@types/node": "^20.0.0",
     "@vercel/ncc": "^0.38.3",
     "@vitest/coverage-v8": "^4.0.15",
     "eslint": "^9.39.1",
