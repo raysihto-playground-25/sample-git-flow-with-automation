@@ -127,10 +127,7 @@ async function run(): Promise<void> {
       resultEmoji,
       context.prNumber,
       context.actor,
-      undefined, // headRef not available in this scope
-      undefined, // baseRef not available in this scope
       result.mergeMethod,
-      undefined, // headSha not available in this scope
     );
     core.summary.addRaw(summaryMarkdown).write();
 

@@ -444,10 +444,7 @@ export function buildSummaryMarkdown(
   result: string,
   prNumber: number,
   actor: string,
-  headRef?: string,
-  baseRef?: string,
   mergeMethod?: string,
-  headSha?: string,
 ): string {
   let summary = `## lysbot-merge Summary\n\n`;
   summary += `| Item | Value |\n`;
@@ -456,17 +453,8 @@ export function buildSummaryMarkdown(
   summary += `| **PR** | #${prNumber} |\n`;
   summary += `| **Triggered by** | @${actor} |\n`;
 
-  if (headRef && baseRef) {
-    summary += `| **Head Branch** | \`${headRef}\` |\n`;
-    summary += `| **Base Branch** | \`${baseRef}\` |\n`;
-  }
-
   if (mergeMethod) {
     summary += `| **Merge Method** | \`${mergeMethod}\` |\n`;
-  }
-
-  if (headSha) {
-    summary += `| **HEAD SHA** | ${headSha} |\n`;
   }
 
   return summary;

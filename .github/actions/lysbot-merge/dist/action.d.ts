@@ -39,4 +39,4 @@ export declare function executeAction(octokit: Octokit, context: EventContext, c
  * @param headSha - Optional HEAD SHA
  * @returns Markdown string for the summary
  */
-export declare function buildSummaryMarkdown(result: string, prNumber: number, actor: string, headRef?: string, baseRef?: string, mergeMethod?: string, headSha?: string): string;
+export declare function buildSummaryMarkdown(result: string, prNumber: number, actor: string, mergeMethod?: string): string;
