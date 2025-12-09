@@ -65,17 +65,6 @@ export interface PullRequestData {
     title: string;
 }
 /**
- * Result of validation checks.
- */
-export interface ValidationResult {
-    /** Whether validation passed */
-    valid: boolean;
-    /** Reason for failure (if any) */
-    reason?: string;
-    /** User-friendly message to post as comment */
-    message?: string;
-}
-/**
  * Individual check result for the merge checklist.
  */
 export interface CheckResult {

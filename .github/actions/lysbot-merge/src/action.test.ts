@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
-import type { ActionConfig, EventContext, PullRequestData, Octokit } from './types';
+import type { ActionConfig, EventContext, Octokit } from './types';
 import { TWEMOJI } from './constants';
 import { executeAction, buildSummaryMarkdown } from './action';
 
@@ -25,27 +25,6 @@ function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
     syncBranchPrefix: 'fix/sync/',
     mergeableRetryCount: 5,
     mergeableRetryInterval: 10,
-    ...overrides,
-  };
-}
-
-/**
- * Creates a default PR data object for tests.
- */
-function createPRData(overrides: Partial<PullRequestData> = {}): PullRequestData {
-  return {
-    state: 'open',
-    locked: false,
-    draft: false,
-    merged: false,
-    mergeable: true,
-    mergeableState: 'clean',
-    headSha: 'abc1234567890',
-    headRef: 'feature/test',
-    baseRef: 'develop',
-    author: 'testuser',
-    isFork: false,
-    title: 'feat: test pull request',
     ...overrides,
   };
 }

@@ -40,7 +40,6 @@
 
 name: 'lysbot-merge'
 description: 'Automated PR merging with validation checks via /lysbot merge command'
-author: 'GitHub Copilot'
 
 inputs:
   github-token:
