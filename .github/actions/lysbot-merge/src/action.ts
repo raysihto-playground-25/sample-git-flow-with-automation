@@ -134,10 +134,16 @@ export async function executeAction(
   // Step 3: Run all validation checks
   // -------------------------------------------------------------------------
 
-  const checks: CheckResult[] = [];
+  // PR state checks (open, unlocked, ready)
+  const prStateChecks = validatePRState(prData);
 
-  // PR state checks
-  checks.push(...validatePRState(prData));
+  // Unresolved threads check
+  const unresolvedCount = await countUnresolvedThreads(octokit, owner, repo, prNumber);
+  const threadsCheck: CheckResult = {
+    name: 'All review conversations are resolved',
+    passed: unresolvedCount === 0,
+    details: unresolvedCount > 0 ? `${unresolvedCount} unresolved` : undefined,
+  };
 
   // Approval check - fetch and validate reviews
   const approvedReviews = await fetchApprovedReviews(octokit, owner, repo, prNumber);
@@ -191,56 +197,47 @@ export async function executeAction(
     approvalDetails = 'no valid approvals found';
   }
 
-  checks.push({
+  const approvalCheck: CheckResult = {
     name: 'At least one valid approval from another user',
     passed: approvalCheckPassed,
     details: approvalDetails,
     // Mark as optional when override flag is used, so it shows warning instead of failure
     optional: approvalOverridden,
-  });
-
-  // Unresolved threads check
-  const unresolvedCount = await countUnresolvedThreads(octokit, owner, repo, prNumber);
-  checks.push({
-    name: 'All review conversations are resolved',
-    passed: unresolvedCount === 0,
-    details: unresolvedCount > 0 ? `${unresolvedCount} unresolved` : undefined,
-  });
+  };
 
   // Merge conflicts check (based on mergeable_state)
   const noConflicts = prData.mergeableState === 'clean';
-  checks.push({
+  const conflictsCheck: CheckResult = {
     name: 'No merge conflicts',
     passed: noConflicts,
     details: !noConflicts ? getMergeableStateDescription(prData.mergeableState) : undefined,
-  });
+  };
 
   // Optional: Conventional Commits check for PR title
   const isConventionalTitle = isConventionalCommitTitle(prData.title);
-  checks.push({
+  const conventionalCommitsCheck: CheckResult = {
     name: 'PR title follows [Conventional Commits](https://www.conventionalcommits.org/)',
     passed: isConventionalTitle,
     details: !isConventionalTitle ? 'title does not follow conventional format' : undefined,
     optional: true,
-  });
+  };
 
   // Determine merge method
   const mergeMethodResult = determineMergeMethod(prData.headRef, prData.baseRef, config);
 
-  // Build results markdown
-  // Reorder checks to match workflow order: open, unlocked, ready, threads, approval, conflicts, optional checks
-  const orderedChecks = [
-    checks.find((c) => c.name === 'PR is open')!,
-    checks.find((c) => c.name === 'PR is unlocked')!,
-    checks.find((c) => c.name === 'PR is ready for review')!,
-    checks.find((c) => c.name === 'All review conversations are resolved')!,
-    checks.find((c) => c.name === 'At least one valid approval from another user')!,
-    checks.find((c) => c.name === 'No merge conflicts')!,
-    checks.find((c) => c.name.includes('Conventional Commits'))!,
+  // Build checks array in the final order directly
+  const checks: CheckResult[] = [
+    ...prStateChecks,
+    threadsCheck,
+    approvalCheck,
+    conflictsCheck,
+    conventionalCommitsCheck,
   ];
-  const checksMarkdown = buildCheckResultsMarkdown(orderedChecks);
+
+  // Build results markdown
+  const checksMarkdown = buildCheckResultsMarkdown(checks);
   // Only required (non-optional) checks must pass
-  const allPassed = orderedChecks.filter((c) => !c.optional).every((c) => c.passed);
+  const allPassed = checks.filter((c) => !c.optional).every((c) => c.passed);
 
   // -------------------------------------------------------------------------
   // Step 4: Report results and merge if all passed
