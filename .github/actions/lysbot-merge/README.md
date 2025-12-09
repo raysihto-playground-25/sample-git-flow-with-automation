@@ -45,7 +45,8 @@ jobs:
 ```
 
 > [!NOTE]
-> Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
+> - Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
+> - For users who prefer a more stable reference, consider using a fixed version tag like `@v1.0.0` instead of `@master`.
 
 ## Inputs
 
