@@ -126,7 +126,7 @@ Merge pull request #{PR_NUMBER} from {PR_MERGE_HEAD}
 ```
 Merge pull request #123 from release/v1.0.0
 
-Release v1.0.0
+chore(release): Release v1.0.0
 
 Merged-by: lysbot-merge (on behalf of @username)
 ```
