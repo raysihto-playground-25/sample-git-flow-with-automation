@@ -1044,19 +1044,19 @@ describe('executeAction', () => {
         {
           commit: {
             message: 'feat: add new feature',
-            author: { name: 'Alice Developer', email: 'alice@example.com' },
+            author: { name: 'Bob Developer', email: 'bob@example.com' },
           },
         },
         {
           commit: {
             message: 'fix: fix bug\n\nDetailed description of the fix',
-            author: { name: 'Bob Contributor', email: 'bob@example.com' },
+            author: { name: 'Alice Contributor', email: 'alice@example.com' },
           },
         },
         {
           commit: {
             message: 'docs: update readme',
-            author: { name: 'Alice Developer', email: 'alice@example.com' },
+            author: { name: 'Bob Developer', email: 'bob@example.com' },
           },
         },
       ];
@@ -1104,8 +1104,8 @@ describe('executeAction', () => {
       expect(commitMessage).not.toContain('Detailed description of the fix'); // Only titles, not full messages
 
       // Verify Co-authored-by entries (should be alphabetically sorted)
-      expect(commitMessage).toContain('Co-authored-by: Alice Developer <alice@example.com>');
-      expect(commitMessage).toContain('Co-authored-by: Bob Contributor <bob@example.com>');
+      expect(commitMessage).toContain('Co-authored-by: Bob Developer <bob@example.com>');
+      expect(commitMessage).toContain('Co-authored-by: Alice Contributor <alice@example.com>');
 
       expect(commitMessage).toContain('Merged-by: lysbot-merge');
     });
@@ -1195,20 +1195,20 @@ describe('executeAction', () => {
       const mockCommits = [
         {
           commit: {
-            message: 'feat: commit by Alice',
-            author: { name: 'Alice Developer', email: 'alice@example.com' },
+            message: 'feat: commit by Bob',
+            author: { name: 'Bob Developer', email: 'bob@example.com' },
           },
         },
         {
           commit: {
-            message: 'fix: commit by Bob',
-            author: { name: 'Bob Contributor', email: 'bob@example.com' },
+            message: 'fix: commit by Alice',
+            author: { name: 'Alice Contributor', email: 'alice@example.com' },
           },
         },
         {
           commit: {
-            message: 'chore: another commit by Alice',
-            author: { name: 'Alice Developer', email: 'alice@example.com' },
+            message: 'chore: another commit by Bob',
+            author: { name: 'Bob Developer', email: 'bob@example.com' },
           },
         },
         {
@@ -1247,23 +1247,23 @@ describe('executeAction', () => {
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
       // Verify Co-authored-by entries are present and deduplicated
-      expect(commitMessage).toContain('Co-authored-by: Alice Developer <alice@example.com>');
-      expect(commitMessage).toContain('Co-authored-by: Bob Contributor <bob@example.com>');
+      expect(commitMessage).toContain('Co-authored-by: Bob Developer <bob@example.com>');
+      expect(commitMessage).toContain('Co-authored-by: Alice Contributor <alice@example.com>');
 
-      // Verify Alice appears only once (deduplicated - first occurrence only)
-      const aliceMatches = commitMessage.match(/Co-authored-by: Alice Developer/g) || [];
-      expect(aliceMatches.length).toBe(1);
+      // Verify Bob appears only once (deduplicated - first occurrence only)
+      const bobMatches = commitMessage.match(/Co-authored-by: Bob Developer/g) || [];
+      expect(bobMatches.length).toBe(1);
 
       // Verify Co-authored-by appears in the correct position (after commit list, before additional messages)
       const parts = commitMessage.split('\n\n');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[1]).toContain('Co-authored-by:');
 
-      // Verify order is by commit order (Alice first, then Bob), not alphabetical
+      // Verify order is by commit order (Bob first, then Alice), not alphabetical
       const coAuthorSection = parts[1];
-      const aliceIndex = coAuthorSection.indexOf('Co-authored-by: Alice Developer');
-      const bobIndex = coAuthorSection.indexOf('Co-authored-by: Bob Contributor');
-      expect(aliceIndex).toBeLessThan(bobIndex); // Alice should appear before Bob (commit order)
+      const bobIndex = coAuthorSection.indexOf('Co-authored-by: Bob Developer');
+      const aliceIndex = coAuthorSection.indexOf('Co-authored-by: Alice Contributor');
+      expect(bobIndex).toBeLessThan(aliceIndex); // Bob should appear before Alice (commit order)
       expect(parts[parts.length - 1]).toContain('Merged-by: lysbot-merge');
     });
   });

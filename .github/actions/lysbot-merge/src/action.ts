@@ -356,15 +356,13 @@ export async function executeAction(
     // Collect unique co-authors from commits in order
     // Use array to preserve commit order (older ancestor -> recent ancestor)
     const coAuthors: string[] = [];
-    const seenAuthors = new Set<string>();
     commits.forEach((c) => {
       const author = c.commit.author;
       if (author?.name && author?.email) {
         // Create unique key for author
-        const authorKey = `${author.name} <${author.email}>`;
-        if (!seenAuthors.has(authorKey)) {
-          seenAuthors.add(authorKey);
-          coAuthors.push(`Co-authored-by: ${authorKey}`);
+        const authorLine = `Co-authored-by: ${author.name} <${author.email}>`;
+        if (!coAuthors.includes(authorLine)) {
+          coAuthors.push(authorLine);
         }
       }
     });
