@@ -157,7 +157,8 @@ Co-authored-by: {AUTHOR_NAME_02} <{AUTHOR_EMAIL_02}>
 **Notes:**
 - Only commit titles (first line of each commit message) are listed, not full commit messages
 - Each commit title is prefixed with `* ` (bullet point)
-- Co-authors are extracted from all commits in the PR and listed in alphabetical order
+- Co-authors are extracted from all commits in the PR and listed in commit order (oldest ancestor → most recent)
+- Duplicate authors are included only once (first occurrence)
 - Co-authored-by entries follow the Git trailer format: `Co-authored-by: Name <email>`
 
 **Example:**

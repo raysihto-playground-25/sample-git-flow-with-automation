@@ -1250,7 +1250,7 @@ describe('executeAction', () => {
       expect(commitMessage).toContain('Co-authored-by: Alice Developer <alice@example.com>');
       expect(commitMessage).toContain('Co-authored-by: Bob Contributor <bob@example.com>');
 
-      // Verify Alice appears only once (deduplicated)
+      // Verify Alice appears only once (deduplicated - first occurrence only)
       const aliceMatches = commitMessage.match(/Co-authored-by: Alice Developer/g) || [];
       expect(aliceMatches.length).toBe(1);
 
@@ -1258,6 +1258,12 @@ describe('executeAction', () => {
       const parts = commitMessage.split('\n\n');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[1]).toContain('Co-authored-by:');
+
+      // Verify order is by commit order (Alice first, then Bob), not alphabetical
+      const coAuthorSection = parts[1];
+      const aliceIndex = coAuthorSection.indexOf('Co-authored-by: Alice Developer');
+      const bobIndex = coAuthorSection.indexOf('Co-authored-by: Bob Contributor');
+      expect(aliceIndex).toBeLessThan(bobIndex); // Alice should appear before Bob (commit order)
       expect(parts[parts.length - 1]).toContain('Merged-by: lysbot-merge');
     });
   });

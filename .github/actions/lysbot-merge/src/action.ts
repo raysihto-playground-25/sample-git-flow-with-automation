@@ -353,13 +353,19 @@ export async function executeAction(
       })
       .filter((title) => title !== ''); // Filter out empty entries
 
-    // Collect unique co-authors from commits
-    const coAuthors = new Set<string>();
+    // Collect unique co-authors from commits in order
+    // Use array to preserve commit order (older ancestor -> recent ancestor)
+    const coAuthors: string[] = [];
+    const seenAuthors = new Set<string>();
     commits.forEach((c) => {
       const author = c.commit.author;
       if (author?.name && author?.email) {
-        // Format: Co-authored-by: Name <email>
-        coAuthors.add(`Co-authored-by: ${author.name} <${author.email}>`);
+        // Create unique key for author
+        const authorKey = `${author.name} <${author.email}>`;
+        if (!seenAuthors.has(authorKey)) {
+          seenAuthors.add(authorKey);
+          coAuthors.push(`Co-authored-by: ${authorKey}`);
+        }
       }
     });
 
@@ -370,8 +376,8 @@ export async function executeAction(
       bodyParts.push(commitTitles.join('\n'));
     }
 
-    if (coAuthors.size > 0) {
-      bodyParts.push(Array.from(coAuthors).sort().join('\n'));
+    if (coAuthors.length > 0) {
+      bodyParts.push(coAuthors.join('\n'));
     }
 
     bodyParts.push(additionalMessages);
