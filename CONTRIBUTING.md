@@ -69,7 +69,7 @@ The Conventional Commits specification only mandates `feat` and `fix` types; oth
 
 ### Avoiding Specific Metrics in Documentation
 
-To reduce maintenance burden and prevent documentation drift, **do not include specific metrics** such as test counts, file line numbers, or other quantitative details in documentation files (e.g., README.md, guides, or other markdown documentation).
+To reduce maintenance burden and prevent documentation drift, **do not include specific metrics** such as test counts, file line numbers, coverage percentages, or other quantitative details in documentation files (e.g., README.md, guides, or other markdown documentation) **or in code comments**.
 
 **Rationale**: These specific numbers change frequently as the codebase evolves. Maintaining them accurately requires ongoing effort with minimal benefit. Outdated metrics can mislead readers and create unnecessary maintenance overhead.
 
@@ -77,14 +77,18 @@ To reduce maintenance burden and prevent documentation drift, **do not include s
 - ❌ "The project has 150 tests"
 - ❌ "The main file is 1,088 lines"
 - ❌ "There are 25 TypeScript files"
+- ❌ "This module has 94% test coverage" (in code comments)
+- ❌ "80+ tests validate this functionality" (in code comments)
 
 **Examples of acceptable alternatives**:
 - ✅ "The project has comprehensive test coverage"
 - ✅ "The codebase follows modular design principles"
 - ✅ "Multiple TypeScript files implement the functionality"
+- ✅ "This module has high test coverage" (in code comments)
+- ✅ "Extensive tests validate this functionality" (in code comments)
 
 > [!NOTE]
-> Quantitative metrics should appear in CI or generated reports, not in manually-maintained documentation.
+> Quantitative metrics should appear in CI or generated reports, not in manually-maintained documentation or code comments.
 
 ### Specific Metrics in PR Descriptions
 

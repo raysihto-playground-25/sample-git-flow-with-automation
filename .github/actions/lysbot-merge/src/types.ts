@@ -12,7 +12,7 @@ import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-meth
  * Configuration options for the lysbot-merge action.
  * These are passed from the workflow inputs.
  */
-export interface LysbotMergeConfig {
+export interface ActionConfig {
   /** Prefix for release branches (e.g., "release/") */
   releaseBranchPrefix: string;
   /** Name of the develop branch */
@@ -103,7 +103,7 @@ export interface MergeMethodResult {
 /**
  * Overall result of the lysbot-merge operation.
  */
-export interface LysbotMergeResult {
+export interface ActionResult {
   /** Final status of the operation */
   status: 'merged' | 'skipped' | 'failed' | 'already_merged';
   /** Detailed message about what happened */

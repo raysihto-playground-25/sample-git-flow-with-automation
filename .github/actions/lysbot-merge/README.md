@@ -173,48 +173,58 @@ npm run build   # Build with ncc
 
 ### Code Structure
 
-The codebase has been modularized for better maintainability, following the **Single Responsibility Principle**. Each module focuses on a specific concern:
+The codebase has been modularized for better maintainability and testability, following the **Single Responsibility Principle** and **Humble Object Pattern**. Each module focuses on a specific concern:
 
 #### Current File Structure
 
 ```
 src/
+├── action.ts + action.test.ts          # Core business logic (executeAction, buildSummaryMarkdown)
 ├── constants.ts + constants.test.ts    # Configuration constants and regex patterns
-├── types.ts                            # Type definitions and interfaces
-├── validation.ts + validation.test.ts  # Pure validation and business logic functions
 ├── github-api.ts + github-api.test.ts  # GitHub API interaction wrappers
-└── main.ts + main.test.ts              # Entry point and merge orchestration logic
+├── main.ts                             # GitHub Actions runtime integration (untestable)
+├── types.ts                            # Type definitions and interfaces
+└── validation.ts + validation.test.ts  # Pure validation and business logic functions
 ```
 
 **Module Responsibilities:**
 
-1. **`types.ts`**
-   - All TypeScript type definitions and interfaces
-   - No runtime logic, purely type declarations
-   - Imported by all other modules as needed
+1. **`action.ts`** (testable business logic)
+   - Main `executeAction()` function that orchestrates the merge flow
+   - Pure `buildSummaryMarkdown()` function for generating summaries
+   - All business logic that can be tested without GitHub Actions runtime
+   - Depends on: types, validation, github-api
 
 2. **`constants.ts`**
    - Configuration constants (regex patterns, valid flags, emoji)
    - Immutable reference data
    - No dependencies on other modules except types
 
-3. **`validation.ts`**
-   - Pure functions for validation and business logic
-   - Command parsing, permission checks, merge method determination
-   - Easily testable with no side effects
-   - Depends on: types, constants
-
-4. **`github-api.ts`**
+3. **`github-api.ts`**
    - All functions that interact with GitHub API
    - API calls, data fetching, mutations (reactions, comments, merges)
    - Depends on: types
 
-5. **`main.ts`** (entry point and orchestration)
-   - GitHub Actions integration layer
-   - Main `lysbotMerge` function that coordinates the merge flow
-   - Reads inputs, constructs context, orchestrates validation, checks, and merge execution
-   - Sets outputs and writes summaries
-   - Depends on: types, validation, github-api
+4. **`main.ts`** (GitHub Actions runtime integration - untestable)
+   - Thin integration layer with GitHub Actions runtime
+   - Reads inputs from GitHub Actions environment (`core.getInput`)
+   - Constructs context from GitHub runtime (`github.context`, `process.env`)
+   - Delegates to `action.ts` for all business logic
+   - Writes outputs and summaries to GitHub Actions (`core.setOutput`, `core.summary`)
+   - **0% test coverage by design** - follows "Humble Object" pattern
+   - Contains no business logic, only runtime integration
+   - See comments in main.ts for detailed explanation of why it's untestable
+
+5. **`types.ts`**
+   - All TypeScript type definitions and interfaces
+   - No runtime logic, purely type declarations
+   - Imported by all other modules as needed
+
+6. **`validation.ts`**
+   - Pure functions for validation and business logic
+   - Command parsing, permission checks, merge method determination
+   - Easily testable with no side effects
+   - Depends on: types, constants
 
 #### Refactoring Principles
 
@@ -225,15 +235,21 @@ The refactoring follows these principles to maintain code quality:
    - Pure logic is separated from I/O operations
    - Business rules are isolated from infrastructure
 
-2. **Dependency Direction**
+2. **Humble Object Pattern**
+   - Untestable code (GitHub Actions runtime integration) is isolated in main.ts
+   - All testable business logic is extracted to action.ts
+   - This maximizes test coverage where it matters most
+
+3. **Dependency Direction**
    - Dependencies flow inward: infrastructure → orchestration → logic → types
    - No circular dependencies
    - Pure modules (validation) don't depend on I/O modules (github-api)
 
-3. **Testability**
+4. **Testability**
    - Pure functions are in separate modules for easy unit testing
    - API interactions are grouped for easy mocking
-   - Orchestration logic can be tested with mocked dependencies
+   - Orchestration logic in action.ts can be tested with mocked dependencies
+   - Runtime integration in main.ts is intentionally untested (0% coverage)
 
 #### Future Refactoring Guidelines
 
@@ -254,10 +270,18 @@ When adding new features or making changes, follow these guidelines:
    - Keep constants centralized in `constants.ts`
    - Add new pure functions to `validation.ts` or create domain-specific validation modules
    - Add new API calls to `github-api.ts` or create endpoint-specific modules
-   - Keep orchestration in `main.ts` focused on coordinating, not implementing logic
+   - Keep testable orchestration in `action.ts` focused on business logic
+   - Keep main.ts minimal - only GitHub Actions runtime integration, no business logic
 
-4. **Breaking Changes**
+4. **Testing Strategy**
+   - All business logic MUST be testable and have tests
+   - Extract any logic from main.ts to action.ts if it needs testing
+   - main.ts should remain a thin adapter with 0% coverage
+   - Target 80%+ coverage for all testable modules (action.ts, validation.ts, etc.)
+
+5. **Breaking Changes**
    - Update tests when splitting modules
+   - Update README.md to reflect structural changes
    - Document architectural decisions in commit messages
 
 ## Testing

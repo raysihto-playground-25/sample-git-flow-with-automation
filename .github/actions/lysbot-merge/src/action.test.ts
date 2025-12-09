@@ -1,14 +1,15 @@
 /**
- * main.test.ts - Integration tests for merge orchestration logic
+ * action.test.ts - Tests for action.ts module
  *
- * Tests cover the main lysbotMerge function with all validation and merge flows.
- * GitHub API interactions are mocked for isolation.
+ * Tests cover all functions exported from action.ts:
+ * - executeAction: Main orchestration logic for merge operations
+ * - buildSummaryMarkdown: Pure function for building markdown summaries
  */
 
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
-import type { LysbotMergeConfig, EventContext, PullRequestData, Octokit } from './types';
+import type { ActionConfig, EventContext, PullRequestData, Octokit } from './types';
 import { TWEMOJI } from './constants';
-import { lysbotMerge } from './main';
+import { executeAction, buildSummaryMarkdown } from './action';
 
 // =============================================================================
 // Test Utilities
@@ -17,7 +18,7 @@ import { lysbotMerge } from './main';
 /**
  * Creates a default config for tests.
  */
-function createConfig(overrides: Partial<LysbotMergeConfig> = {}): LysbotMergeConfig {
+function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
   return {
     releaseBranchPrefix: 'release/',
     developBranch: 'develop',
@@ -127,14 +128,15 @@ function createEventContext(overrides: Partial<EventContext> = {}): EventContext
     ...overrides,
   };
 }
-describe('lysbotMerge', () => {
+
+describe('executeAction', () => {
   describe('command and user validation', () => {
     it('skips processing for bot comments', async () => {
       const octokit = createMockOctokit();
       const context = createEventContext({ userType: 'Bot' });
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('skipped');
       expect(result.message).toContain('bot');
@@ -145,7 +147,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext({ commentBody: 'Hello world' });
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('skipped');
       expect(result.message).toContain('not matched');
@@ -156,7 +158,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext({ authorAssociation: 'NONE' });
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('author association');
@@ -174,7 +176,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('permissions');
@@ -208,7 +210,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('Fork');
@@ -240,7 +242,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('already_merged');
     });
@@ -263,7 +265,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('merged');
       expect(result.mergeMethod).toBe('squash'); // base is develop
@@ -278,7 +280,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('checks failed');
@@ -293,7 +295,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext({ commentBody: '/lysbot merge' });
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('checks failed');
@@ -322,7 +324,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('merged');
 
@@ -363,7 +365,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('checks failed');
@@ -421,7 +423,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       // Should still merge successfully (conventional commits is optional)
       expect(result.status).toBe('merged');
@@ -476,7 +478,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       // Should dismiss the stale review
       expect(octokit.rest.pulls.dismissReview).toHaveBeenCalled();
@@ -540,7 +542,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       // Should post comment about dismiss failure
       expect(octokit.rest.issues.createComment).toHaveBeenCalled();
@@ -596,7 +598,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       // Should still merge successfully (conventional commits is optional)
       expect(result.status).toBe('merged');
@@ -629,7 +631,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       // Should merge successfully
       expect(result.status).toBe('merged');
@@ -690,7 +692,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('TOCTOU');
@@ -747,7 +749,7 @@ describe('lysbotMerge', () => {
         mergeableRetryInterval: 0, // No delay in tests
       });
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('merged');
     });
@@ -800,7 +802,7 @@ describe('lysbotMerge', () => {
         mergeableRetryInterval: 0,
       });
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('Not mergeable');
@@ -844,7 +846,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
     });
@@ -870,7 +872,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext();
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('Merge failed');
@@ -885,7 +887,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('merged');
 
@@ -914,7 +916,7 @@ describe('lysbotMerge', () => {
       const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
       const config = createConfig();
 
-      const result = await lysbotMerge(octokit, context, config);
+      const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('merged');
 
@@ -925,5 +927,158 @@ describe('lysbotMerge', () => {
       expect(commitMessage).toContain('Merged-by: lysbot-merge');
       expect(commitMessage).not.toContain('EXCEPTIONAL MERGE');
     });
+  });
+});
+
+describe('buildSummaryMarkdown', () => {
+  it('builds summary with all parameters provided', () => {
+    const result = buildSummaryMarkdown(
+      '✅ Merged successfully',
+      123,
+      'testuser',
+      'feature/test',
+      'develop',
+      'squash',
+      'abc1234567890',
+    );
+
+    expect(result).toContain('## lysbot-merge Summary');
+    expect(result).toContain('| **Result** | ✅ Merged successfully |');
+    expect(result).toContain('| **PR** | #123 |');
+    expect(result).toContain('| **Triggered by** | @testuser |');
+    expect(result).toContain('| **Head Branch** | `feature/test` |');
+    expect(result).toContain('| **Base Branch** | `develop` |');
+    expect(result).toContain('| **Merge Method** | `squash` |');
+    expect(result).toContain('| **HEAD SHA** | abc1234567890 |');
+  });
+
+  it('builds summary without optional parameters', () => {
+    const result = buildSummaryMarkdown('⏭️ Skipped', 456, 'anotheruser');
+
+    expect(result).toContain('## lysbot-merge Summary');
+    expect(result).toContain('| **Result** | ⏭️ Skipped |');
+    expect(result).toContain('| **PR** | #456 |');
+    expect(result).toContain('| **Triggered by** | @anotheruser |');
+    expect(result).not.toContain('Head Branch');
+    expect(result).not.toContain('Base Branch');
+    expect(result).not.toContain('Merge Method');
+    expect(result).not.toContain('HEAD SHA');
+  });
+
+  it('builds summary with only headRef and baseRef', () => {
+    const result = buildSummaryMarkdown('❌ Failed', 789, 'failuser', 'feature/fail', 'main', undefined, undefined);
+
+    expect(result).toContain('| **Head Branch** | `feature/fail` |');
+    expect(result).toContain('| **Base Branch** | `main` |');
+    expect(result).not.toContain('Merge Method');
+    expect(result).not.toContain('HEAD SHA');
+  });
+
+  it('builds summary with only mergeMethod', () => {
+    const result = buildSummaryMarkdown(
+      '✅ Merged successfully',
+      111,
+      'mergeuser',
+      undefined,
+      undefined,
+      'merge',
+      undefined,
+    );
+
+    expect(result).toContain('| **Merge Method** | `merge` |');
+    expect(result).not.toContain('Head Branch');
+    expect(result).not.toContain('Base Branch');
+    expect(result).not.toContain('HEAD SHA');
+  });
+
+  it('builds summary with only headSha', () => {
+    const result = buildSummaryMarkdown(
+      'ℹ️ Already merged',
+      222,
+      'shauser',
+      undefined,
+      undefined,
+      undefined,
+      'def9876543210',
+    );
+
+    expect(result).toContain('| **HEAD SHA** | def9876543210 |');
+    expect(result).not.toContain('Head Branch');
+    expect(result).not.toContain('Base Branch');
+    expect(result).not.toContain('Merge Method');
+  });
+
+  it('creates valid markdown table structure', () => {
+    const result = buildSummaryMarkdown('✅ Test', 1, 'user');
+
+    // Check for markdown table headers
+    expect(result).toContain('| Item | Value |');
+    expect(result).toContain('|------|-------|');
+
+    // Should have proper line breaks
+    const lines = result.split('\n');
+    expect(lines.length).toBeGreaterThan(3);
+
+    // Each data row should have pipe delimiters
+    const dataLines = lines.filter((line) => line.includes('**'));
+    dataLines.forEach((line) => {
+      expect(line).toMatch(/^\|.*\|$/);
+    });
+  });
+
+  it('escapes special characters properly in result text', () => {
+    const result = buildSummaryMarkdown('⚠️ Warning: <special>', 333, 'special-user_123');
+
+    expect(result).toContain('⚠️ Warning: <special>');
+    expect(result).toContain('@special-user_123');
+  });
+
+  it('handles different result emojis and text', () => {
+    const testCases = ['✅ Merged successfully', '⏭️ Skipped', '❌ Failed', 'ℹ️ Already merged'];
+
+    testCases.forEach((resultText) => {
+      const result = buildSummaryMarkdown(resultText, 1, 'user');
+      expect(result).toContain(`| **Result** | ${resultText} |`);
+    });
+  });
+
+  it('handles different PR numbers', () => {
+    const testCases = [1, 42, 999, 12345];
+
+    testCases.forEach((prNumber) => {
+      const result = buildSummaryMarkdown('✅ Test', prNumber, 'user');
+      expect(result).toContain(`| **PR** | #${prNumber} |`);
+    });
+  });
+
+  it('handles different actors', () => {
+    const testCases = ['alice', 'bob-smith', 'user_123', 'dependabot[bot]'];
+
+    testCases.forEach((actor) => {
+      const result = buildSummaryMarkdown('✅ Test', 1, actor);
+      expect(result).toContain(`| **Triggered by** | @${actor} |`);
+    });
+  });
+
+  it('includes branches only when both headRef and baseRef are provided', () => {
+    // Both provided
+    let result = buildSummaryMarkdown('✅ Test', 1, 'user', 'head', 'base');
+    expect(result).toContain('Head Branch');
+    expect(result).toContain('Base Branch');
+
+    // Only headRef provided
+    result = buildSummaryMarkdown('✅ Test', 1, 'user', 'head', undefined);
+    expect(result).not.toContain('Head Branch');
+    expect(result).not.toContain('Base Branch');
+
+    // Only baseRef provided
+    result = buildSummaryMarkdown('✅ Test', 1, 'user', undefined, 'base');
+    expect(result).not.toContain('Head Branch');
+    expect(result).not.toContain('Base Branch');
+
+    // Neither provided
+    result = buildSummaryMarkdown('✅ Test', 1, 'user');
+    expect(result).not.toContain('Head Branch');
+    expect(result).not.toContain('Base Branch');
   });
 });

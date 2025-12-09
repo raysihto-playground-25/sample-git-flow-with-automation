@@ -5,11 +5,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { LysbotMergeConfig, PullRequestData, CheckResult } from './types';
+import type { ActionConfig, PullRequestData, CheckResult } from './types';
 import { TWEMOJI } from './constants';
 import {
-  isLysbotMergeCommand,
-  parseLysbotMergeCommand,
+  isCommand,
+  parseCommand,
   isBot,
   hasValidAuthorAssociation,
   hasValidPermission,
@@ -28,7 +28,7 @@ import {
 /**
  * Creates a default config for tests.
  */
-function createConfig(overrides: Partial<LysbotMergeConfig> = {}): LysbotMergeConfig {
+function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
   return {
     releaseBranchPrefix: 'release/',
     developBranch: 'develop',
@@ -61,84 +61,84 @@ function createPRData(overrides: Partial<PullRequestData> = {}): PullRequestData
 }
 
 // =============================================================================
-// Tests for isLysbotMergeCommand
+// Tests for isCommand
 // =============================================================================
 
-describe('isLysbotMergeCommand', () => {
+describe('isCommand', () => {
   describe('valid command patterns', () => {
     it('matches exact "/lysbot merge" command', () => {
-      expect(isLysbotMergeCommand('/lysbot merge')).toBe(true);
+      expect(isCommand('/lysbot merge')).toBe(true);
     });
 
     it('matches with leading whitespace (space/tab/newline)', () => {
-      expect(isLysbotMergeCommand('  /lysbot merge')).toBe(true);
-      expect(isLysbotMergeCommand('\t/lysbot merge')).toBe(true);
-      expect(isLysbotMergeCommand('\n/lysbot merge')).toBe(true);
+      expect(isCommand('  /lysbot merge')).toBe(true);
+      expect(isCommand('\t/lysbot merge')).toBe(true);
+      expect(isCommand('\n/lysbot merge')).toBe(true);
     });
 
     it('matches with trailing whitespace (space/tab/newline)', () => {
-      expect(isLysbotMergeCommand('/lysbot merge  ')).toBe(true);
-      expect(isLysbotMergeCommand('/lysbot merge\t')).toBe(true);
-      expect(isLysbotMergeCommand('/lysbot merge\n')).toBe(true);
+      expect(isCommand('/lysbot merge  ')).toBe(true);
+      expect(isCommand('/lysbot merge\t')).toBe(true);
+      expect(isCommand('/lysbot merge\n')).toBe(true);
     });
 
     it('matches with multiple spaces between words', () => {
-      expect(isLysbotMergeCommand('/lysbot  merge')).toBe(true);
-      expect(isLysbotMergeCommand('/lysbot   merge')).toBe(true);
-      expect(isLysbotMergeCommand('/lysbot\tmerge')).toBe(true);
+      expect(isCommand('/lysbot  merge')).toBe(true);
+      expect(isCommand('/lysbot   merge')).toBe(true);
+      expect(isCommand('/lysbot\tmerge')).toBe(true);
     });
 
     it('matches with --override-approval-requirement flag', () => {
-      expect(isLysbotMergeCommand('/lysbot merge --override-approval-requirement')).toBe(true);
-      expect(isLysbotMergeCommand('  /lysbot merge --override-approval-requirement  ')).toBe(true);
+      expect(isCommand('/lysbot merge --override-approval-requirement')).toBe(true);
+      expect(isCommand('  /lysbot merge --override-approval-requirement  ')).toBe(true);
     });
   });
 
   describe('invalid command patterns', () => {
     it('rejects command with unknown arguments or flags', () => {
-      expect(isLysbotMergeCommand('/lysbot merge now')).toBe(false);
-      expect(isLysbotMergeCommand('/lysbot merge --force')).toBe(false);
-      expect(isLysbotMergeCommand('/lysbot merge --unknown-flag')).toBe(false);
+      expect(isCommand('/lysbot merge now')).toBe(false);
+      expect(isCommand('/lysbot merge --force')).toBe(false);
+      expect(isCommand('/lysbot merge --unknown-flag')).toBe(false);
     });
 
     it('rejects partial or malformed commands', () => {
-      expect(isLysbotMergeCommand('/lysbot')).toBe(false);
-      expect(isLysbotMergeCommand('/lysbot merg')).toBe(false);
-      expect(isLysbotMergeCommand('lysbot merge')).toBe(false);
+      expect(isCommand('/lysbot')).toBe(false);
+      expect(isCommand('/lysbot merg')).toBe(false);
+      expect(isCommand('lysbot merge')).toBe(false);
     });
 
     it('rejects when command is embedded in other text', () => {
-      expect(isLysbotMergeCommand('Please /lysbot merge this')).toBe(false);
-      expect(isLysbotMergeCommand('Run /lysbot merge')).toBe(false);
+      expect(isCommand('Please /lysbot merge this')).toBe(false);
+      expect(isCommand('Run /lysbot merge')).toBe(false);
     });
 
     it('is case-sensitive (uppercase rejected)', () => {
-      expect(isLysbotMergeCommand('/LYSBOT MERGE')).toBe(false);
-      expect(isLysbotMergeCommand('/Lysbot Merge')).toBe(false);
+      expect(isCommand('/LYSBOT MERGE')).toBe(false);
+      expect(isCommand('/Lysbot Merge')).toBe(false);
     });
   });
 });
 
 // =============================================================================
-// Tests for parseLysbotMergeCommand
+// Tests for parseCommand
 // =============================================================================
 
-describe('parseLysbotMergeCommand', () => {
+describe('parseCommand', () => {
   describe('valid commands', () => {
     it('parses basic command without flags', () => {
-      const result = parseLysbotMergeCommand('/lysbot merge');
+      const result = parseCommand('/lysbot merge');
       expect(result).not.toBeNull();
       expect(result?.overrideApprovalRequirement).toBe(false);
     });
 
     it('parses command with --override-approval-requirement flag', () => {
-      const result = parseLysbotMergeCommand('/lysbot merge --override-approval-requirement');
+      const result = parseCommand('/lysbot merge --override-approval-requirement');
       expect(result).not.toBeNull();
       expect(result?.overrideApprovalRequirement).toBe(true);
     });
 
     it('parses command with flag and extra whitespace', () => {
-      const result = parseLysbotMergeCommand('  /lysbot merge   --override-approval-requirement  ');
+      const result = parseCommand('  /lysbot merge   --override-approval-requirement  ');
       expect(result).not.toBeNull();
       expect(result?.overrideApprovalRequirement).toBe(true);
     });
@@ -146,16 +146,16 @@ describe('parseLysbotMergeCommand', () => {
 
   describe('invalid commands', () => {
     it('returns null for non-command text', () => {
-      expect(parseLysbotMergeCommand('hello world')).toBeNull();
+      expect(parseCommand('hello world')).toBeNull();
     });
 
     it('returns null for command with unknown flags', () => {
-      expect(parseLysbotMergeCommand('/lysbot merge --unknown-flag')).toBeNull();
+      expect(parseCommand('/lysbot merge --unknown-flag')).toBeNull();
     });
 
     it('returns null for malformed commands', () => {
-      expect(parseLysbotMergeCommand('/lysbot')).toBeNull();
-      expect(parseLysbotMergeCommand('lysbot merge')).toBeNull();
+      expect(parseCommand('/lysbot')).toBeNull();
+      expect(parseCommand('lysbot merge')).toBeNull();
     });
   });
 });
