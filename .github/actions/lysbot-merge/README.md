@@ -150,7 +150,6 @@ For squash merges (used for PRs targeting `develop` or `release/*` branches):
 Co-authored-by: {AUTHOR_NAME_01} <{AUTHOR_EMAIL_01}>
 Co-authored-by: {AUTHOR_NAME_02} <{AUTHOR_EMAIL_02}>
 ...
-
 {ADDITIONAL_MESSAGES}
 ```
 
@@ -170,7 +169,6 @@ feat: add new authentication system (#456)
 
 Co-authored-by: Alice Developer <alice@example.com>
 Co-authored-by: Bob Contributor <bob@example.com>
-
 Merged-by: lysbot-merge (on behalf of @username)
 ```
 
