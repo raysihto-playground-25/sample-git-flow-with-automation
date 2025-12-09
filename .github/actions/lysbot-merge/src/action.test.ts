@@ -1047,24 +1047,22 @@ describe('executeAction', () => {
       ];
 
       let paginateCalls = 0;
-      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(
-        async (fn: unknown) => {
-          paginateCalls++;
-          // First call is for approved reviews, second is for commits
-          if (paginateCalls === 1) {
-            return [
-              {
-                id: 1,
-                state: 'APPROVED',
-                commit_id: 'abc1234567890',
-                user: { login: 'reviewer' },
-              },
-            ];
-          } else {
-            return mockCommits;
-          }
-        },
-      );
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
+        paginateCalls++;
+        // First call is for approved reviews, second is for commits
+        if (paginateCalls === 1) {
+          return [
+            {
+              id: 1,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'reviewer' },
+            },
+          ];
+        } else {
+          return mockCommits;
+        }
+      });
 
       const context = createEventContext();
       const config = createConfig();
