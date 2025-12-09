@@ -20,13 +20,18 @@
 #         pull-requests: write
 #         issues: write
 #       steps:
-#         - uses: actions/checkout@v4
-#         - uses: ./.github/actions/lysbot-merge
+#         - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@master
 #           with:
 #             github-token: ${{ secrets.GITHUB_TOKEN }}
 #             release_branch_prefix: "release/"
 #             develop_branch: "develop"
 #             sync_branch_prefix: "fix/sync/"
+#
+# NOTES:
+# - Replace `{ORG}` with the organization or user name and `{REPO}` with the
+#   repository name where this action is hosted.
+# - For users who prefer a more stable reference, consider using a fixed
+#   version tag like `@v1.0.0` instead of `@master`.
 #
 # LIMITATIONS:
 # - Fork PRs are NOT supported (GITHUB_TOKEN has limited permissions)

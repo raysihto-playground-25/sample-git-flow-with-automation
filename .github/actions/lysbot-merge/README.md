@@ -196,6 +196,7 @@ Before merging, the action validates:
 4. ✅ All review conversations are resolved
 5. ✅ At least one valid approval from another user
 6. ✅ No merge conflicts
+7.    PR title follows Conventional Commits
 
 ### Check Status Icons
 
