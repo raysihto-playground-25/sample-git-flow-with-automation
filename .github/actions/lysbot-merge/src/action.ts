@@ -339,7 +339,7 @@ export async function executeAction(
   } else {
     // For squash commits:
     // Title: {PR_TITLE} (#{PR_NUMBER})
-    // Body: * {COMMIT_TITLE_01}\n* {COMMIT_TITLE_02}\n...\n\nCo-authored-by: ...\n{ADDITIONAL_MESSAGES}
+    // Body: * {COMMIT_TITLE_01}\n* {COMMIT_TITLE_02}\n...\n\nCo-authored-by: ...\n\n{ADDITIONAL_MESSAGES}
     commitTitle = `${prData.title} (#${prNumber})`;
 
     // Fetch commits to list their titles and collect co-authors
