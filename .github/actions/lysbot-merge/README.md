@@ -104,16 +104,80 @@ The action automatically selects the appropriate merge method:
 
 ## Commit Message Behavior
 
-The action's commit message behavior is **equivalent to GitHub's default merge behavior**:
+lysbot-merge **explicitly specifies** both commit title and body to ensure consistent behavior regardless of repository settings for `merge_commit_title` and `merge_commit_message`.
 
-- **For merge commits**: GitHub generates a default commit message with the PR title and description. The action appends additional metadata to this default message (e.g., `Merged-by: lysbot-merge (on behalf of @username)`).
-- **For squash merges**: GitHub uses the PR title as the commit title and the PR body as the commit message, with the action's metadata appended.
+### Merge Commits
 
-This ensures that merge commits created by lysbot-merge are consistent with those created through GitHub's web interface.
+For merge commits (used for `release/*` and `fix/sync/*` branches):
+
+**Title (first line):**
+```
+Merge pull request #{PR_NUMBER} from {PR_MERGE_HEAD}
+```
+
+**Body (after blank line):**
+```
+{PR_TITLE}
+
+{ADDITIONAL_MESSAGES}
+```
+
+**Example:**
+```
+Merge pull request #123 from release/v1.0.0
+
+chore(release): Release v1.0.0
+
+Merged-by: lysbot-merge (on behalf of @username)
+```
+
+### Squash Merges
+
+For squash merges (used for PRs targeting `develop` or `release/*` branches):
+
+**Title (first line):**
+```
+{PR_TITLE} (#{PR_NUMBER})
+```
+
+**Body (after blank line):**
+```
+* {COMMIT_TITLE_01}
+* {COMMIT_TITLE_02}
+* {COMMIT_TITLE_03}
+...
+
+Co-authored-by: {AUTHOR_NAME_01} <{AUTHOR_EMAIL_01}>
+Co-authored-by: {AUTHOR_NAME_02} <{AUTHOR_EMAIL_02}>
+...
+
+{ADDITIONAL_MESSAGES}
+```
+
+**Notes:**
+- Only commit titles (first line of each commit message) are listed, not full commit messages
+- Each commit title is prefixed with `* ` (bullet point)
+- Co-authors are extracted from all commits in the PR and listed in commit order (oldest ancestor → most recent)
+- Duplicate authors are included only once (first occurrence)
+- Co-authored-by entries follow the Git trailer format: `Co-authored-by: Name <email>`
+
+**Example:**
+```
+feat: add new authentication system (#456)
+
+* feat: implement OAuth2 provider
+* fix: handle token expiration
+* docs: update authentication guide
+
+Co-authored-by: Alice Developer <alice@example.com>
+Co-authored-by: Bob Contributor <bob@example.com>
+
+Merged-by: lysbot-merge (on behalf of @username)
+```
 
 ### Special Commit Message Markers
 
-When the `--override-approval-requirement` flag is used **and actually takes effect** (i.e., when there are no valid approvals), the merge commit message will include a marker:
+When the `--override-approval-requirement` flag is used **and actually takes effect** (i.e., when there are no valid approvals), the merge commit message will include a marker in the additional messages section:
 
 ```
 ⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement

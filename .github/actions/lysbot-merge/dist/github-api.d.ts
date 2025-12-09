@@ -81,6 +81,24 @@ export declare function dismissReview(octokit: Octokit, owner: string, repo: str
  */
 export declare function countUnresolvedThreads(octokit: Octokit, owner: string, repo: string, prNumber: number): Promise<number>;
 /**
+ * Fetches the list of commits in a PR.
+ *
+ * @param octokit - GitHub API client
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param prNumber - PR number
+ * @returns Array of commit objects with commit message and author information
+ */
+export declare function fetchPullRequestCommits(octokit: Octokit, owner: string, repo: string, prNumber: number): Promise<Array<{
+    commit: {
+        message: string;
+        author?: {
+            name?: string;
+            email?: string;
+        } | null;
+    };
+}>>;
+/**
  * Performs the merge operation.
  *
  * @param octokit - GitHub API client
@@ -89,10 +107,11 @@ export declare function countUnresolvedThreads(octokit: Octokit, owner: string, 
  * @param prNumber - PR number
  * @param method - Merge method (squash or merge)
  * @param sha - Expected head SHA for TOCTOU check
- * @param commitMessage - Additional commit message to append to GitHub's default message
+ * @param commitTitle - Explicit commit title (first line of commit message)
+ * @param commitMessage - Explicit commit message body (lines after the title and blank line)
  * @returns Object containing success status, error message, and merge commit SHA
  */
-export declare function mergePullRequest(octokit: Octokit, owner: string, repo: string, prNumber: number, method: 'squash' | 'merge', sha: string, commitMessage: string): Promise<{
+export declare function mergePullRequest(octokit: Octokit, owner: string, repo: string, prNumber: number, method: 'squash' | 'merge', sha: string, commitTitle: string, commitMessage: string): Promise<{
     success: boolean;
     error?: string;
     mergeCommitSha?: string;

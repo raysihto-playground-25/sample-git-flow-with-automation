@@ -14,6 +14,7 @@ import {
   dismissReview,
   countUnresolvedThreads,
   mergePullRequest,
+  fetchPullRequestCommits,
 } from './github-api';
 
 // =============================================================================
@@ -243,10 +244,42 @@ describe('countUnresolvedThreads', () => {
   });
 });
 
+describe('fetchPullRequestCommits', () => {
+  it('should fetch and return commits from a PR with author information', async () => {
+    const octokit = createMockOctokit();
+    const mockCommits = [
+      { commit: { message: 'feat: add new feature', author: { name: 'Alice', email: 'alice@example.com' } } },
+      {
+        commit: { message: 'fix: fix bug\n\nDetailed description', author: { name: 'Bob', email: 'bob@example.com' } },
+      },
+      { commit: { message: 'docs: update readme' } },
+    ];
+    (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue(mockCommits);
+
+    const commits = await fetchPullRequestCommits(octokit, 'owner', 'repo', 1);
+
+    expect(commits).toHaveLength(3);
+    expect(commits[0].commit.message).toBe('feat: add new feature');
+    expect(commits[0].commit.author?.name).toBe('Alice');
+    expect(commits[0].commit.author?.email).toBe('alice@example.com');
+    expect(commits[1].commit.message).toBe('fix: fix bug\n\nDetailed description');
+    expect(commits[2].commit.message).toBe('docs: update readme');
+  });
+});
+
 describe('mergePullRequest', () => {
   it('should return success on successful merge', async () => {
     const octokit = createMockOctokit();
-    const result = await mergePullRequest(octokit, 'owner', 'repo', 1, 'squash', 'abc123', 'Merge message');
+    const result = await mergePullRequest(
+      octokit,
+      'owner',
+      'repo',
+      1,
+      'squash',
+      'abc123',
+      'Merge title',
+      'Merge message body',
+    );
 
     expect(result.success).toBe(true);
     expect(result.mergeCommitSha).toBe('merge123456789');
@@ -258,7 +291,16 @@ describe('mergePullRequest', () => {
       new Error('Merge conflict'),
     );
 
-    const result = await mergePullRequest(octokit, 'owner', 'repo', 1, 'squash', 'abc123', 'Merge message');
+    const result = await mergePullRequest(
+      octokit,
+      'owner',
+      'repo',
+      1,
+      'squash',
+      'abc123',
+      'Merge title',
+      'Merge message body',
+    );
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('Merge conflict');

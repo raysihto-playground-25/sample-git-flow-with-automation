@@ -32,6 +32,7 @@ import {
   dismissReview,
   countUnresolvedThreads,
   mergePullRequest,
+  fetchPullRequestCommits,
 } from './github-api';
 
 /**
@@ -319,12 +320,67 @@ export async function executeAction(
   }
 
   // Perform merge
-  // Build commit message that will be appended to GitHub's automatic message
-  let commitMessage = `Merged-by: lysbot-merge (on behalf of @${actor})`;
+  // Build explicit commit title and message according to lysbot-merge specification
+  let commitTitle: string;
+  let commitBody: string;
 
-  // Add marker if approval requirement was overridden
+  // Build additional metadata that goes in the commit body
+  let additionalMessages = `Merged-by: lysbot-merge (on behalf of @${actor})`;
   if (approvalOverridden) {
-    commitMessage += `\n\n⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement`;
+    additionalMessages += `\n\n⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement`;
+  }
+
+  if (mergeMethodResult.method === 'merge') {
+    // For merge commits:
+    // Title: Merge pull request #{PR_NUMBER} from {PR_MERGE_HEAD}
+    // Body: {PR_TITLE}\n\n{ADDITIONAL_MESSAGES}
+    commitTitle = `Merge pull request #${prNumber} from ${prData.headRef}`;
+    commitBody = `${prData.title}\n\n${additionalMessages}`;
+  } else {
+    // For squash commits:
+    // Title: {PR_TITLE} (#{PR_NUMBER})
+    // Body: * {COMMIT_TITLE_01}\n* {COMMIT_TITLE_02}\n...\n\nCo-authored-by: ...\n\n{ADDITIONAL_MESSAGES}
+    commitTitle = `${prData.title} (#${prNumber})`;
+
+    // Fetch commits to list their titles and collect co-authors
+    const commits = await fetchPullRequestCommits(octokit, owner, repo, prNumber);
+    const commitTitles = commits
+      .map((c) => {
+        // Extract first line of commit message (commit title)
+        const message = c.commit.message || '';
+        const firstLine = message.split('\n')[0];
+        return firstLine ? `* ${firstLine}` : '';
+      })
+      .filter((title) => title !== ''); // Filter out empty entries
+
+    // Collect unique co-authors from commits in order
+    // Use array to preserve commit order (older ancestor -> recent ancestor)
+    const coAuthors: string[] = [];
+    commits.forEach((c) => {
+      const author = c.commit.author;
+      if (author?.name && author?.email) {
+        // Create unique key for author
+        const authorLine = `Co-authored-by: ${author.name} <${author.email}>`;
+        if (!coAuthors.includes(authorLine)) {
+          coAuthors.push(authorLine);
+        }
+      }
+    });
+
+    // Build commit body with commit titles, co-authors, and additional messages
+    const bodyParts: string[] = [];
+
+    if (commitTitles.length > 0) {
+      bodyParts.push(commitTitles.join('\n'));
+    }
+
+    if (coAuthors.length > 0) {
+      bodyParts.push(coAuthors.join('\n'));
+    }
+
+    bodyParts.push(additionalMessages);
+
+    commitBody = bodyParts.join('\n\n');
   }
 
   const mergeResult = await mergePullRequest(
@@ -334,7 +390,8 @@ export async function executeAction(
     prNumber,
     mergeMethodResult.method,
     originalHeadSha,
-    commitMessage,
+    commitTitle,
+    commitBody,
   );
 
   if (!mergeResult.success) {
