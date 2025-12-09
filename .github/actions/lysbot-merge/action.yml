@@ -73,5 +73,5 @@ outputs:
     description: 'Merge method used (squash or merge)'
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'

@@ -434,21 +434,10 @@ export async function executeAction(
  * @param result - Result status emoji and message
  * @param prNumber - PR number
  * @param actor - User who triggered the action
- * @param headRef - Optional head branch name
- * @param baseRef - Optional base branch name
  * @param mergeMethod - Optional merge method used
- * @param headSha - Optional HEAD SHA
  * @returns Markdown string for the summary
  */
-export function buildSummaryMarkdown(
-  result: string,
-  prNumber: number,
-  actor: string,
-  headRef?: string,
-  baseRef?: string,
-  mergeMethod?: string,
-  headSha?: string,
-): string {
+export function buildSummaryMarkdown(result: string, prNumber: number, actor: string, mergeMethod?: string): string {
   let summary = `## lysbot-merge Summary\n\n`;
   summary += `| Item | Value |\n`;
   summary += `|------|-------|\n`;
@@ -456,17 +445,8 @@ export function buildSummaryMarkdown(
   summary += `| **PR** | #${prNumber} |\n`;
   summary += `| **Triggered by** | @${actor} |\n`;
 
-  if (headRef && baseRef) {
-    summary += `| **Head Branch** | \`${headRef}\` |\n`;
-    summary += `| **Base Branch** | \`${baseRef}\` |\n`;
-  }
-
   if (mergeMethod) {
     summary += `| **Merge Method** | \`${mergeMethod}\` |\n`;
-  }
-
-  if (headSha) {
-    summary += `| **HEAD SHA** | ${headSha} |\n`;
   }
 
   return summary;
