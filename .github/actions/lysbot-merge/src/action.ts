@@ -2,18 +2,18 @@
  * action.ts - Testable action logic for the lysbot-merge GitHub Action
  *
  * This file contains the main business logic that can be unit tested:
- * 1. lysbotMerge() - The main orchestration function for merge operations
+ * 1. executeAction() - The main orchestration function for merge operations
  * 2. buildSummaryMarkdown() - Helper to build summary markdown
  *
  * This is separated from main.ts which contains untestable GitHub Actions runtime code.
  */
 
 import * as core from '@actions/core';
-import type { LysbotMergeConfig, EventContext, LysbotMergeResult, CheckResult, Octokit } from './types';
+import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types';
 import {
   isBot,
-  isLysbotMergeCommand,
-  parseLysbotMergeCommand,
+  isActionCommand,
+  parseActionCommand,
   hasValidAuthorAssociation,
   hasValidPermission,
   validatePRState,
@@ -50,11 +50,11 @@ import {
  * @param config - Configuration options
  * @returns Result of the operation
  */
-export async function lysbotMerge(
+export async function executeAction(
   octokit: Octokit,
   context: EventContext,
-  config: LysbotMergeConfig,
-): Promise<LysbotMergeResult> {
+  config: ActionConfig,
+): Promise<ActionResult> {
   const { owner, repo, prNumber, commentId, commentBody, actor, userType, authorAssociation } = context;
 
   // -------------------------------------------------------------------------
@@ -66,13 +66,13 @@ export async function lysbotMerge(
     return { status: 'skipped', message: 'Comment is from a bot' };
   }
 
-  // Check if this is the lysbot merge command
-  if (!isLysbotMergeCommand(commentBody)) {
+  // Check if this is the merge command
+  if (!isActionCommand(commentBody)) {
     return { status: 'skipped', message: 'Command not matched' };
   }
 
   // Parse merge options from the command
-  const mergeOptions = parseLysbotMergeCommand(commentBody);
+  const mergeOptions = parseActionCommand(commentBody);
   if (!mergeOptions) {
     return { status: 'skipped', message: 'Command not matched' };
   }

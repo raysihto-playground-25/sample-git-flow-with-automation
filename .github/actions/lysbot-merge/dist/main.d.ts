@@ -17,7 +17,7 @@
  *
  * TESTING APPROACH:
  * =================
- * - All business logic is in action.ts (lysbotMerge, buildSummaryMarkdown) which IS fully tested
+ * - All business logic is in action.ts (executeAction, buildSummaryMarkdown) which IS fully tested
  * - This file is a thin integration layer with GitHub Actions runtime
  * - Testing this would require mocking the entire GitHub Actions environment, which provides
  *   no value since it only contains simple pass-through code with no conditional logic

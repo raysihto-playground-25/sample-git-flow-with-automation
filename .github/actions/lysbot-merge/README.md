@@ -179,45 +179,33 @@ The codebase has been modularized for better maintainability and testability, fo
 
 ```
 src/
-├── constants.ts + constants.test.ts    # Configuration constants and regex patterns
-├── types.ts                            # Type definitions and interfaces
-├── validation.ts + validation.test.ts  # Pure validation and business logic functions
-├── github-api.ts + github-api.test.ts  # GitHub API interaction wrappers
 ├── action.ts + action.test.ts          # Core business logic (lysbotMerge, buildSummaryMarkdown)
-└── main.ts                             # GitHub Actions runtime integration (untestable)
+├── constants.ts + constants.test.ts    # Configuration constants and regex patterns
+├── github-api.ts + github-api.test.ts  # GitHub API interaction wrappers
+├── main.ts                             # GitHub Actions runtime integration (untestable)
+├── types.ts                            # Type definitions and interfaces
+└── validation.ts + validation.test.ts  # Pure validation and business logic functions
 ```
 
 **Module Responsibilities:**
 
-1. **`types.ts`**
-   - All TypeScript type definitions and interfaces
-   - No runtime logic, purely type declarations
-   - Imported by all other modules as needed
+1. **`action.ts`** (testable business logic)
+   - Main `lysbotMerge()` function that orchestrates the merge flow
+   - Pure `buildSummaryMarkdown()` function for generating summaries
+   - All business logic that can be tested without GitHub Actions runtime
+   - Depends on: types, validation, github-api
 
 2. **`constants.ts`**
    - Configuration constants (regex patterns, valid flags, emoji)
    - Immutable reference data
    - No dependencies on other modules except types
 
-3. **`validation.ts`**
-   - Pure functions for validation and business logic
-   - Command parsing, permission checks, merge method determination
-   - Easily testable with no side effects
-   - Depends on: types, constants
-
-4. **`github-api.ts`**
+3. **`github-api.ts`**
    - All functions that interact with GitHub API
    - API calls, data fetching, mutations (reactions, comments, merges)
    - Depends on: types
 
-5. **`action.ts`** (testable business logic)
-   - Main `lysbotMerge()` function that orchestrates the merge flow
-   - Pure `buildSummaryMarkdown()` function for generating summaries
-   - All business logic that can be tested without GitHub Actions runtime
-   - Depends on: types, validation, github-api
-   - **94%+ test coverage** via action.test.ts
-
-6. **`main.ts`** (GitHub Actions runtime integration - untestable)
+4. **`main.ts`** (GitHub Actions runtime integration - untestable)
    - Thin integration layer with GitHub Actions runtime
    - Reads inputs from GitHub Actions environment (`core.getInput`)
    - Constructs context from GitHub runtime (`github.context`, `process.env`)
@@ -226,6 +214,17 @@ src/
    - **0% test coverage by design** - follows "Humble Object" pattern
    - Contains no business logic, only runtime integration
    - See comments in main.ts for detailed explanation of why it's untestable
+
+5. **`types.ts`**
+   - All TypeScript type definitions and interfaces
+   - No runtime logic, purely type declarations
+   - Imported by all other modules as needed
+
+6. **`validation.ts`**
+   - Pure functions for validation and business logic
+   - Command parsing, permission checks, merge method determination
+   - Easily testable with no side effects
+   - Depends on: types, constants
 
 #### Refactoring Principles
 

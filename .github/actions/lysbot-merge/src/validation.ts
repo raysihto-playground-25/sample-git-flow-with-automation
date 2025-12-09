@@ -6,7 +6,7 @@
  * These functions are easily testable and have no side effects.
  */
 
-import type { LysbotMergeConfig, PullRequestData, CheckResult, MergeMethodResult, MergeOptions } from './types';
+import type { ActionConfig, PullRequestData, CheckResult, MergeMethodResult, MergeOptions } from './types';
 import {
   COMMAND_REGEX,
   VALID_FLAGS,
@@ -38,14 +38,14 @@ export function isConventionalCommitTitle(title: string): boolean {
  * @returns MergeOptions with parsed flags, or null if not a valid command
  *
  * @example
- * parseLysbotMergeCommand('/lysbot merge')
+ * parseActionCommand('/lysbot merge')
  *   // { overrideApprovalRequirement: false }
- * parseLysbotMergeCommand('/lysbot merge --override-approval-requirement')
+ * parseActionCommand('/lysbot merge --override-approval-requirement')
  *   // { overrideApprovalRequirement: true }
- * parseLysbotMergeCommand('hello')
+ * parseActionCommand('hello')
  *   // null
  */
-export function parseLysbotMergeCommand(commentBody: string): MergeOptions | null {
+export function parseActionCommand(commentBody: string): MergeOptions | null {
   const match = COMMAND_REGEX.exec(commentBody);
   if (!match) return null;
 
@@ -69,16 +69,16 @@ export function parseLysbotMergeCommand(commentBody: string): MergeOptions | nul
  * Now also accepts optional flags like `--override-approval-requirement`.
  *
  * @param commentBody - The body of the comment to check
- * @returns true if the comment is the lysbot merge command
+ * @returns true if the comment is the merge command
  *
  * @example
- * isLysbotMergeCommand('/lysbot merge')     // true
- * isLysbotMergeCommand('  /lysbot merge  ') // true
- * isLysbotMergeCommand('/lysbot merge --override-approval-requirement') // true
- * isLysbotMergeCommand('/lysbot merge now') // false (invalid flag)
+ * isActionCommand('/lysbot merge')     // true
+ * isActionCommand('  /lysbot merge  ') // true
+ * isActionCommand('/lysbot merge --override-approval-requirement') // true
+ * isActionCommand('/lysbot merge now') // false (invalid flag)
  */
-export function isLysbotMergeCommand(commentBody: string): boolean {
-  return parseLysbotMergeCommand(commentBody) !== null;
+export function isActionCommand(commentBody: string): boolean {
+  return parseActionCommand(commentBody) !== null;
 }
 
 /**
@@ -126,7 +126,7 @@ export function hasValidPermission(permission: string): boolean {
  * @param config - Configuration with branch prefixes
  * @returns The merge method and reason
  */
-export function determineMergeMethod(headRef: string, baseRef: string, config: LysbotMergeConfig): MergeMethodResult {
+export function determineMergeMethod(headRef: string, baseRef: string, config: ActionConfig): MergeMethodResult {
   // Check head branch patterns first
   if (headRef.startsWith(config.releaseBranchPrefix)) {
     return {

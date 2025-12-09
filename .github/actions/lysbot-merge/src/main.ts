@@ -17,7 +17,7 @@
  *
  * TESTING APPROACH:
  * =================
- * - All business logic is in action.ts (lysbotMerge, buildSummaryMarkdown) which IS fully tested
+ * - All business logic is in action.ts (executeAction, buildSummaryMarkdown) which IS fully tested
  * - This file is a thin integration layer with GitHub Actions runtime
  * - Testing this would require mocking the entire GitHub Actions environment, which provides
  *   no value since it only contains simple pass-through code with no conditional logic
@@ -28,8 +28,8 @@
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import type { LysbotMergeConfig, EventContext } from './types';
-import { lysbotMerge, buildSummaryMarkdown } from './action';
+import type { ActionConfig, EventContext } from './types';
+import { executeAction, buildSummaryMarkdown } from './action';
 
 /**
  * Main function that runs the action.
@@ -39,7 +39,7 @@ import { lysbotMerge, buildSummaryMarkdown } from './action';
  * This function is a thin wrapper that:
  * 1. Reads inputs from GitHub Actions environment (core.getInput)
  * 2. Reads context from GitHub Actions runtime (github.context, process.env)
- * 3. Delegates all business logic to lysbotMerge() in action.ts (which IS tested)
+ * 3. Delegates all business logic to executeAction() in action.ts (which IS tested)
  * 4. Writes outputs to GitHub Actions environment (core.setOutput, core.summary)
  *
  * Testing this function would require:
@@ -51,7 +51,7 @@ import { lysbotMerge, buildSummaryMarkdown } from './action';
  * This provides no value because:
  * - There is no conditional logic or business rules in this function
  * - It's purely an adapter between GitHub Actions runtime and our business logic
- * - The business logic (lysbotMerge, buildSummaryMarkdown) is fully tested in action.test.ts
+ * - The business logic (executeAction, buildSummaryMarkdown) is fully tested in action.test.ts
  * - Any bugs would be immediately visible when running the action in a real workflow
  *
  * COVERAGE IMPACT:
@@ -64,7 +64,7 @@ async function run(): Promise<void> {
   try {
     // Get inputs
     const token = core.getInput('github-token', { required: true });
-    const config: LysbotMergeConfig = {
+    const config: ActionConfig = {
       releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
       developBranch: core.getInput('develop_branch') || 'develop',
       syncBranchPrefix: core.getInput('sync_branch_prefix') || 'fix/sync/',
@@ -107,7 +107,7 @@ async function run(): Promise<void> {
     const octokit = github.getOctokit(token);
 
     // Run the main logic
-    const result = await lysbotMerge(octokit, context, config);
+    const result = await executeAction(octokit, context, config);
 
     // Set outputs
     core.setOutput('result', result.status);

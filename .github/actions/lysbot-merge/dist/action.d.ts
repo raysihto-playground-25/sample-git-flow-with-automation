@@ -2,12 +2,12 @@
  * action.ts - Testable action logic for the lysbot-merge GitHub Action
  *
  * This file contains the main business logic that can be unit tested:
- * 1. lysbotMerge() - The main orchestration function for merge operations
+ * 1. executeAction() - The main orchestration function for merge operations
  * 2. buildSummaryMarkdown() - Helper to build summary markdown
  *
  * This is separated from main.ts which contains untestable GitHub Actions runtime code.
  */
-import type { LysbotMergeConfig, EventContext, LysbotMergeResult, Octokit } from './types';
+import type { ActionConfig, EventContext, ActionResult, Octokit } from './types';
 /**
  * Main function that orchestrates the lysbot-merge operation.
  *
@@ -24,7 +24,7 @@ import type { LysbotMergeConfig, EventContext, LysbotMergeResult, Octokit } from
  * @param config - Configuration options
  * @returns Result of the operation
  */
-export declare function lysbotMerge(octokit: Octokit, context: EventContext, config: LysbotMergeConfig): Promise<LysbotMergeResult>;
+export declare function executeAction(octokit: Octokit, context: EventContext, config: ActionConfig): Promise<ActionResult>;
 /**
  * Builds a summary markdown table for the lysbot-merge operation.
  *

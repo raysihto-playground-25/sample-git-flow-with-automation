@@ -80,14 +80,14 @@ describe('COMMAND_REGEX', () => {
 
   it('should match basic command patterns and capture optional flags', () => {
     // Note: COMMAND_REGEX now captures optional flags after "merge"
-    // The actual flag validation is done in isLysbotMergeCommand
+    // The actual flag validation is done in isActionCommand
     const testCases = [
       { input: '/lysbot merge', expected: true },
       { input: '  /lysbot merge', expected: true },
       { input: '/lysbot merge  ', expected: true },
       { input: '/lysbot  merge', expected: true },
       { input: '/lysbot merge --override-approval-requirement', expected: true },
-      { input: '/lysbot merge now', expected: true }, // Regex matches, but isLysbotMergeCommand rejects
+      { input: '/lysbot merge now', expected: true }, // Regex matches, but isActionCommand rejects
       { input: 'run /lysbot merge', expected: false }, // Text before command
     ];
 
