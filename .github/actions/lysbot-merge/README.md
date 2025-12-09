@@ -179,7 +179,7 @@ The codebase has been modularized for better maintainability and testability, fo
 
 ```
 src/
-├── action.ts + action.test.ts          # Core business logic (lysbotMerge, buildSummaryMarkdown)
+├── action.ts + action.test.ts          # Core business logic (executeAction, buildSummaryMarkdown)
 ├── constants.ts + constants.test.ts    # Configuration constants and regex patterns
 ├── github-api.ts + github-api.test.ts  # GitHub API interaction wrappers
 ├── main.ts                             # GitHub Actions runtime integration (untestable)
@@ -190,7 +190,7 @@ src/
 **Module Responsibilities:**
 
 1. **`action.ts`** (testable business logic)
-   - Main `lysbotMerge()` function that orchestrates the merge flow
+   - Main `executeAction()` function that orchestrates the merge flow
    - Pure `buildSummaryMarkdown()` function for generating summaries
    - All business logic that can be tested without GitHub Actions runtime
    - Depends on: types, validation, github-api
