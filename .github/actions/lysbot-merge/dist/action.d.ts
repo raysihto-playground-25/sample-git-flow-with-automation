@@ -33,10 +33,7 @@ export declare function executeAction(octokit: Octokit, context: EventContext, c
  * @param result - Result status emoji and message
  * @param prNumber - PR number
  * @param actor - User who triggered the action
- * @param headRef - Optional head branch name
- * @param baseRef - Optional base branch name
  * @param mergeMethod - Optional merge method used
- * @param headSha - Optional HEAD SHA
  * @returns Markdown string for the summary
  */
 export declare function buildSummaryMarkdown(result: string, prNumber: number, actor: string, mergeMethod?: string): string;
