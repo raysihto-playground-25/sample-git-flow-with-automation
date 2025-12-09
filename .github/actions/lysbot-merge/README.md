@@ -243,12 +243,12 @@ The codebase has been modularized for better maintainability and testability, fo
 
 ```
 src/
-├── action.ts + action.test.ts          # Core business logic (executeAction, buildSummaryMarkdown)
-├── constants.ts + constants.test.ts    # Configuration constants and regex patterns
-├── github-api.ts + github-api.test.ts  # GitHub API interaction wrappers
-├── main.ts                             # GitHub Actions runtime integration (untestable)
-├── types.ts                            # Type definitions and interfaces
-└── validation.ts + validation.test.ts  # Pure validation and business logic functions
+├── action.ts      # Core business logic (executeAction, buildSummaryMarkdown)
+├── constants.ts   # Configuration constants and regex patterns
+├── github-api.ts  # GitHub API interaction wrappers
+├── main.ts        # GitHub Actions runtime integration (untestable)
+├── types.ts       # Type definitions and interfaces
+└── validation.ts  # Pure validation and business logic functions
 ```
 
 **Module Responsibilities:**
