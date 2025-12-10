@@ -3,15 +3,15 @@ name: on-comment
 # =============================================================================
 # on-comment - Project-Specific lysbot Commands Caller
 # =============================================================================
-# This is the project-specific caller workflow that invokes lysbot-related
-# actions with project-specific configuration.
+# This is the project-specific caller workflow that invokes lysbot-comm
+# action with project-specific configuration.
 #
 # Currently supported commands:
 # - /lysbot merge - See .github/actions/lysbot-comm/action.yml for details
 #
 # CUSTOMIZATION:
 # - Modify the `with` inputs below to match your project's branching strategy
-# - The actions handle all the logic, so you only need to
+# - The action handles all the logic, so you only need to
 #   configure the branch naming conventions here
 # =============================================================================
 

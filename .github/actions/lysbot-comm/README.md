@@ -1,6 +1,6 @@
 # lysbot-comm Action
 
-A TypeScript-based GitHub Action that provides automated PR merging via the `/lysbot merge` command in PR comments.
+A TypeScript-based GitHub Action that provides automation commands via PR comments. Currently supports automated PR merging through the `/lysbot merge` command.
 
 ## Features
 
@@ -16,13 +16,13 @@ A TypeScript-based GitHub Action that provides automated PR merging via the `/ly
 
 Depending on what you want to do next:
 
-- **Use `/lysbot merge` on an existing project** &#x279C; See **[Usage](#usage)**
+- **Use automation commands on an existing project** &#x279C; See **[Usage](#usage)**
 - **Integrate this Action into your repository** &#x279C; See **[Quick Start](#quick-start)**
 - **Contribute to or debug the Action** &#x279C; See **[Development](#development)**
 
 ## Usage
 
-Comment `/lysbot merge` on any PR to trigger the merge action.
+Comment `/lysbot merge` on any PR to trigger automated merging.
 
 ### Command Options
 
@@ -47,7 +47,7 @@ Comment `/lysbot merge` on any PR to trigger the merge action.
 
 ## Merge Method Selection
 
-The action automatically selects the appropriate merge method:
+The action automatically selects the appropriate merge method based on branch patterns:
 
 | Condition | Merge Method | Reason |
 |-----------|--------------|--------|
@@ -228,7 +228,7 @@ The workflow must have the following permissions:
 > **Fork PRs are NOT supported**: `GITHUB_TOKEN` has limited write permissions for fork-originated PRs
 
 > [!NOTE]
-> **Authorization required**: Only organization owners, members, or collaborators with write access can use the command
+> **Authorization required**: Only organization owners, members, or collaborators with write access can use automation commands
 
 ## Development
 
