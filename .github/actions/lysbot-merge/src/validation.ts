@@ -171,25 +171,28 @@ export function determineMergeMethod(headRef: string, baseRef: string, config: A
 export function validatePRState(prData: PullRequestData): CheckResult[] {
   const checks: CheckResult[] = [];
 
-  // Check 1: PR is open
-  checks.push({
-    name: 'PR is open',
-    passed: prData.state === 'open',
-    details: prData.state !== 'open' ? 'currently closed' : undefined,
-  });
+  // Consolidated check: PR is ready for review (combines open, unlocked, and not draft checks)
+  const isOpen = prData.state === 'open';
+  const isUnlocked = !prData.locked;
+  const isNotDraft = !prData.draft;
+  const allPassed = isOpen && isUnlocked && isNotDraft;
 
-  // Check 2: PR is unlocked
-  checks.push({
-    name: 'PR is unlocked',
-    passed: !prData.locked,
-    details: prData.locked ? 'currently locked' : undefined,
-  });
+  // Collect failure reasons
+  const failureReasons: string[] = [];
+  if (!isOpen) {
+    failureReasons.push('currently closed');
+  }
+  if (!isUnlocked) {
+    failureReasons.push('currently locked');
+  }
+  if (!isNotDraft) {
+    failureReasons.push('currently a draft');
+  }
 
-  // Check 3: PR is not a draft
   checks.push({
     name: 'PR is ready for review',
-    passed: !prData.draft,
-    details: prData.draft ? 'currently a draft' : undefined,
+    passed: allPassed,
+    details: failureReasons.length > 0 ? failureReasons.join(', ') : undefined,
   });
 
   return checks;

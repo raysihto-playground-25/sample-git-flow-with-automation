@@ -307,41 +307,71 @@ describe('determineMergeMethod', () => {
 
 describe('validatePRState', () => {
   describe('valid PR state', () => {
-    it('passes all checks for valid open PR', () => {
+    it('passes consolidated check for valid open PR', () => {
       const prData = createPRData();
       const checks = validatePRState(prData);
 
-      expect(checks).toHaveLength(3);
-      expect(checks.every((c) => c.passed)).toBe(true);
+      expect(checks).toHaveLength(1);
+      expect(checks[0].name).toBe('PR is ready for review');
+      expect(checks[0].passed).toBe(true);
+      expect(checks[0].details).toBeUndefined();
     });
   });
 
   describe('invalid PR states', () => {
-    it('fails open check when PR is closed', () => {
+    it('fails check when PR is closed', () => {
       const prData = createPRData({ state: 'closed' });
       const checks = validatePRState(prData);
 
-      const openCheck = checks.find((c) => c.name === 'PR is open');
-      expect(openCheck?.passed).toBe(false);
-      expect(openCheck?.details).toContain('closed');
+      expect(checks).toHaveLength(1);
+      const check = checks[0];
+      expect(check.name).toBe('PR is ready for review');
+      expect(check.passed).toBe(false);
+      expect(check.details).toBe('currently closed');
     });
 
-    it('fails unlocked check when PR is locked', () => {
+    it('fails check when PR is locked', () => {
       const prData = createPRData({ locked: true });
       const checks = validatePRState(prData);
 
-      const lockedCheck = checks.find((c) => c.name === 'PR is unlocked');
-      expect(lockedCheck?.passed).toBe(false);
-      expect(lockedCheck?.details).toContain('locked');
+      expect(checks).toHaveLength(1);
+      const check = checks[0];
+      expect(check.name).toBe('PR is ready for review');
+      expect(check.passed).toBe(false);
+      expect(check.details).toBe('currently locked');
     });
 
-    it('fails ready check when PR is a draft', () => {
+    it('fails check when PR is a draft', () => {
       const prData = createPRData({ draft: true });
       const checks = validatePRState(prData);
 
-      const draftCheck = checks.find((c) => c.name === 'PR is ready for review');
-      expect(draftCheck?.passed).toBe(false);
-      expect(draftCheck?.details).toContain('draft');
+      expect(checks).toHaveLength(1);
+      const check = checks[0];
+      expect(check.name).toBe('PR is ready for review');
+      expect(check.passed).toBe(false);
+      expect(check.details).toBe('currently a draft');
+    });
+
+    it('fails check with multiple reasons when PR has multiple issues', () => {
+      const prData = createPRData({ state: 'closed', locked: true });
+      const checks = validatePRState(prData);
+
+      expect(checks).toHaveLength(1);
+      const check = checks[0];
+      expect(check.name).toBe('PR is ready for review');
+      expect(check.passed).toBe(false);
+      expect(check.details).toBe('currently closed, currently locked');
+    });
+
+    it('fails check with all three reasons when all conditions fail', () => {
+      const prData = createPRData({ state: 'closed', locked: true, draft: true });
+      const checks = validatePRState(prData);
+
+      expect(checks).toHaveLength(1);
+      const check = checks[0];
+      expect(check.name).toBe('PR is ready for review');
+      expect(check.passed).toBe(false);
+      expect(check.details).toBe('currently closed, currently locked, currently a draft');
     });
   });
 });

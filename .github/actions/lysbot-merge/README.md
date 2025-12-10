@@ -144,13 +144,11 @@ This marker is **not** added if the override flag was specified but didn't take 
 
 Before merging, the action validates:
 
-1. ✅ PR is open (not closed)
-2. ✅ PR is unlocked
-3. ✅ PR is ready for review (not a draft)
-4. ✅ All review conversations are resolved
-5. ✅ At least one valid approval from another user
-6. ✅ No merge conflicts
-7.    PR title follows Conventional Commits
+1. ✅ PR is ready for review (open, unlocked, and not a draft)
+2. ✅ All review conversations are resolved
+3. ✅ At least one valid approval from another user
+4. ✅ No merge conflicts
+5.    PR title follows Conventional Commits
 
 ### Check Status Icons
 
