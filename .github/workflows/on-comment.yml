@@ -7,7 +7,7 @@ name: on-comment
 # actions with project-specific configuration.
 #
 # Currently supported commands:
-# - /lysbot merge - See .github/actions/lysbot-merge/action.yml for details
+# - /lysbot merge - See .github/actions/lysbot-comm/action.yml for details
 #
 # CUSTOMIZATION:
 # - Modify the `with` inputs below to match your project's branching strategy
@@ -25,8 +25,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  lysbot-merge:
-    name: lysbot-merge
+  lysbot-comm:
+    name: lysbot-comm
     # Only run if this is a PR comment (not an issue)
     if: github.event.issue.pull_request
     runs-on: ubuntu-latest
@@ -38,8 +38,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Run lysbot-merge action
-        uses: ./.github/actions/lysbot-merge
+      - name: Run lysbot-comm action
+        uses: ./.github/actions/lysbot-comm
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Project-specific branch naming configuration

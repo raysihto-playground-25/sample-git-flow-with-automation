@@ -1,4 +1,4 @@
-# lysbot-merge Action
+# lysbot-comm Action
 
 A TypeScript-based GitHub Action that provides automated PR merging via the `/lysbot merge` command in PR comments.
 
@@ -59,7 +59,7 @@ The action automatically selects the appropriate merge method:
 
 ## Commit Message Behavior
 
-lysbot-merge **explicitly specifies** both commit title and body to ensure consistent behavior regardless of repository settings for `merge_commit_title` and `merge_commit_message`.
+lysbot-comm **explicitly specifies** both commit title and body to ensure consistent behavior regardless of repository settings for `merge_commit_title` and `merge_commit_message`.
 
 ### Merge Commits
 
@@ -83,7 +83,7 @@ Merge pull request #123 from release/v1.0.0
 
 chore(release): Release v1.0.0
 
-Merged-by: lysbot-merge (on behalf of @username)
+Merged-by: lysbot-comm (on behalf of @username)
 ```
 
 ### Squash Merges
@@ -127,7 +127,7 @@ feat: add new authentication system (#456)
 Co-authored-by: Alice Developer <alice@example.com>
 Co-authored-by: Bob Contributor <bob@example.com>
 
-Merged-by: lysbot-merge (on behalf of @username)
+Merged-by: lysbot-comm (on behalf of @username)
 ```
 
 ### Special Commit Message Markers
@@ -176,7 +176,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  lysbot-merge:
+  lysbot-comm:
     if: github.event.issue.pull_request
     runs-on: ubuntu-latest
     permissions:
@@ -184,7 +184,7 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@master
+      - uses: {ORG}/{REPO}/.github/actions/lysbot-comm@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           release_branch_prefix: "release/"
@@ -232,10 +232,10 @@ The workflow must have the following permissions:
 
 ## Development
 
-To work on the lysbot-merge action:
+To work on the lysbot-comm action:
 
 ```bash
-cd .github/actions/lysbot-merge
+cd .github/actions/lysbot-comm
 npm install
 npm test        # Run unit tests
 npm run format  # Run formatter (format:check for checking only)

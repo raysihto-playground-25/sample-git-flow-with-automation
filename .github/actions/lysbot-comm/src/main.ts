@@ -1,5 +1,5 @@
 /**
- * main.ts - Entry point for the lysbot-merge GitHub Action
+ * main.ts - Entry point for the lysbot-comm GitHub Action
  *
  * This file is the main entry point that runs in the GitHub Actions environment.
  * It is responsible for:
@@ -127,7 +127,7 @@ async function run(): Promise<void> {
     core.summary.addRaw(summaryMarkdown).write();
 
     // Log result
-    core.info(`lysbot-merge result: ${result.status} - ${result.message}`);
+    core.info(`lysbot-comm result: ${result.status} - ${result.message}`);
 
     // Mark as failed if the result status is failed
     if (result.status === 'failed') {
@@ -136,7 +136,7 @@ async function run(): Promise<void> {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    core.setFailed(`lysbot-merge action failed: ${message}`);
+    core.setFailed(`lysbot-comm action failed: ${message}`);
   }
 }
 
