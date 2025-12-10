@@ -12,6 +12,14 @@ A TypeScript-based GitHub Action that provides automated PR merging via the `/ly
 - 📊 **Detailed feedback** - Posts clear status messages to PR comments
 - ✅ **Unit tested** - Comprehensive test suite with extensive test coverage
 
+## Next Steps
+
+Depending on what you want to do next:
+
+- **Use `/lysbot merge` on an existing project** &#x279C; See **[Usage](#usage)**
+- **Integrate this Action into your repository** &#x279C; See **[Quick Start](#quick-start)**
+- **Contribute to or debug the Action** &#x279C; See **[Development](#development)**
+
 ## Usage
 
 Comment `/lysbot merge` on any PR to trigger the merge action.
@@ -104,7 +112,7 @@ Co-authored-by: {AUTHOR_NAME_02} <{AUTHOR_EMAIL_02}>
 **Notes:**
 - Only commit titles (first line of each commit message) are listed, not full commit messages
 - Each commit title is prefixed with `* ` (bullet point)
-- Co-authors are extracted from all commits in the PR and listed in commit order (oldest ancestor → most recent)
+- Co-authors are extracted from all commits in the PR and listed in commit order (oldest ancestor &#x279C; most recent)
 - Duplicate authors are included only once (first occurrence)
 - Co-authored-by entries follow the Git trailer format: `Co-authored-by: Name <email>`
 
@@ -307,7 +315,7 @@ The refactoring follows these principles to maintain code quality:
    - This maximizes test coverage where it matters most
 
 3. **Dependency Direction**
-   - Dependencies flow inward: infrastructure → orchestration → logic → types
+   - Dependencies flow inward: infrastructure &#x279C; orchestration &#x279C; logic &#x279C; types
    - No circular dependencies
    - Pure modules (validation) don't depend on I/O modules (github-api)
 
