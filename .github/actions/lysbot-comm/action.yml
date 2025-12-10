@@ -1,5 +1,5 @@
 # =============================================================================
-# lysbot-merge - PR Merge Automation Action
+# lysbot-comm - PR Merge Automation Action
 # =============================================================================
 # A composite action that provides automated PR merging via the `/lysbot merge`
 # command in PR comments. This action encapsulates all the validation and
@@ -13,14 +13,14 @@
 #       types: [created]
 #
 #   jobs:
-#     lysbot-merge:
+#     lysbot-comm:
 #       runs-on: ubuntu-latest
 #       permissions:
 #         contents: write
 #         pull-requests: write
 #         issues: write
 #       steps:
-#         - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@master
+#         - uses: {ORG}/{REPO}/.github/actions/lysbot-comm@master
 #           with:
 #             github-token: ${{ secrets.GITHUB_TOKEN }}
 #             release_branch_prefix: "release/"
@@ -43,7 +43,7 @@
 #   display compatibility. Licensed under CC-BY 4.0.
 # =============================================================================
 
-name: 'lysbot-merge'
+name: 'lysbot-comm'
 description: 'Automated PR merging with validation checks via /lysbot merge command'
 
 inputs:

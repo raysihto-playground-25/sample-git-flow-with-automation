@@ -1,8 +1,8 @@
 /**
- * constants.ts - Constants and configuration values for lysbot-merge
+ * constants.ts - Constants and configuration values for lysbot-comm
  *
  * This module contains all constant values, regex patterns, and configuration
- * data used throughout the lysbot-merge action.
+ * data used throughout the lysbot-comm action.
  */
 /**
  * Command regex for matching `/lysbot merge` comments.
