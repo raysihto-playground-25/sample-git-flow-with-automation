@@ -12,60 +12,6 @@ A TypeScript-based GitHub Action that provides automated PR merging via the `/ly
 - 📊 **Detailed feedback** - Posts clear status messages to PR comments
 - ✅ **Unit tested** - Comprehensive test suite with extensive test coverage
 
-## Quick Start
-
-Create a caller workflow in your project (e.g., `.github/workflows/on-comment.yml`):
-
-```yaml
-name: on-comment
-
-on:
-  issue_comment:
-    types: [created]
-
-concurrency:
-  group: on-comment-${{ github.event.issue.number }}
-  cancel-in-progress: false
-
-jobs:
-  lysbot-merge:
-    if: github.event.issue.pull_request
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-    steps:
-      - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          release_branch_prefix: "release/"
-          develop_branch: "develop"
-          sync_branch_prefix: "fix/sync/"
-```
-
-> [!NOTE]
-> - Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
-> - For users who prefer a more stable reference, consider using a fixed version tag like `@v1.0.0` instead of `@master`.
-
-## Inputs
-
-| Input | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `github-token` | string | Yes | - | GitHub token for API authentication |
-| `release_branch_prefix` | string | No | `release/` | Prefix for release branches |
-| `develop_branch` | string | No | `develop` | Name of the develop branch |
-| `sync_branch_prefix` | string | No | `fix/sync/` | Prefix for sync branches (back-merges) |
-| `mergeable_retry_count` | number | No | `5` | Number of retries for mergeable status calculation |
-| `mergeable_retry_interval` | number | No | `10` | Interval in seconds between retries |
-
-## Outputs
-
-| Output | Description |
-|--------|-------------|
-| `result` | Result of the operation: `merged`, `skipped`, `failed`, or `already_merged` |
-| `merge_method` | Merge method used: `squash` or `merge` (only set when merged) |
-
 ## Usage
 
 Comment `/lysbot merge` on any PR to trigger the merge action.
@@ -207,6 +153,60 @@ The merge check comment uses three icon states:
 | ✅ | Check passed |
 | ❌ | Check failed and blocks merge |
 | ⚠️ | Check did not pass but is explicitly tolerated (e.g., overridden approval requirement or accepted title warning) |
+
+## Quick Start
+
+Create a caller workflow in your project (e.g., `.github/workflows/on-comment.yml`):
+
+```yaml
+name: on-comment
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: on-comment-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  lysbot-merge:
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          release_branch_prefix: "release/"
+          develop_branch: "develop"
+          sync_branch_prefix: "fix/sync/"
+```
+
+> [!NOTE]
+> - Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
+> - For users who prefer a more stable reference, consider using a fixed version tag like `@v1.0.0` instead of `@master`.
+
+## Inputs
+
+| Input | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `github-token` | string | Yes | - | GitHub token for API authentication |
+| `release_branch_prefix` | string | No | `release/` | Prefix for release branches |
+| `develop_branch` | string | No | `develop` | Name of the develop branch |
+| `sync_branch_prefix` | string | No | `fix/sync/` | Prefix for sync branches (back-merges) |
+| `mergeable_retry_count` | number | No | `5` | Number of retries for mergeable status calculation |
+| `mergeable_retry_interval` | number | No | `10` | Interval in seconds between retries |
+
+## Outputs
+
+| Output | Description |
+|--------|-------------|
+| `result` | Result of the operation: `merged`, `skipped`, `failed`, or `already_merged` |
+| `merge_method` | Merge method used: `squash` or `merge` (only set when merged) |
 
 ## Permissions Required
 
