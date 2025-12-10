@@ -109,6 +109,11 @@ export interface MergeOptions {
    * All other checks (status checks, merge conflicts, labels, etc.) still apply.
    */
   overrideApprovalRequirement: boolean;
+  /**
+   * When true, perform all checks but skip the actual merge operation.
+   * Useful for validating PR status without merging.
+   */
+  checkOnly: boolean;
 }
 
 // Type alias for Octokit instance

@@ -39,9 +39,13 @@ export function isConventionalCommitTitle(title: string): boolean {
  *
  * @example
  * parseCommand('/lysbot merge')
- *   // { overrideApprovalRequirement: false }
+ *   // { overrideApprovalRequirement: false, checkOnly: false }
  * parseCommand('/lysbot merge --override-approval-requirement')
- *   // { overrideApprovalRequirement: true }
+ *   // { overrideApprovalRequirement: true, checkOnly: false }
+ * parseCommand('/lysbot merge --check-only')
+ *   // { overrideApprovalRequirement: false, checkOnly: true }
+ * parseCommand('/lysbot merge --dry-run')
+ *   // { overrideApprovalRequirement: false, checkOnly: true }
  * parseCommand('hello')
  *   // null
  */
@@ -61,12 +65,13 @@ export function parseCommand(commentBody: string): MergeOptions | null {
 
   return {
     overrideApprovalRequirement: flags.includes('--override-approval-requirement'),
+    checkOnly: flags.includes('--check-only') || flags.includes('--dry-run'),
   };
 }
 
 /**
  * Checks if a comment matches the `/lysbot merge` command pattern.
- * Now also accepts optional flags like `--override-approval-requirement`.
+ * Now also accepts optional flags like `--override-approval-requirement`, `--check-only`, and `--dry-run`.
  *
  * @param commentBody - The body of the comment to check
  * @returns true if the comment is the merge command
@@ -75,6 +80,8 @@ export function parseCommand(commentBody: string): MergeOptions | null {
  * isCommand('/lysbot merge')     // true
  * isCommand('  /lysbot merge  ') // true
  * isCommand('/lysbot merge --override-approval-requirement') // true
+ * isCommand('/lysbot merge --check-only') // true
+ * isCommand('/lysbot merge --dry-run') // true
  * isCommand('/lysbot merge now') // false (invalid flag)
  */
 export function isCommand(commentBody: string): boolean {

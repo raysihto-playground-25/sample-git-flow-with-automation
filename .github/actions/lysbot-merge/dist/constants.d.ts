@@ -13,7 +13,7 @@ export declare const COMMAND_REGEX: RegExp;
 /**
  * List of valid command flags for `/lysbot merge`.
  */
-export declare const VALID_FLAGS: readonly ["--override-approval-requirement"];
+export declare const VALID_FLAGS: readonly ["--override-approval-requirement", "--check-only", "--dry-run"];
 /**
  * Twemoji images for cross-browser emoji compatibility.
  * https://github.com/twitter/twemoji (CC-BY 4.0 licensed)

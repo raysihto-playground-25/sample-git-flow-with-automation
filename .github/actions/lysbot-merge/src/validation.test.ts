@@ -92,6 +92,21 @@ describe('isCommand', () => {
       expect(isCommand('/lysbot merge --override-approval-requirement')).toBe(true);
       expect(isCommand('  /lysbot merge --override-approval-requirement  ')).toBe(true);
     });
+
+    it('matches with --check-only flag', () => {
+      expect(isCommand('/lysbot merge --check-only')).toBe(true);
+      expect(isCommand('  /lysbot merge --check-only  ')).toBe(true);
+    });
+
+    it('matches with --dry-run flag', () => {
+      expect(isCommand('/lysbot merge --dry-run')).toBe(true);
+      expect(isCommand('  /lysbot merge --dry-run  ')).toBe(true);
+    });
+
+    it('matches with multiple flags', () => {
+      expect(isCommand('/lysbot merge --check-only --override-approval-requirement')).toBe(true);
+      expect(isCommand('/lysbot merge --dry-run --override-approval-requirement')).toBe(true);
+    });
   });
 
   describe('invalid command patterns', () => {
@@ -129,18 +144,56 @@ describe('parseCommand', () => {
       const result = parseCommand('/lysbot merge');
       expect(result).not.toBeNull();
       expect(result?.overrideApprovalRequirement).toBe(false);
+      expect(result?.checkOnly).toBe(false);
     });
 
     it('parses command with --override-approval-requirement flag', () => {
       const result = parseCommand('/lysbot merge --override-approval-requirement');
       expect(result).not.toBeNull();
       expect(result?.overrideApprovalRequirement).toBe(true);
+      expect(result?.checkOnly).toBe(false);
     });
 
     it('parses command with flag and extra whitespace', () => {
       const result = parseCommand('  /lysbot merge   --override-approval-requirement  ');
       expect(result).not.toBeNull();
       expect(result?.overrideApprovalRequirement).toBe(true);
+      expect(result?.checkOnly).toBe(false);
+    });
+
+    it('parses command with --check-only flag', () => {
+      const result = parseCommand('/lysbot merge --check-only');
+      expect(result).not.toBeNull();
+      expect(result?.overrideApprovalRequirement).toBe(false);
+      expect(result?.checkOnly).toBe(true);
+    });
+
+    it('parses command with --dry-run flag', () => {
+      const result = parseCommand('/lysbot merge --dry-run');
+      expect(result).not.toBeNull();
+      expect(result?.overrideApprovalRequirement).toBe(false);
+      expect(result?.checkOnly).toBe(true);
+    });
+
+    it('parses command with both flags', () => {
+      const result = parseCommand('/lysbot merge --override-approval-requirement --check-only');
+      expect(result).not.toBeNull();
+      expect(result?.overrideApprovalRequirement).toBe(true);
+      expect(result?.checkOnly).toBe(true);
+    });
+
+    it('parses command with both flags in reverse order', () => {
+      const result = parseCommand('/lysbot merge --check-only --override-approval-requirement');
+      expect(result).not.toBeNull();
+      expect(result?.overrideApprovalRequirement).toBe(true);
+      expect(result?.checkOnly).toBe(true);
+    });
+
+    it('parses command with --dry-run and --override-approval-requirement', () => {
+      const result = parseCommand('/lysbot merge --dry-run --override-approval-requirement');
+      expect(result).not.toBeNull();
+      expect(result?.overrideApprovalRequirement).toBe(true);
+      expect(result?.checkOnly).toBe(true);
     });
   });
 

@@ -256,6 +256,18 @@ export async function executeAction(
   }
 
   // All checks passed - post status and proceed to merge
+  if (mergeOptions.checkOnly) {
+    // Check-only mode: report success but skip actual merge
+    await postComment(
+      octokit,
+      owner,
+      repo,
+      prNumber,
+      `## Merge checks passed (check-only mode)\n\n> [!NOTE]\n> All checks passed, but the PR was **not merged** because \`--check-only\` or \`--dry-run\` flag was used.\n>\n> The PR is ready to be merged. Run \`/lysbot merge\` without the check-only flag to proceed with the merge.\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`,
+    );
+    return { status: 'skipped', message: 'Check-only mode: all checks passed but merge skipped' };
+  }
+
   await postComment(
     octokit,
     owner,

@@ -29,11 +29,15 @@ Comment `/lysbot merge` on any PR to trigger the merge action.
 | Option | Description |
 |--------|-------------|
 | `--override-approval-requirement` | **Exceptional/privileged option**: Skip the review approval requirement for this merge only. The command executor acts as a reviewer proxy, taking responsibility for approving the changes. All other checks (status checks, merge conflicts, unresolved threads, etc.) still apply. |
+| `--check-only` | Perform all merge checks but skip the actual merge operation. Useful for validating PR status without merging. Alias: `--dry-run` |
 
-**Example with flag:**
+**Example with flags:**
 
 ```
 /lysbot merge --override-approval-requirement
+/lysbot merge --check-only
+/lysbot merge --dry-run
+/lysbot merge --check-only --override-approval-requirement
 ```
 
 > [!CAUTION]

@@ -15,7 +15,7 @@ export const COMMAND_REGEX = /^\s*\/lysbot\s+merge(?:\s+(.*))?\s*$/;
 /**
  * List of valid command flags for `/lysbot merge`.
  */
-export const VALID_FLAGS = ['--override-approval-requirement'] as const;
+export const VALID_FLAGS = ['--override-approval-requirement', '--check-only', '--dry-run'] as const;
 
 /**
  * Twemoji images for cross-browser emoji compatibility.
