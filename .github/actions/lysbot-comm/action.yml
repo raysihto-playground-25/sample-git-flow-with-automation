@@ -1,9 +1,9 @@
 # =============================================================================
-# lysbot-comm - PR Merge Automation Action
+# lysbot-comm - Comment-Based Automation Action
 # =============================================================================
-# A composite action that provides automated PR merging via the `/lysbot merge`
-# command in PR comments. This action encapsulates all the validation and
-# merge logic previously in the reusable workflow.
+# A composite action that provides automation commands via PR comments.
+# Currently supports the `/lysbot merge` command for automated PR merging,
+# with validation and merge logic encapsulated in the action.
 #
 # USAGE:
 # This action is called from a workflow triggered by issue_comment events.
@@ -36,7 +36,7 @@
 # LIMITATIONS:
 # - Fork PRs are NOT supported (GITHUB_TOKEN has limited permissions)
 # - Only organization owners, members, or collaborators with write access
-#   can use the `/lysbot merge` command
+#   can use automation commands
 #
 # THIRD-PARTY LICENSES:
 # - Twemoji graphics (https://github.com/twitter/twemoji) are used for emoji
@@ -44,7 +44,7 @@
 # =============================================================================
 
 name: 'lysbot-comm'
-description: 'Automated PR merging with validation checks via /lysbot merge command'
+description: 'Comment-based automation with validation checks'
 
 inputs:
   github-token:
