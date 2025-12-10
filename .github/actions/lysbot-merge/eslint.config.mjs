@@ -11,9 +11,7 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Allow explicit any in some cases for GitHub API responses
       '@typescript-eslint/no-explicit-any': 'error',
-      // Enforce consistent type imports
       '@typescript-eslint/consistent-type-imports': 'error',
     },
   },
@@ -33,9 +31,7 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Additional rules for JS
       'no-unused-vars': 'error',
-      // Allow console for Node.js scripts
       'no-console': 'off',
     },
   },

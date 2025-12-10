@@ -110,7 +110,7 @@ export async function fetchPullRequestData(
 
   // Detect fork using robust logic: check fork flag OR compare owner IDs
   // This handles cases where head.repo is null (e.g., fork repo deleted)
-  const isFork = pr.head.repo?.fork === true || (pr.head.repo?.owner?.id ?? 0) !== (pr.base.repo?.owner?.id ?? 0);
+  const isFork = pr.head.repo?.fork === true || pr.head.repo?.owner?.id !== pr.base.repo?.owner?.id;
 
   return {
     state: pr.state,
