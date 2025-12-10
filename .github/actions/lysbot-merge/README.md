@@ -12,59 +12,13 @@ A TypeScript-based GitHub Action that provides automated PR merging via the `/ly
 - 📊 **Detailed feedback** - Posts clear status messages to PR comments
 - ✅ **Unit tested** - Comprehensive test suite with extensive test coverage
 
-## Quick Start
+## Next Steps
 
-Create a caller workflow in your project (e.g., `.github/workflows/on-comment.yml`):
+Depending on what you want to do next:
 
-```yaml
-name: on-comment
-
-on:
-  issue_comment:
-    types: [created]
-
-concurrency:
-  group: on-comment-${{ github.event.issue.number }}
-  cancel-in-progress: false
-
-jobs:
-  lysbot-merge:
-    if: github.event.issue.pull_request
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-    steps:
-      - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          release_branch_prefix: "release/"
-          develop_branch: "develop"
-          sync_branch_prefix: "fix/sync/"
-```
-
-> [!NOTE]
-> - Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
-> - For users who prefer a more stable reference, consider using a fixed version tag like `@v1.0.0` instead of `@master`.
-
-## Inputs
-
-| Input | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `github-token` | string | Yes | - | GitHub token for API authentication |
-| `release_branch_prefix` | string | No | `release/` | Prefix for release branches |
-| `develop_branch` | string | No | `develop` | Name of the develop branch |
-| `sync_branch_prefix` | string | No | `fix/sync/` | Prefix for sync branches (back-merges) |
-| `mergeable_retry_count` | number | No | `5` | Number of retries for mergeable status calculation |
-| `mergeable_retry_interval` | number | No | `10` | Interval in seconds between retries |
-
-## Outputs
-
-| Output | Description |
-|--------|-------------|
-| `result` | Result of the operation: `merged`, `skipped`, `failed`, or `already_merged` |
-| `merge_method` | Merge method used: `squash` or `merge` (only set when merged) |
+- **Use `/lysbot merge` on an existing project** &#x279C; See **[Usage](#usage)**
+- **Integrate this Action into your repository** &#x279C; See **[Quick Start](#quick-start)**
+- **Contribute to or debug the Action** &#x279C; See **[Development](#development)**
 
 ## Usage
 
@@ -158,7 +112,7 @@ Co-authored-by: {AUTHOR_NAME_02} <{AUTHOR_EMAIL_02}>
 **Notes:**
 - Only commit titles (first line of each commit message) are listed, not full commit messages
 - Each commit title is prefixed with `* ` (bullet point)
-- Co-authors are extracted from all commits in the PR and listed in commit order (oldest ancestor → most recent)
+- Co-authors are extracted from all commits in the PR and listed in commit order (oldest ancestor &#x279C; most recent)
 - Duplicate authors are included only once (first occurrence)
 - Co-authored-by entries follow the Git trailer format: `Co-authored-by: Name <email>`
 
@@ -207,6 +161,60 @@ The merge check comment uses three icon states:
 | ✅ | Check passed |
 | ❌ | Check failed and blocks merge |
 | ⚠️ | Check did not pass but is explicitly tolerated (e.g., overridden approval requirement or accepted title warning) |
+
+## Quick Start
+
+Create a caller workflow in your project (e.g., `.github/workflows/on-comment.yml`):
+
+```yaml
+name: on-comment
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: on-comment-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  lysbot-merge:
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          release_branch_prefix: "release/"
+          develop_branch: "develop"
+          sync_branch_prefix: "fix/sync/"
+```
+
+> [!NOTE]
+> - Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
+> - For users who prefer a more stable reference, consider using a fixed version tag like `@v1.0.0` instead of `@master`.
+
+## Inputs
+
+| Input | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `github-token` | string | Yes | - | GitHub token for API authentication |
+| `release_branch_prefix` | string | No | `release/` | Prefix for release branches |
+| `develop_branch` | string | No | `develop` | Name of the develop branch |
+| `sync_branch_prefix` | string | No | `fix/sync/` | Prefix for sync branches (back-merges) |
+| `mergeable_retry_count` | number | No | `5` | Number of retries for mergeable status calculation |
+| `mergeable_retry_interval` | number | No | `10` | Interval in seconds between retries |
+
+## Outputs
+
+| Output | Description |
+|--------|-------------|
+| `result` | Result of the operation: `merged`, `skipped`, `failed`, or `already_merged` |
+| `merge_method` | Merge method used: `squash` or `merge` (only set when merged) |
 
 ## Permissions Required
 
@@ -307,7 +315,7 @@ The refactoring follows these principles to maintain code quality:
    - This maximizes test coverage where it matters most
 
 3. **Dependency Direction**
-   - Dependencies flow inward: infrastructure → orchestration → logic → types
+   - Dependencies flow inward: infrastructure &#x279C; orchestration &#x279C; logic &#x279C; types
    - No circular dependencies
    - Pure modules (validation) don't depend on I/O modules (github-api)
 
