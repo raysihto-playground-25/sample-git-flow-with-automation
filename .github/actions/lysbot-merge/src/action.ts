@@ -55,7 +55,18 @@ export async function executeAction(
   context: EventContext,
   config: ActionConfig,
 ): Promise<ActionResult> {
-  const { owner, repo, prNumber, commentId, commentBody, actor, userType, authorAssociation, eventName, isPullRequest } = context;
+  const {
+    owner,
+    repo,
+    prNumber,
+    commentId,
+    commentBody,
+    actor,
+    userType,
+    authorAssociation,
+    eventName,
+    isPullRequest,
+  } = context;
 
   // -------------------------------------------------------------------------
   // Step 1: Validate event type and context
