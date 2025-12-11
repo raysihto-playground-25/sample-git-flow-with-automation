@@ -7,9 +7,6 @@ node_modules/
 # Test-related files in dist (generated when tsconfig includes test files)
 dist/*.test.d.ts
 dist/*.test.d.ts.map
-dist/src/
-dist/vitest.config.d.ts
-dist/vitest.config.d.ts.map
 
 # Test coverage
 coverage/
