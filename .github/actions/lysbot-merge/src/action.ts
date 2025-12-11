@@ -56,11 +56,21 @@ export async function executeAction(
   context: EventContext,
   config: ActionConfig,
 ): Promise<ActionResult> {
-  const { owner, repo, prNumber, commentId, commentBody, actor, userType, authorAssociation } = context;
+  const { owner, repo, prNumber, commentId, commentBody, actor, userType, authorAssociation, eventName, isPullRequest } = context;
 
   // -------------------------------------------------------------------------
-  // Step 1: Validate command and user
+  // Step 1: Validate event type and context
   // -------------------------------------------------------------------------
+
+  // Validate event type - this action only works with issue_comment events
+  if (eventName !== 'issue_comment') {
+    return { status: 'skipped', message: 'This action only runs on issue_comment events' };
+  }
+
+  // Check if this is a PR comment (not an issue comment)
+  if (!isPullRequest) {
+    return { status: 'skipped', message: 'Comment is not on a PR, skipping' };
+  }
 
   // Skip if bot
   if (isBot(userType)) {
@@ -107,7 +117,7 @@ export async function executeAction(
   }
 
   // -------------------------------------------------------------------------
-  // Step 2: Fetch and validate PR data
+  // Step 2: Validate user permissions
   // -------------------------------------------------------------------------
 
   let prData = await fetchPullRequestData(octokit, owner, repo, prNumber);
@@ -132,7 +142,7 @@ export async function executeAction(
   }
 
   // -------------------------------------------------------------------------
-  // Step 3: Run all validation checks
+  // Step 3: Fetch and validate PR data
   // -------------------------------------------------------------------------
 
   // PR state checks (open, unlocked, ready)
@@ -241,7 +251,7 @@ export async function executeAction(
   const allPassed = checks.filter((c) => !c.optional).every((c) => c.passed);
 
   // -------------------------------------------------------------------------
-  // Step 4: Report results and merge if all passed
+  // Step 5: Report results and merge if all passed
   // -------------------------------------------------------------------------
 
   if (!allPassed) {
@@ -265,7 +275,7 @@ export async function executeAction(
   );
 
   // -------------------------------------------------------------------------
-  // Step 5: TOCTOU check and merge
+  // Step 6: TOCTOU check and merge
   // -------------------------------------------------------------------------
 
   const originalHeadSha = prData.headSha;

@@ -105,11 +105,37 @@ function createEventContext(overrides: Partial<EventContext> = {}): EventContext
     authorAssociation: 'MEMBER',
     serverUrl: 'https://github.com',
     runId: 12345,
+    eventName: 'issue_comment',
+    isPullRequest: true,
     ...overrides,
   };
 }
 
 describe('executeAction', () => {
+  describe('event type validation', () => {
+    it('skips processing for non-issue_comment events', async () => {
+      const octokit = createMockOctokit();
+      const context = createEventContext({ eventName: 'push' });
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('skipped');
+      expect(result.message).toContain('issue_comment');
+    });
+
+    it('skips processing for issue comments (not PR comments)', async () => {
+      const octokit = createMockOctokit();
+      const context = createEventContext({ isPullRequest: false });
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('skipped');
+      expect(result.message).toContain('not on a PR');
+    });
+  });
+
   describe('command and user validation', () => {
     it('skips processing for bot comments', async () => {
       const octokit = createMockOctokit();

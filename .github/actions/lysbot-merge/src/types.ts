@@ -49,6 +49,10 @@ export interface EventContext {
   serverUrl: string;
   /** Workflow run ID */
   runId: number;
+  /** GitHub event name (e.g., 'issue_comment') */
+  eventName: string;
+  /** Whether this is a PR comment (not an issue comment) */
+  isPullRequest: boolean;
 }
 
 /**

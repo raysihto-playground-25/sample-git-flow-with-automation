@@ -75,25 +75,11 @@ async function run(): Promise<void> {
     // Get event context
     const payload = github.context.payload;
 
-    // Validate event type - this action only works with issue_comment events on PRs
-    if (github.context.eventName !== 'issue_comment') {
-      core.info('This action only runs on issue_comment events');
-      core.setOutput('result', 'skipped');
-      return;
-    }
-
-    // Check if this is a PR comment (not an issue comment)
-    if (!payload.issue?.pull_request) {
-      core.info('Comment is not on a PR, skipping');
-      core.setOutput('result', 'skipped');
-      return;
-    }
-
     // Build event context
     const context: EventContext = {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
-      prNumber: payload.issue.number,
+      prNumber: payload.issue?.number ?? 0,
       commentId: payload.comment?.id ?? 0,
       commentBody: payload.comment?.body ?? '',
       actor: github.context.actor,
@@ -101,6 +87,8 @@ async function run(): Promise<void> {
       authorAssociation: payload.comment?.author_association ?? 'NONE',
       serverUrl: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
       runId: github.context.runId,
+      eventName: github.context.eventName,
+      isPullRequest: !!payload.issue?.pull_request,
     };
 
     // Create Octokit instance
