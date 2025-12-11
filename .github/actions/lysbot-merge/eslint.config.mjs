@@ -1,6 +1,9 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
+// Configuration files that need special handling with allowDefaultProject
+const configFiles = ['scripts/*.mjs', '.ncurc.cjs', 'eslint.config.mjs', 'vitest.config.ts'];
+
 export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -19,13 +22,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/*.mjs', '.ncurc.cjs', 'eslint.config.mjs', 'vitest.config.ts'],
+    files: configFiles,
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['scripts/*.mjs', '.ncurc.cjs', 'eslint.config.mjs', 'vitest.config.ts'],
+          allowDefaultProject: configFiles,
         },
-        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         process: 'readonly',
