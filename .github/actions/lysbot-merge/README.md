@@ -155,7 +155,7 @@ Before merging, the action validates:
 2. ✅ All review conversations are resolved
 3. ✅ At least one valid approval from another user
 4. ✅ No merge conflicts
-5. PR title follows Conventional Commits
+5. ✅ PR title follows Conventional Commits
 
 ### Check Status Icons
 
@@ -191,7 +191,7 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@master
+      - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           release_branch_prefix: "release/"
@@ -202,7 +202,7 @@ jobs:
 > [!NOTE]
 >
 > - Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
-> - For users who prefer a more stable reference, consider using a fixed version tag like `@v1.0.0` instead of `@master`.
+> - This Action has no stable release yet. Please use `@develop` until the first versioned tag becomes available.
 
 ## Inputs
 
