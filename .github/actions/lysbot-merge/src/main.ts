@@ -79,6 +79,8 @@ async function run(): Promise<void> {
     const context: EventContext = {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
+      // prNumber will be 0 if this is not a PR comment, but that's acceptable
+      // because executeAction() will skip early when isPullRequest is false
       prNumber: payload.issue?.number ?? 0,
       commentId: payload.comment?.id ?? 0,
       commentBody: payload.comment?.body ?? '',

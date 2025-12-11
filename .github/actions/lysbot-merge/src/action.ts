@@ -76,7 +76,9 @@ export async function executeAction(
     return { status: 'skipped', message: 'Comment is from a bot' };
   }
 
-  // Parse merge options from the command (also validates command format)
+  // Parse and validate the merge command
+  // Note: This replaces the previous isCommand() check to avoid parsing twice
+  // parseCommand() returns null if the command format is invalid
   const mergeOptions = parseCommand(commentBody);
   if (!mergeOptions) {
     return { status: 'skipped', message: 'Command not matched' };
