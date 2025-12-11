@@ -10,7 +10,9 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: configFiles,
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -31,11 +33,6 @@ export default tseslint.config(
   {
     files: configFiles,
     languageOptions: {
-      parserOptions: {
-        projectService: {
-          allowDefaultProject: configFiles,
-        },
-      },
       globals: {
         process: 'readonly',
         console: 'readonly',
