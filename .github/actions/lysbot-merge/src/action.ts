@@ -259,7 +259,7 @@ export async function executeAction(
   const allPassed = checks.filter((c) => !c.optional).every((c) => c.passed);
 
   // -------------------------------------------------------------------------
-  // Step 5: Report results and merge if all passed
+  // Step 4: Report results and merge if all passed
   // -------------------------------------------------------------------------
 
   if (!allPassed) {
@@ -283,7 +283,7 @@ export async function executeAction(
   );
 
   // -------------------------------------------------------------------------
-  // Step 6: TOCTOU check and merge
+  // Step 5: TOCTOU check and merge
   // -------------------------------------------------------------------------
 
   const originalHeadSha = prData.headSha;
