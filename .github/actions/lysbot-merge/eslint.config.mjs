@@ -6,7 +6,7 @@ const configFiles = ['scripts/*.mjs', '.ncurc.cjs', 'eslint.config.mjs', 'vitest
 
 export default tseslint.config(
   eslint.configs.recommended,
-  ...tseslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
   {
     languageOptions: {
       parserOptions: {
@@ -19,6 +19,13 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
+    },
+  },
+  {
+    files: ['**/*.test.ts'],
+    rules: {
+      // Allow async functions without await in test files for mock implementations
+      '@typescript-eslint/require-await': 'off',
     },
   },
   {
