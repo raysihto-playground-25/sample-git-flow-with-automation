@@ -26,8 +26,8 @@ Comment `/lysbot merge` on any PR to trigger the merge action.
 
 ### Command Options
 
-| Option | Description |
-|--------|-------------|
+| Option                            | Description                                                                                                                                                                                                                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--override-approval-requirement` | **Exceptional/privileged option**: Skip the review approval requirement for this merge only. The command executor acts as a reviewer proxy, taking responsibility for approving the changes. All other checks (status checks, merge conflicts, unresolved threads, etc.) still apply. |
 
 **Example with flag:**
@@ -49,13 +49,13 @@ Comment `/lysbot merge` on any PR to trigger the merge action.
 
 The action automatically selects the appropriate merge method:
 
-| Condition | Merge Method | Reason |
-|-----------|--------------|--------|
-| Head branch is `release/*` | Merge commit | Preserve release history |
-| Head branch is `fix/sync/*` | Merge commit | Preserve back-merge history |
-| Base branch is `release/*` | Squash | Clean release branch history |
-| Base branch is `develop` | Squash | Clean develop branch history |
-| Otherwise | Merge commit | Default behavior |
+| Condition                   | Merge Method | Reason                       |
+| --------------------------- | ------------ | ---------------------------- |
+| Head branch is `release/*`  | Merge commit | Preserve release history     |
+| Head branch is `fix/sync/*` | Merge commit | Preserve back-merge history  |
+| Base branch is `release/*`  | Squash       | Clean release branch history |
+| Base branch is `develop`    | Squash       | Clean develop branch history |
+| Otherwise                   | Merge commit | Default behavior             |
 
 ## Commit Message Behavior
 
@@ -66,11 +66,13 @@ lysbot-merge **explicitly specifies** both commit title and body to ensure consi
 For merge commits (used for `release/*` and `fix/sync/*` branches):
 
 **Title (first line):**
+
 ```
 Merge pull request #{PR_NUMBER} from {PR_MERGE_HEAD}
 ```
 
 **Body (after blank line):**
+
 ```
 {PR_TITLE}
 
@@ -78,6 +80,7 @@ Merge pull request #{PR_NUMBER} from {PR_MERGE_HEAD}
 ```
 
 **Example:**
+
 ```
 Merge pull request #123 from release/v1.0.0
 
@@ -91,11 +94,13 @@ Merged-by: lysbot-merge (on behalf of @username)
 For squash merges (used for PRs targeting `develop` or `release/*` branches):
 
 **Title (first line):**
+
 ```
 {PR_TITLE} (#{PR_NUMBER})
 ```
 
 **Body (after blank line):**
+
 ```
 * {COMMIT_TITLE_01}
 * {COMMIT_TITLE_02}
@@ -110,6 +115,7 @@ Co-authored-by: {AUTHOR_NAME_02} <{AUTHOR_EMAIL_02}>
 ```
 
 **Notes:**
+
 - Only commit titles (first line of each commit message) are listed, not full commit messages
 - Each commit title is prefixed with `* ` (bullet point)
 - Co-authors are extracted from all commits in the PR and listed in commit order (oldest ancestor &#x279C; most recent)
@@ -117,6 +123,7 @@ Co-authored-by: {AUTHOR_NAME_02} <{AUTHOR_EMAIL_02}>
 - Co-authored-by entries follow the Git trailer format: `Co-authored-by: Name <email>`
 
 **Example:**
+
 ```
 feat: add new authentication system (#456)
 
@@ -148,17 +155,17 @@ Before merging, the action validates:
 2. ✅ All review conversations are resolved
 3. ✅ At least one valid approval from another user
 4. ✅ No merge conflicts
-5.    PR title follows Conventional Commits
+5. PR title follows Conventional Commits
 
 ### Check Status Icons
 
 The merge check comment uses three icon states:
 
-| Icon | Meaning |
-|------|---------|
-| ✅ | Check passed |
-| ❌ | Check failed and blocks merge |
-| ⚠️ | Check did not pass but is explicitly tolerated (e.g., overridden approval requirement or accepted title warning) |
+| Icon | Meaning                                                                                                          |
+| ---- | ---------------------------------------------------------------------------------------------------------------- |
+| ✅   | Check passed                                                                                                     |
+| ❌   | Check failed and blocks merge                                                                                    |
+| ⚠️   | Check did not pass but is explicitly tolerated (e.g., overridden approval requirement or accepted title warning) |
 
 ## Quick Start
 
@@ -193,26 +200,27 @@ jobs:
 ```
 
 > [!NOTE]
+>
 > - Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
 > - For users who prefer a more stable reference, consider using a fixed version tag like `@v1.0.0` instead of `@master`.
 
 ## Inputs
 
-| Input | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `github-token` | string | Yes | - | GitHub token for API authentication |
-| `release_branch_prefix` | string | No | `release/` | Prefix for release branches |
-| `develop_branch` | string | No | `develop` | Name of the develop branch |
-| `sync_branch_prefix` | string | No | `fix/sync/` | Prefix for sync branches (back-merges) |
-| `mergeable_retry_count` | number | No | `5` | Number of retries for mergeable status calculation |
-| `mergeable_retry_interval` | number | No | `10` | Interval in seconds between retries |
+| Input                      | Type   | Required | Default     | Description                                        |
+| -------------------------- | ------ | -------- | ----------- | -------------------------------------------------- |
+| `github-token`             | string | Yes      | -           | GitHub token for API authentication                |
+| `release_branch_prefix`    | string | No       | `release/`  | Prefix for release branches                        |
+| `develop_branch`           | string | No       | `develop`   | Name of the develop branch                         |
+| `sync_branch_prefix`       | string | No       | `fix/sync/` | Prefix for sync branches (back-merges)             |
+| `mergeable_retry_count`    | number | No       | `5`         | Number of retries for mergeable status calculation |
+| `mergeable_retry_interval` | number | No       | `10`        | Interval in seconds between retries                |
 
 ## Outputs
 
-| Output | Description |
-|--------|-------------|
-| `result` | Result of the operation: `merged`, `skipped`, `failed`, or `already_merged` |
-| `merge_method` | Merge method used: `squash` or `merge` (only set when merged) |
+| Output         | Description                                                                 |
+| -------------- | --------------------------------------------------------------------------- |
+| `result`       | Result of the operation: `merged`, `skipped`, `failed`, or `already_merged` |
+| `merge_method` | Merge method used: `squash` or `merge` (only set when merged)               |
 
 ## Permissions Required
 
@@ -360,11 +368,11 @@ When adding new features or making changes, follow these guidelines:
 
 This action uses **Vitest** for unit testing. The test suite focuses on testing pure logic functions and mocking GitHub API interactions for isolation.
 
-| Test Type | Status | Description |
-|-----------|--------|-------------|
-| **Unit Tests** | ✅ Implemented | Covers command parsing, permissions, merge logic, and API interactions |
-| **Integration Tests** | ❌ Not implemented | Would test GitHub API interactions with real tokens |
-| **E2E Tests** | ❌ Not implemented | Would test full workflow execution on real PRs |
+| Test Type             | Status             | Description                                                            |
+| --------------------- | ------------------ | ---------------------------------------------------------------------- |
+| **Unit Tests**        | ✅ Implemented     | Covers command parsing, permissions, merge logic, and API interactions |
+| **Integration Tests** | ❌ Not implemented | Would test GitHub API interactions with real tokens                    |
+| **E2E Tests**         | ❌ Not implemented | Would test full workflow execution on real PRs                         |
 
 ### Running Tests
 

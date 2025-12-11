@@ -11,23 +11,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.mjs'],
+    files: ['scripts/**/*.mjs', '.ncurc.cjs'],
     languageOptions: {
-      sourceType: 'module', // ES Modules support
-      parserOptions: {
-        project: null, // Disable type checking
-      },
       globals: {
         process: 'readonly',
         console: 'readonly',
-        __dirname: 'readonly',
         module: 'readonly',
-        require: 'readonly',
       },
-    },
-    rules: {
-      'no-unused-vars': 'error',
-      'no-console': 'off',
     },
   },
   {
