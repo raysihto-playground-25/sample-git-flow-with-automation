@@ -12,7 +12,6 @@ import * as core from '@actions/core';
 import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types';
 import {
   isBot,
-  isCommand,
   parseCommand,
   hasValidAuthorAssociation,
   hasValidPermission,
