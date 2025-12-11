@@ -77,18 +77,14 @@ export async function executeAction(
     return { status: 'skipped', message: 'Comment is from a bot' };
   }
 
-  // Check if this is the merge command
-  if (!isCommand(commentBody)) {
-    return { status: 'skipped', message: 'Command not matched' };
-  }
-
-  // Parse merge options from the command
+  // Parse merge options from the command (also validates command format)
   const mergeOptions = parseCommand(commentBody);
   if (!mergeOptions) {
     return { status: 'skipped', message: 'Command not matched' };
   }
 
   // Add eyes reaction for immediate feedback
+  // This happens as soon as we know it's a valid merge command
   await addReaction(octokit, owner, repo, commentId, 'eyes');
 
   // Check author association
