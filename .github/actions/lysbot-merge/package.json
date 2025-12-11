@@ -8,9 +8,9 @@
     "postbuild": "npm run normalize:sourcemaps",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src scripts",
-    "format": "prettier --write src scripts",
-    "format:check": "prettier --check src scripts",
+    "lint": "eslint src scripts *.*[tj]s",
+    "format": "prettier --write src scripts *.*[tj]s",
+    "format:check": "prettier --check src scripts *.*[tj]s",
     "normalize:sourcemaps": "node scripts/normalize-sourcemaps.mjs"
   },
   "engines": {
