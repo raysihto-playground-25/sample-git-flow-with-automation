@@ -1,6 +1,6 @@
-# lysbot-comm Action
+# lysbot-merge Action
 
-A TypeScript-based GitHub Action that provides automation commands via PR comments. Currently supports automated PR merging through the `/lysbot merge` command.
+A TypeScript-based GitHub Action that provides automated PR merging via the `/lysbot merge` command in PR comments.
 
 ## Features
 
@@ -16,13 +16,13 @@ A TypeScript-based GitHub Action that provides automation commands via PR commen
 
 Depending on what you want to do next:
 
-- **Use automation commands on an existing project** &#x279C; See **[Usage](#usage)**
+- **Use `/lysbot merge` on an existing project** &#x279C; See **[Usage](#usage)**
 - **Integrate this Action into your repository** &#x279C; See **[Quick Start](#quick-start)**
 - **Contribute to or debug the Action** &#x279C; See **[Development](#development)**
 
 ## Usage
 
-Comment `/lysbot merge` on any PR to trigger automated merging.
+Comment `/lysbot merge` on any PR to trigger the merge action.
 
 ### Command Options
 
@@ -47,7 +47,7 @@ Comment `/lysbot merge` on any PR to trigger automated merging.
 
 ## Merge Method Selection
 
-The action automatically selects the appropriate merge method based on branch patterns:
+The action automatically selects the appropriate merge method:
 
 | Condition | Merge Method | Reason |
 |-----------|--------------|--------|
@@ -59,7 +59,7 @@ The action automatically selects the appropriate merge method based on branch pa
 
 ## Commit Message Behavior
 
-lysbot-comm **explicitly specifies** both commit title and body to ensure consistent behavior regardless of repository settings for `merge_commit_title` and `merge_commit_message`.
+lysbot-merge **explicitly specifies** both commit title and body to ensure consistent behavior regardless of repository settings for `merge_commit_title` and `merge_commit_message`.
 
 ### Merge Commits
 
@@ -83,7 +83,7 @@ Merge pull request #123 from release/v1.0.0
 
 chore(release): Release v1.0.0
 
-Merged-by: lysbot-comm (on behalf of @username)
+Merged-by: lysbot-merge (on behalf of @username)
 ```
 
 ### Squash Merges
@@ -127,7 +127,7 @@ feat: add new authentication system (#456)
 Co-authored-by: Alice Developer <alice@example.com>
 Co-authored-by: Bob Contributor <bob@example.com>
 
-Merged-by: lysbot-comm (on behalf of @username)
+Merged-by: lysbot-merge (on behalf of @username)
 ```
 
 ### Special Commit Message Markers
@@ -176,7 +176,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  lysbot-comm:
+  lysbot-merge:
     if: github.event.issue.pull_request
     runs-on: ubuntu-latest
     permissions:
@@ -184,7 +184,7 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: {ORG}/{REPO}/.github/actions/lysbot-comm@master
+      - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           release_branch_prefix: "release/"
@@ -228,14 +228,14 @@ The workflow must have the following permissions:
 > **Fork PRs are NOT supported**: `GITHUB_TOKEN` has limited write permissions for fork-originated PRs
 
 > [!NOTE]
-> **Authorization required**: Only organization owners, members, or collaborators with write access can use automation commands
+> **Authorization required**: Only organization owners, members, or collaborators with write access can use the command
 
 ## Development
 
-To work on the lysbot-comm action:
+To work on the lysbot-merge action:
 
 ```bash
-cd .github/actions/lysbot-comm
+cd .github/actions/lysbot-merge
 npm install
 npm test        # Run unit tests
 npm run format  # Run formatter (format:check for checking only)

@@ -107,7 +107,7 @@ export declare function getMergeableStateDescription(state: string): string;
 export declare function buildCheckResultsMarkdown(checks: CheckResult[]): string;
 /**
  * Waits for a specified number of milliseconds before retrying.
- * This is a custom utility function specific to lysbot-comm action,
+ * This is a custom utility function specific to lysbot-merge action,
  * used for retry intervals when waiting for mergeable status.
  *
  * @param ms - Milliseconds to wait

@@ -1,5 +1,5 @@
 /**
- * action.ts - Testable action logic for the lysbot-comm GitHub Action
+ * action.ts - Testable action logic for the lysbot-merge GitHub Action
  *
  * This file contains the main business logic that can be unit tested:
  * 1. executeAction() - The main orchestration function for merge operations
@@ -36,7 +36,7 @@ import {
 } from './github-api';
 
 /**
- * Main function that orchestrates the lysbot-comm operation.
+ * Main function that orchestrates the lysbot-merge operation.
  *
  * This function:
  * 1. Validates the command and permissions
@@ -320,12 +320,12 @@ export async function executeAction(
   }
 
   // Perform merge
-  // Build explicit commit title and message according to lysbot-comm specification
+  // Build explicit commit title and message according to lysbot-merge specification
   let commitTitle: string;
   let commitBody: string;
 
   // Build additional metadata that goes in the commit body
-  let additionalMessages = `Merged-by: lysbot-comm (on behalf of @${actor})`;
+  let additionalMessages = `Merged-by: lysbot-merge (on behalf of @${actor})`;
   if (approvalOverridden) {
     additionalMessages += `\n\n⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement`;
   }
@@ -416,7 +416,7 @@ export async function executeAction(
     owner,
     repo,
     prNumber,
-    `## Merged by lysbot-comm\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** ${originalHeadSha}${mergeCommitInfo}`,
+    `## Merged by lysbot-merge\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** ${originalHeadSha}${mergeCommitInfo}`,
   );
 
   return {
@@ -427,7 +427,7 @@ export async function executeAction(
 }
 
 /**
- * Builds a summary markdown table for the lysbot-comm operation.
+ * Builds a summary markdown table for the lysbot-merge operation.
  *
  * This is a pure function that can be tested without GitHub Actions environment.
  *
@@ -438,7 +438,7 @@ export async function executeAction(
  * @returns Markdown string for the summary
  */
 export function buildSummaryMarkdown(result: string, prNumber: number, actor: string, mergeMethod?: string): string {
-  let summary = `## lysbot-comm Summary\n\n`;
+  let summary = `## lysbot-merge Summary\n\n`;
   summary += `| Item | Value |\n`;
   summary += `|------|-------|\n`;
   summary += `| **Result** | ${result} |\n`;

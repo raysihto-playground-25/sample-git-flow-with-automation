@@ -1,5 +1,5 @@
 /**
- * action.ts - Testable action logic for the lysbot-comm GitHub Action
+ * action.ts - Testable action logic for the lysbot-merge GitHub Action
  *
  * This file contains the main business logic that can be unit tested:
  * 1. executeAction() - The main orchestration function for merge operations
@@ -9,7 +9,7 @@
  */
 import type { ActionConfig, EventContext, ActionResult, Octokit } from './types';
 /**
- * Main function that orchestrates the lysbot-comm operation.
+ * Main function that orchestrates the lysbot-merge operation.
  *
  * This function:
  * 1. Validates the command and permissions
@@ -26,7 +26,7 @@ import type { ActionConfig, EventContext, ActionResult, Octokit } from './types'
  */
 export declare function executeAction(octokit: Octokit, context: EventContext, config: ActionConfig): Promise<ActionResult>;
 /**
- * Builds a summary markdown table for the lysbot-comm operation.
+ * Builds a summary markdown table for the lysbot-merge operation.
  *
  * This is a pure function that can be tested without GitHub Actions environment.
  *

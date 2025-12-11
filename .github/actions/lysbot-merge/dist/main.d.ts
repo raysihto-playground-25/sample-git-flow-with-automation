@@ -1,5 +1,5 @@
 /**
- * main.ts - Entry point for the lysbot-comm GitHub Action
+ * main.ts - Entry point for the lysbot-merge GitHub Action
  *
  * This file is the main entry point that runs in the GitHub Actions environment.
  * It is responsible for:

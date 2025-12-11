@@ -1,13 +1,13 @@
 /**
- * types.ts - Type definitions and interfaces for lysbot-comm
+ * types.ts - Type definitions and interfaces for lysbot-merge
  *
  * This module contains all TypeScript type definitions and interfaces
- * used throughout the lysbot-comm action.
+ * used throughout the lysbot-merge action.
  */
 import type { GitHub } from '@actions/github/lib/utils';
 import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 /**
- * Configuration options for the lysbot-comm action.
+ * Configuration options for the lysbot-merge action.
  * These are passed from the workflow inputs.
  */
 export interface ActionConfig {
@@ -82,7 +82,7 @@ export interface MergeMethodResult {
     reason: string;
 }
 /**
- * Overall result of the lysbot-comm operation.
+ * Overall result of the lysbot-merge operation.
  */
 export interface ActionResult {
     /** Final status of the operation */

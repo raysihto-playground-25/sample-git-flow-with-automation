@@ -1,5 +1,5 @@
 {
-  "name": "lysbot-comm",
+  "name": "lysbot-merge-action",
   "version": "1.0.0",
   "description": "GitHub Action for automated PR merging with validation checks",
   "main": "dist/index.js",

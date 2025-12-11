@@ -936,7 +936,7 @@ describe('executeAction', () => {
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
       // For squash merge (base is develop)
       expect(commitTitle).toContain('feat: test pull request (#1)');
-      expect(commitMessage).toContain('Merged-by: lysbot-comm');
+      expect(commitMessage).toContain('Merged-by: lysbot-merge');
       expect(commitMessage).toContain('EXCEPTIONAL MERGE');
       expect(commitMessage).toContain('--override-approval-requirement');
     });
@@ -973,7 +973,7 @@ describe('executeAction', () => {
       const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
       expect(mergeCalls.length).toBe(1);
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
-      expect(commitMessage).toContain('Merged-by: lysbot-comm');
+      expect(commitMessage).toContain('Merged-by: lysbot-merge');
       expect(commitMessage).not.toContain('EXCEPTIONAL MERGE');
     });
 
@@ -1033,7 +1033,7 @@ describe('executeAction', () => {
 
       // Body: {PR_TITLE}\n\n{ADDITIONAL_MESSAGES}
       expect(commitMessage).toContain('Release v1.0.0');
-      expect(commitMessage).toContain('Merged-by: lysbot-comm');
+      expect(commitMessage).toContain('Merged-by: lysbot-merge');
     });
 
     it('creates proper commit message for squash commits with commit list', async () => {
@@ -1107,7 +1107,7 @@ describe('executeAction', () => {
       expect(commitMessage).toContain('Co-authored-by: Bob Developer <bob@example.com>');
       expect(commitMessage).toContain('Co-authored-by: Alice Contributor <alice@example.com>');
 
-      expect(commitMessage).toContain('Merged-by: lysbot-comm');
+      expect(commitMessage).toContain('Merged-by: lysbot-merge');
     });
 
     it('creates proper commit message for squash commits with no commits', async () => {
@@ -1140,7 +1140,7 @@ describe('executeAction', () => {
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
       // Should only contain additional messages, no commit list
-      expect(commitMessage).toBe('Merged-by: lysbot-comm (on behalf of @testactor)');
+      expect(commitMessage).toBe('Merged-by: lysbot-merge (on behalf of @testactor)');
       expect(commitMessage).not.toContain('*');
     });
 
@@ -1264,7 +1264,7 @@ describe('executeAction', () => {
       const bobIndex = coAuthorSection.indexOf('Co-authored-by: Bob Developer');
       const aliceIndex = coAuthorSection.indexOf('Co-authored-by: Alice Contributor');
       expect(bobIndex).toBeLessThan(aliceIndex); // Bob should appear before Alice (commit order)
-      expect(parts[parts.length - 1]).toContain('Merged-by: lysbot-comm');
+      expect(parts[parts.length - 1]).toContain('Merged-by: lysbot-merge');
     });
   });
 });
@@ -1273,7 +1273,7 @@ describe('buildSummaryMarkdown', () => {
   it('builds summary with all parameters provided', () => {
     const result = buildSummaryMarkdown('✅ Merged successfully', 123, 'testuser', 'squash');
 
-    expect(result).toContain('## lysbot-comm Summary');
+    expect(result).toContain('## lysbot-merge Summary');
     expect(result).toContain('| **Result** | ✅ Merged successfully |');
     expect(result).toContain('| **PR** | #123 |');
     expect(result).toContain('| **Triggered by** | @testuser |');
@@ -1283,7 +1283,7 @@ describe('buildSummaryMarkdown', () => {
   it('builds summary without optional parameters', () => {
     const result = buildSummaryMarkdown('⏭️ Skipped', 456, 'anotheruser');
 
-    expect(result).toContain('## lysbot-comm Summary');
+    expect(result).toContain('## lysbot-merge Summary');
     expect(result).toContain('| **Result** | ⏭️ Skipped |');
     expect(result).toContain('| **PR** | #456 |');
     expect(result).toContain('| **Triggered by** | @anotheruser |');
