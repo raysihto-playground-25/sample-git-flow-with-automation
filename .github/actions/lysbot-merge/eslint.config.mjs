@@ -19,7 +19,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.mjs', '.ncurc.cjs', 'eslint.config.mjs', 'vitest.config.ts'],
+    files: ['scripts/*.mjs', '.ncurc.cjs', 'eslint.config.mjs', 'vitest.config.ts'],
     languageOptions: {
       parserOptions: {
         projectService: {
