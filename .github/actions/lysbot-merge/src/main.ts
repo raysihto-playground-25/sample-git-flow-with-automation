@@ -73,6 +73,11 @@ async function run(): Promise<void> {
     };
 
     // Get event context
+    //
+    // Note:
+    //   - github.context.payload is intentionally typed as unknown, so some property accesses
+    //     cannot be made fully type-safe. In those cases, we selectively disable ESLint on specific
+    //     lines rather than adding noisy type assertions.
     const payload = github.context.payload;
 
     // Build event context
@@ -83,9 +88,12 @@ async function run(): Promise<void> {
       // because executeAction() will skip early when isPullRequest is false
       prNumber: payload.issue?.number ?? 0,
       commentId: payload.comment?.id ?? 0,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       commentBody: payload.comment?.body ?? '',
       actor: github.context.actor,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       userType: payload.comment?.user?.type ?? 'User',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       authorAssociation: payload.comment?.author_association ?? 'NONE',
       serverUrl: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
       runId: github.context.runId,
@@ -114,7 +122,7 @@ async function run(): Promise<void> {
     }[result.status];
 
     const summaryMarkdown = buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);
-    core.summary.addRaw(summaryMarkdown).write();
+    await core.summary.addRaw(summaryMarkdown).write();
 
     // Log result
     core.info(`lysbot-merge result: ${result.status} - ${result.message}`);
@@ -131,4 +139,4 @@ async function run(): Promise<void> {
 }
 
 // Run the action
-run();
+void run();
