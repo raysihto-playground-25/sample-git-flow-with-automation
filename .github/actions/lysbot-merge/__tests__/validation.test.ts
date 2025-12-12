@@ -5,8 +5,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { ActionConfig, PullRequestData, CheckResult } from '../src/types.js';
+
 import { TWEMOJI } from '../src/constants.js';
+import type { ActionConfig, PullRequestData, CheckResult } from '../src/types.js';
 import {
   isCommand,
   parseCommand,
