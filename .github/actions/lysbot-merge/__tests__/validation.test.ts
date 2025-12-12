@@ -5,8 +5,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { ActionConfig, PullRequestData, CheckResult } from '../src/types.js';
+
 import { TWEMOJI } from '../src/constants.js';
+import type { ActionConfig, PullRequestData, CheckResult } from '../src/types.js';
 import {
   isCommand,
   parseCommand,
@@ -364,7 +365,11 @@ describe('validatePRState', () => {
     });
 
     it('fails check with all three reasons when all conditions fail', () => {
-      const prData = createPRData({ state: 'closed', locked: true, draft: true });
+      const prData = createPRData({
+        state: 'closed',
+        locked: true,
+        draft: true,
+      });
       const checks = validatePRState(prData);
 
       expect(checks).toHaveLength(1);
@@ -451,7 +456,14 @@ describe('buildCheckResultsMarkdown', () => {
   });
 
   it('should include warning icon for failed optional checks', () => {
-    const checks: CheckResult[] = [{ name: 'Optional check', passed: false, details: 'not required', optional: true }];
+    const checks: CheckResult[] = [
+      {
+        name: 'Optional check',
+        passed: false,
+        details: 'not required',
+        optional: true,
+      },
+    ];
     const markdown = buildCheckResultsMarkdown(checks);
 
     expect(markdown).toContain(TWEMOJI.WARNING);
@@ -472,7 +484,12 @@ describe('buildCheckResultsMarkdown', () => {
       { name: 'Required passing', passed: true },
       { name: 'Required failing', passed: false, details: 'error' },
       { name: 'Optional passing', passed: true, optional: true },
-      { name: 'Optional failing', passed: false, details: 'warning', optional: true },
+      {
+        name: 'Optional failing',
+        passed: false,
+        details: 'warning',
+        optional: true,
+      },
     ];
     const markdown = buildCheckResultsMarkdown(checks);
 

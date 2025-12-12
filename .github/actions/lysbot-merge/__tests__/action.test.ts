@@ -7,9 +7,10 @@
  */
 
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
-import type { ActionConfig, EventContext, Octokit } from '../src/types.js';
-import { TWEMOJI } from '../src/constants.js';
+
 import { executeAction, buildSummaryMarkdown } from '../src/action.js';
+import { TWEMOJI } from '../src/constants.js';
+import type { ActionConfig, EventContext, Octokit } from '../src/types.js';
 
 // =============================================================================
 // Test Utilities
@@ -72,7 +73,11 @@ function createMockOctokit(): Octokit {
         listCommits: vi.fn().mockResolvedValue({ data: [] }),
         dismissReview: vi.fn().mockResolvedValue({}),
         merge: vi.fn().mockResolvedValue({
-          data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' },
+          data: {
+            sha: 'merge123456789',
+            merged: true,
+            message: 'Pull request successfully merged',
+          },
         }),
       },
     },
@@ -337,7 +342,9 @@ describe('executeAction', () => {
       // No approved reviews
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
 
-      const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
+      const context = createEventContext({
+        commentBody: '/lysbot merge --override-approval-requirement',
+      });
       const config = createConfig();
 
       const result = await executeAction(octokit, context, config);
@@ -378,7 +385,9 @@ describe('executeAction', () => {
         },
       });
 
-      const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
+      const context = createEventContext({
+        commentBody: '/lysbot merge --override-approval-requirement',
+      });
       const config = createConfig();
 
       const result = await executeAction(octokit, context, config);
@@ -948,7 +957,9 @@ describe('executeAction', () => {
         }
       });
 
-      const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
+      const context = createEventContext({
+        commentBody: '/lysbot merge --override-approval-requirement',
+      });
       const config = createConfig();
 
       const result = await executeAction(octokit, context, config);
@@ -988,7 +999,9 @@ describe('executeAction', () => {
         }
       });
 
-      const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
+      const context = createEventContext({
+        commentBody: '/lysbot merge --override-approval-requirement',
+      });
       const config = createConfig();
 
       const result = await executeAction(octokit, context, config);

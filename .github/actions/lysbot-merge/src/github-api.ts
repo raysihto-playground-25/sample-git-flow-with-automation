@@ -265,7 +265,14 @@ export async function fetchPullRequestCommits(
   owner: string,
   repo: string,
   prNumber: number,
-): Promise<Array<{ commit: { message: string; author?: { name?: string; email?: string } | null } }>> {
+): Promise<
+  Array<{
+    commit: {
+      message: string;
+      author?: { name?: string; email?: string } | null;
+    };
+  }>
+> {
   const commits = await octokit.paginate(octokit.rest.pulls.listCommits, {
     owner,
     repo,

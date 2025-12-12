@@ -1,7 +1,12 @@
-import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+
+import eslint from '@eslint/js';
+// @ts-expect-error - eslint-plugin-import doesn't have proper ESM types
+import importPlugin from 'eslint-plugin-import';
+// @ts-expect-error - eslint-plugin-promise doesn't have proper ESM types
+import promisePlugin from 'eslint-plugin-promise';
+import tseslint from 'typescript-eslint';
 
 // Configuration files that need special handling with allowDefaultProject
 const configFiles = [
@@ -9,6 +14,7 @@ const configFiles = [
   '.ncurc.cjs',
   '.prettierrc.ts',
   'eslint.config.ts',
+  'prettier.config.js',
   'vitest.config.ts',
 ];
 
@@ -26,9 +32,31 @@ export default tseslint.config(
     },
   },
   {
+    plugins: {
+      import: importPlugin,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      promise: promisePlugin,
+    },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+      // Disable import/no-unresolved as it doesn't work well with TypeScript .js extensions
+      // TypeScript uses .js in imports even though files are .ts
+      'import/no-unresolved': 'off',
+      'import/order': ['error', { alphabetize: { order: 'asc' }, 'newlines-between': 'always' }],
+      'no-console': 'error',
+      'no-process-exit': 'error',
+      'no-sync': 'error',
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'promise/always-return': 'warn',
+      'promise/catch-or-return': 'error',
+      'promise/no-nesting': 'warn',
+      'promise/no-return-wrap': 'error',
+      curly: 'error',
+      eqeqeq: 'error',
     },
   },
   {

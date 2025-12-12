@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+
 import { CONVENTIONAL_COMMIT_TYPES, CONVENTIONAL_COMMIT_REGEX, COMMAND_REGEX } from '../src/constants.js';
 
 // =============================================================================
@@ -86,7 +87,10 @@ describe('COMMAND_REGEX', () => {
       { input: '  /lysbot merge', expected: true },
       { input: '/lysbot merge  ', expected: true },
       { input: '/lysbot  merge', expected: true },
-      { input: '/lysbot merge --override-approval-requirement', expected: true },
+      {
+        input: '/lysbot merge --override-approval-requirement',
+        expected: true,
+      },
       { input: '/lysbot merge now', expected: true }, // Regex matches, but isCommand rejects
       { input: 'run /lysbot merge', expected: false }, // Text before command
     ];

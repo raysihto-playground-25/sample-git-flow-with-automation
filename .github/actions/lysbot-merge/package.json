@@ -43,6 +43,8 @@
     "@vercel/ncc": "^0.38.4",
     "@vitest/coverage-v8": "^4.0.15",
     "eslint": "^9.39.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-promise": "^7.2.1",
     "jiti": "^2.6.1",
     "prettier": "^3.7.4",
     "tsx": "^4.21.0",

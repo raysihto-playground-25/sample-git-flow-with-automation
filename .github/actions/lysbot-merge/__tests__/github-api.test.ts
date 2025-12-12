@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
-import type { Octokit } from '../src/types.js';
+
 import {
   addReaction,
   postComment,
@@ -16,6 +16,7 @@ import {
   mergePullRequest,
   fetchPullRequestCommits,
 } from '../src/github-api.js';
+import type { Octokit } from '../src/types.js';
 
 // =============================================================================
 // Test Utilities
@@ -63,7 +64,11 @@ function createMockOctokit(): Octokit {
         listReviews: vi.fn().mockResolvedValue({ data: [] }),
         dismissReview: vi.fn().mockResolvedValue({}),
         merge: vi.fn().mockResolvedValue({
-          data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' },
+          data: {
+            sha: 'merge123456789',
+            merged: true,
+            message: 'Pull request successfully merged',
+          },
         }),
       },
     },
@@ -248,9 +253,17 @@ describe('fetchPullRequestCommits', () => {
   it('should fetch and return commits from a PR with author information', async () => {
     const octokit = createMockOctokit();
     const mockCommits = [
-      { commit: { message: 'feat: add new feature', author: { name: 'Alice', email: 'alice@example.com' } } },
       {
-        commit: { message: 'fix: fix bug\n\nDetailed description', author: { name: 'Bob', email: 'bob@example.com' } },
+        commit: {
+          message: 'feat: add new feature',
+          author: { name: 'Alice', email: 'alice@example.com' },
+        },
+      },
+      {
+        commit: {
+          message: 'fix: fix bug\n\nDetailed description',
+          author: { name: 'Bob', email: 'bob@example.com' },
+        },
       },
       { commit: { message: 'docs: update readme' } },
     ];

@@ -9,6 +9,18 @@
  */
 
 import * as core from '@actions/core';
+
+import {
+  addReaction,
+  postComment,
+  getCollaboratorPermission,
+  fetchPullRequestData,
+  fetchApprovedReviews,
+  dismissReview,
+  countUnresolvedThreads,
+  mergePullRequest,
+  fetchPullRequestCommits,
+} from './github-api.js';
 import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types.js';
 import {
   isBot,
@@ -22,17 +34,6 @@ import {
   isConventionalCommitTitle,
   waitBeforeRetryMs,
 } from './validation.js';
-import {
-  addReaction,
-  postComment,
-  getCollaboratorPermission,
-  fetchPullRequestData,
-  fetchApprovedReviews,
-  dismissReview,
-  countUnresolvedThreads,
-  mergePullRequest,
-  fetchPullRequestCommits,
-} from './github-api.js';
 
 /**
  * Main function that orchestrates the lysbot-merge operation.
@@ -74,7 +75,10 @@ export async function executeAction(
 
   // Validate event type - this action only works with issue_comment events
   if (eventName !== 'issue_comment') {
-    return { status: 'skipped', message: 'This action only runs on issue_comment events' };
+    return {
+      status: 'skipped',
+      message: 'This action only runs on issue_comment events',
+    };
   }
 
   // Check if this is a PR comment (not an issue comment)
