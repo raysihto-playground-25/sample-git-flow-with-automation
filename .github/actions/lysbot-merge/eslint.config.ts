@@ -7,8 +7,8 @@ import { fileURLToPath } from 'url';
 const configFiles = [
   // keep this list sorted alphabetically
   '.ncurc.cjs',
-  '.prettierrc.ts',
   'eslint.config.ts',
+  'prettier.config.ts',
   'vitest.config.ts',
 ];
 
