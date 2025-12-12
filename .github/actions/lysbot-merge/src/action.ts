@@ -9,6 +9,18 @@
  */
 
 import * as core from '@actions/core';
+
+import {
+  addReaction,
+  postComment,
+  getCollaboratorPermission,
+  fetchPullRequestData,
+  fetchApprovedReviews,
+  dismissReview,
+  countUnresolvedThreads,
+  mergePullRequest,
+  fetchPullRequestCommits,
+} from './github-api.js';
 import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types.js';
 import {
   isBot,
@@ -22,17 +34,6 @@ import {
   isConventionalCommitTitle,
   waitBeforeRetryMs,
 } from './validation.js';
-import {
-  addReaction,
-  postComment,
-  getCollaboratorPermission,
-  fetchPullRequestData,
-  fetchApprovedReviews,
-  dismissReview,
-  countUnresolvedThreads,
-  mergePullRequest,
-  fetchPullRequestCommits,
-} from './github-api.js';
 
 /**
  * Main function that orchestrates the lysbot-merge operation.
