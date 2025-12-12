@@ -1,8 +1,10 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 // Configuration files that need special handling with allowDefaultProject
-const configFiles = ['scripts/*.mjs', '.ncurc.cjs', 'eslint.config.mjs', 'vitest.config.ts'];
+const configFiles = ['scripts/*.mjs', '.ncurc.cjs', 'eslint.config.ts', 'vitest.config.ts'];
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -13,7 +15,7 @@ export default tseslint.config(
         projectService: {
           allowDefaultProject: configFiles,
         },
-        tsconfigRootDir: import.meta.dirname,
+        tsconfigRootDir: dirname(fileURLToPath(import.meta.url)),
       },
     },
   },
@@ -38,6 +40,10 @@ export default tseslint.config(
         console: 'readonly',
         module: 'readonly',
       },
+    },
+    rules: {
+      'no-unused-vars': 'error',
+      'no-console': 'off',
     },
   },
   {
