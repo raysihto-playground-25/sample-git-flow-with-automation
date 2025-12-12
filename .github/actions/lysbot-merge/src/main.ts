@@ -61,7 +61,7 @@ import type { ActionConfig, EventContext } from './types.js';
  * - All testable business logic has been extracted to action.ts (high coverage)
  * - This separation follows the "Humble Object" pattern for testing
  */
-async function run(): Promise<void> {
+export async function run(): Promise<void> {
   try {
     // Get inputs
     const token = core.getInput('github-token', { required: true });
@@ -138,6 +138,3 @@ async function run(): Promise<void> {
     core.setFailed(`lysbot-merge action failed: ${message}`);
   }
 }
-
-// Run the action
-void run();
