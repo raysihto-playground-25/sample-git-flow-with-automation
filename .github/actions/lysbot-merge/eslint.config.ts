@@ -33,7 +33,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.test.ts'],
+    files: ['__tests__/**/*.test.ts'],
     rules: {
       // Allow async functions without await in test files for mock implementations
       '@typescript-eslint/require-await': 'off',
