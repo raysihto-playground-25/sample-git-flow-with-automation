@@ -4,7 +4,14 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 // Configuration files that need special handling with allowDefaultProject
-const configFiles = ['scripts/*.mjs', '.ncurc.cjs', 'eslint.config.ts', 'vitest.config.ts'];
+const configFiles = [
+  // keep this list sorted alphabetically
+  '.ncurc.cjs',
+  '.prettierrc.ts',
+  'eslint.config.ts',
+  'scripts/*.mjs',
+  'vitest.config.ts',
+];
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -47,6 +54,11 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['coverage/', 'dist/', 'node_modules/'],
+    ignores: [
+      // keep this list sorted alphabetically
+      'coverage/',
+      'dist/',
+      'node_modules/',
+    ],
   },
 );
