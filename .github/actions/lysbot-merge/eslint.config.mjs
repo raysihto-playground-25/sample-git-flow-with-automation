@@ -2,7 +2,7 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 // Configuration files that need special handling with allowDefaultProject
-const configFiles = ['scripts/*.mjs', '.ncurc.cjs', 'eslint.config.mjs', 'vitest.config.ts'];
+const configFiles = ['scripts/*.mjs', '.ncurc.mjs', 'eslint.config.mjs', 'vitest.config.ts'];
 
 export default tseslint.config(
   eslint.configs.recommended,

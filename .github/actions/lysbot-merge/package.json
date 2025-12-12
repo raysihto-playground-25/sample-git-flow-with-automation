@@ -2,6 +2,7 @@
   "name": "lysbot-merge-action",
   "version": "1.0.0",
   "description": "GitHub Action for automated PR merging with validation checks",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "ncc build src/main.ts --source-map --license licenses.txt --minify",

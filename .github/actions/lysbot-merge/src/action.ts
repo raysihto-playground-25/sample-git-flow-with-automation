@@ -9,7 +9,7 @@
  */
 
 import * as core from '@actions/core';
-import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types';
+import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types.js';
 import {
   isBot,
   parseCommand,
@@ -21,7 +21,7 @@ import {
   buildCheckResultsMarkdown,
   isConventionalCommitTitle,
   waitBeforeRetryMs,
-} from './validation';
+} from './validation.js';
 import {
   addReaction,
   postComment,
@@ -32,7 +32,7 @@ import {
   countUnresolvedThreads,
   mergePullRequest,
   fetchPullRequestCommits,
-} from './github-api';
+} from './github-api.js';
 
 /**
  * Main function that orchestrates the lysbot-merge operation.

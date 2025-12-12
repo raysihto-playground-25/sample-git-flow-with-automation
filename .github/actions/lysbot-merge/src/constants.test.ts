@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { CONVENTIONAL_COMMIT_TYPES, CONVENTIONAL_COMMIT_REGEX, COMMAND_REGEX } from './constants';
+import { CONVENTIONAL_COMMIT_TYPES, CONVENTIONAL_COMMIT_REGEX, COMMAND_REGEX } from './constants.js';
 
 // =============================================================================
 // Tests for CONVENTIONAL_COMMIT_TYPES constant

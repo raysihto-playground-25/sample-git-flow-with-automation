@@ -4,7 +4,7 @@
  * This module contains all TypeScript type definitions and interfaces
  * used throughout the lysbot-merge action.
  */
-import type { GitHub } from '@actions/github/lib/utils';
+import type { GitHub } from '@actions/github/lib/utils.js';
 import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 /**
  * Configuration options for the lysbot-merge action.

@@ -28,8 +28,8 @@
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import type { ActionConfig, EventContext } from './types';
-import { executeAction, buildSummaryMarkdown } from './action';
+import type { ActionConfig, EventContext } from './types.js';
+import { executeAction, buildSummaryMarkdown } from './action.js';
 
 /**
  * Main function that runs the action.
