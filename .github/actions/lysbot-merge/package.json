@@ -7,7 +7,7 @@
   "scripts": {
     "build": "ncc build src/main.ts --source-map --license licenses.txt --minify",
     "postbuild": "npm run normalize:sourcemaps",
-    "normalize:sourcemaps": "node scripts/normalize-sourcemaps.mjs",
+    "normalize:sourcemaps": "tsx scripts/normalize-sourcemaps.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
@@ -43,6 +43,7 @@
     "eslint": "^9.39.1",
     "jiti": "^2.6.1",
     "prettier": "^3.7.4",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.49.0",
     "vitest": "^4.0.15"
