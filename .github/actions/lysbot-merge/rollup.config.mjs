@@ -10,7 +10,6 @@ export default {
     file: 'dist/index.js',
     format: 'esm',
     sourcemap: false,
-    banner: '#!/usr/bin/env node',
   },
   external: [],
   plugins: [
