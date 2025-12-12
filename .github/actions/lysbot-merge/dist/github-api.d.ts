@@ -4,7 +4,7 @@
  * This module contains all functions that interact with the GitHub API.
  * These functions handle API calls, data fetching, and mutations.
  */
-import type { Octokit, PullRequestData, ReviewsArray } from './types';
+import type { Octokit, PullRequestData, ReviewsArray } from './types.js';
 /**
  * Adds a reaction to a comment.
  *

@@ -5,7 +5,7 @@
  * and business logic that don't require external I/O operations.
  * These functions are easily testable and have no side effects.
  */
-import type { ActionConfig, PullRequestData, CheckResult, MergeMethodResult, MergeOptions } from './types';
+import type { ActionConfig, PullRequestData, CheckResult, MergeMethodResult, MergeOptions } from './types.js';
 /**
  * Checks if a PR title follows the Conventional Commits format.
  *

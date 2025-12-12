@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
-import type { Octokit } from './types';
+import type { Octokit } from './types.js';
 import {
   addReaction,
   postComment,
@@ -15,7 +15,7 @@ import {
   countUnresolvedThreads,
   mergePullRequest,
   fetchPullRequestCommits,
-} from './github-api';
+} from './github-api.js';
 
 // =============================================================================
 // Test Utilities

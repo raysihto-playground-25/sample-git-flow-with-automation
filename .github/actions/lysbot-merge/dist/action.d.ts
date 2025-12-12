@@ -7,7 +7,7 @@
  *
  * This is separated from main.ts which contains untestable GitHub Actions runtime code.
  */
-import type { ActionConfig, EventContext, ActionResult, Octokit } from './types';
+import type { ActionConfig, EventContext, ActionResult, Octokit } from './types.js';
 /**
  * Main function that orchestrates the lysbot-merge operation.
  *

@@ -2,11 +2,12 @@
   "name": "lysbot-merge-action",
   "version": "1.0.0",
   "description": "GitHub Action for automated PR merging with validation checks",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "ncc build src/main.ts --source-map --license licenses.txt --minify",
     "postbuild": "npm run normalize:sourcemaps",
-    "normalize:sourcemaps": "node scripts/normalize-sourcemaps.mjs",
+    "normalize:sourcemaps": "tsx scripts/normalize-sourcemaps.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
@@ -32,7 +33,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^2.0.0",
+    "@actions/core": "^2.0.1",
     "@actions/github": "^6.0.1"
   },
   "devDependencies": {
@@ -40,7 +41,9 @@
     "@vercel/ncc": "^0.38.4",
     "@vitest/coverage-v8": "^4.0.15",
     "eslint": "^9.39.1",
+    "jiti": "^2.6.1",
     "prettier": "^3.7.4",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.49.0",
     "vitest": "^4.0.15"
