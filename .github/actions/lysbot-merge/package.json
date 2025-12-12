@@ -19,7 +19,6 @@
   },
   "scripts": {
     "bundle": "npm run format:write && npm run package",
-    "ci-test": "vitest run",
     "format:write": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

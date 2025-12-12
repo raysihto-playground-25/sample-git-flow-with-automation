@@ -244,11 +244,11 @@ To work on the lysbot-merge action:
 
 ```bash
 cd .github/actions/lysbot-merge
-npm install
-npm test        # Run unit tests
-npm run format  # Run formatter (format:check for checking only)
-npm run lint    # Run ESLint
-npm run build   # Build with ncc
+npm ci
+npm run test:coverage  # Run unit tests with coverage
+npm run format:write   # Run formatter (format:check for checking only)
+npm run lint           # Run ESLint
+npm run bundle         # Bundle with ncc
 ```
 
 ### Code Structure
@@ -378,13 +378,13 @@ This action uses **Vitest** for unit testing. The test suite focuses on testing 
 
 ```bash
 # Run all tests
-npm test
+npm run test
 
 # Run tests in watch mode
 npm run test:watch
 
 # Run tests with coverage
-npm test -- --coverage
+npm run test:coverage
 ```
 
 ## Third-Party Licenses
