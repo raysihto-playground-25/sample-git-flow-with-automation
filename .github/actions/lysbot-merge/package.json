@@ -5,9 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "ncc build src/main.ts --source-map --license licenses.txt --minify",
-    "postbuild": "npm run normalize:sourcemaps",
-    "normalize:sourcemaps": "tsx scripts/normalize-sourcemaps.ts",
+    "build": "ncc build src/main.ts --license licenses.txt --minify",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
