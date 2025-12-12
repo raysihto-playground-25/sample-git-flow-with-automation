@@ -14,6 +14,7 @@ const configFiles = [
   '.ncurc.cjs',
   'eslint.config.ts',
   'prettier.config.ts',
+  'rollup.config.mjs',
   'vitest.config.ts',
 ];
 
