@@ -9,7 +9,6 @@ const configFiles = [
   '.ncurc.cjs',
   '.prettierrc.ts',
   'eslint.config.ts',
-  'scripts/*.ts',
   'vitest.config.ts',
 ];
 

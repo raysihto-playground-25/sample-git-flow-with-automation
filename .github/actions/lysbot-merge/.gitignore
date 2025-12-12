@@ -4,10 +4,6 @@ node_modules/
 # Build output (keep dist/ since it's needed for the action to work)
 # dist/
 
-# Test-related files in dist (generated when tsconfig includes test files)
-dist/*.test.d.ts
-dist/*.test.d.ts.map
-
 # Test coverage
 coverage/
 
