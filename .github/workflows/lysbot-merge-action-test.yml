@@ -47,11 +47,13 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          npm test -- --coverage | tee /tmp/coverage-${{ github.run_id }}.txt
+          set -Eeuo pipefail
+          npm run test:coverage | tee /tmp/coverage-${{ github.run_id }}.txt
 
       - name: Report coverage to summary
         if: success()
         run: |
+          set -Eeuo pipefail
           {
             echo "## Test Coverage Report"
             echo ""
@@ -68,13 +70,14 @@ jobs:
           rm -f /tmp/coverage-${{ github.run_id }}.txt
 
       - name: Build action
-        run: npm run build
+        run: npm run bundle
 
       - name: Verify dist is up to date
         run: |
+          set -Eeuo pipefail
           # Check if dist/ directory exists and has changes
           if [ -d "dist" ] && [ -n "$(git status --porcelain dist/)" ]; then
-            echo "::error::dist/ directory is out of date. Run 'npm run build' and commit the changes."
+            echo "::error::dist/ directory is out of date. Run 'npm run bundle' and commit the changes."
             git diff dist/
             exit 1
           fi
