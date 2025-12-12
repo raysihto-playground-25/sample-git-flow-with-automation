@@ -2,9 +2,8 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 import eslint from '@eslint/js';
-// @ts-expect-error - eslint-plugin-import doesn't have proper types
 import importPlugin from 'eslint-plugin-import';
-// @ts-expect-error - eslint-plugin-promise doesn't have proper types
+import prettierPlugin from 'eslint-plugin-prettier';
 import promisePlugin from 'eslint-plugin-promise';
 import tseslint from 'typescript-eslint';
 
@@ -30,12 +29,11 @@ export default tseslint.config(
         tsconfigRootDir: dirname(fileURLToPath(import.meta.url)),
       },
     },
-  },
-  {
     plugins: {
       import: importPlugin,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       promise: promisePlugin,
+      prettier: prettierPlugin,
     },
     settings: {
       'import/resolver': {
@@ -57,6 +55,7 @@ export default tseslint.config(
       'no-sync': 'error',
       'no-var': 'error',
       'prefer-const': 'error',
+      'prettier/prettier': 'error',
       'promise/always-return': 'warn',
       'promise/catch-or-return': 'error',
       'promise/no-nesting': 'warn',
