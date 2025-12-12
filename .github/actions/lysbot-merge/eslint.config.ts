@@ -13,7 +13,7 @@ const configFiles = [
   // keep this list sorted alphabetically
   '.ncurc.cjs',
   'eslint.config.ts',
-  'prettier.config.cjs',
+  'prettier.config.ts',
   'vitest.config.ts',
 ];
 
