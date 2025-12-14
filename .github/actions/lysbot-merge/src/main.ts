@@ -4,26 +4,23 @@
  * This file is the main entry point that runs in the GitHub Actions environment.
  * It is responsible for:
  * 1. Reading inputs from the GitHub Actions environment
- * 2. Constructing the event context from github.context
- * 3. Calling the main action logic from action.ts
- * 4. Setting outputs and writing summaries
- *
- * WHY THIS FILE IS UNTESTABLE:
- * ============================
- * This file contains ONLY GitHub Actions runtime integration code that:
- * 1. Depends on @actions/core global state (core.getInput, core.setOutput, core.summary)
- * 2. Depends on @actions/github global context (github.context, process.env)
- * 3. Has no business logic - only reads inputs, delegates to action.ts, and writes outputs
+ * 2. Handling deprecated input parameters with warnings
+ * 3. Parsing options YAML and constructing configuration
+ * 4. Constructing the event context from github.context
+ * 5. Calling the main action logic from action.ts
+ * 6. Setting outputs and writing summaries
  *
  * TESTING APPROACH:
  * =================
- * - All business logic is in action.ts (executeAction, buildSummaryMarkdown) which IS fully tested
- * - This file is a thin integration layer with GitHub Actions runtime
- * - Testing this would require mocking the entire GitHub Actions environment, which provides
- *   no value since it only contains simple pass-through code with no conditional logic
- * - The real functionality is tested in action.test.ts with high coverage
+ * This file contains GitHub Actions runtime integration code and has been tested
+ * using vitest mocks to verify:
+ * - Deprecated input handling and warning messages
+ * - Options parsing with deprecated input fallbacks
+ * - Integer parsing for numeric inputs
+ * - Error handling and reporting
  *
- * All testable logic has been moved to action.ts.
+ * The core business logic remains in action.ts (executeAction, buildSummaryMarkdown)
+ * which has comprehensive test coverage independent of GitHub Actions runtime.
  */
 
 import * as core from '@actions/core';
@@ -36,31 +33,16 @@ import type { EventContext } from './types.js';
 /**
  * Main function that runs the action.
  *
- * WHY THIS FUNCTION IS NOT TESTED:
- * =================================
- * This function is a thin wrapper that:
+ * This function:
  * 1. Reads inputs from GitHub Actions environment (core.getInput)
- * 2. Reads context from GitHub Actions runtime (github.context, process.env)
- * 3. Delegates all business logic to executeAction() in action.ts (which IS tested)
- * 4. Writes outputs to GitHub Actions environment (core.setOutput, core.summary)
+ * 2. Handles deprecated input parameters with warnings
+ * 3. Parses options YAML with deprecated input fallbacks
+ * 4. Reads context from GitHub Actions runtime (github.context, process.env)
+ * 5. Delegates all merge business logic to executeAction() in action.ts
+ * 6. Writes outputs to GitHub Actions environment (core.setOutput, core.summary)
  *
- * Testing this function would require:
- * - Mocking @actions/core global state
- * - Mocking @actions/github global context
- * - Mocking process.env
- * - Setting up a complete GitHub Actions environment simulation
- *
- * This provides no value because:
- * - There is no conditional logic or business rules in this function
- * - It's purely an adapter between GitHub Actions runtime and our business logic
- * - The business logic (executeAction, buildSummaryMarkdown) is fully tested in action.test.ts
- * - Any bugs would be immediately visible when running the action in a real workflow
- *
- * COVERAGE IMPACT:
- * ================
- * - This file intentionally has 0% test coverage
- * - All testable business logic has been extracted to action.ts (high coverage)
- * - This separation follows the "Humble Object" pattern for testing
+ * This function is tested using vitest mocks to verify the deprecated input
+ * handling, options parsing, and error handling logic.
  */
 export async function run(): Promise<void> {
   try {

@@ -297,7 +297,7 @@ src/
 ├── action.ts         # Core business logic (executeAction, buildSummaryMarkdown)
 ├── constants.ts      # Configuration constants and regex patterns
 ├── github-api.ts     # GitHub API interaction wrappers
-├── main.ts           # GitHub Actions runtime integration (untestable)
+├── main.ts           # GitHub Actions runtime integration (tested with mocks)
 ├── options-parser.ts # YAML options parser with zod validation
 ├── types.ts          # Type definitions and interfaces
 └── validation.ts     # Pure validation and business logic functions
@@ -321,15 +321,16 @@ src/
    - API calls, data fetching, mutations (reactions, comments, merges)
    - Depends on: types
 
-4. **`main.ts`** (GitHub Actions runtime integration - untestable)
-   - Thin integration layer with GitHub Actions runtime
+4. **`main.ts`** (GitHub Actions runtime integration - tested with mocks)
+   - Integration layer with GitHub Actions runtime
    - Reads inputs from GitHub Actions environment (`core.getInput`)
+   - Handles deprecated input parameters with warnings
+   - Parses options YAML with deprecated input fallbacks
    - Constructs context from GitHub runtime (`github.context`, `process.env`)
-   - Delegates to `action.ts` for all business logic
+   - Delegates to `action.ts` for merge business logic
    - Writes outputs and summaries to GitHub Actions (`core.setOutput`, `core.summary`)
-   - **0% test coverage by design** - follows "Humble Object" pattern
-   - Contains no business logic, only runtime integration
-   - See comments in main.ts for detailed explanation of why it's untestable
+   - Tested using vitest mocks to verify input handling, options parsing, and error handling
+   - Contains conditional logic for backward compatibility with deprecated inputs
 
 5. **`options-parser.ts`** (YAML parsing and validation)
    - Parses YAML options input using `yaml` library
@@ -358,10 +359,10 @@ The refactoring follows these principles to maintain code quality:
    - Pure logic is separated from I/O operations
    - Business rules are isolated from infrastructure
 
-2. **Humble Object Pattern**
-   - Untestable code (GitHub Actions runtime integration) is isolated in main.ts
-   - All testable business logic is extracted to action.ts
-   - This maximizes test coverage where it matters most
+2. **Testing Strategy**
+   - GitHub Actions runtime integration code in main.ts is tested using vitest mocks
+   - All merge business logic is extracted to action.ts for comprehensive testing
+   - This separation maximizes maintainability and test coverage
 
 3. **Dependency Direction**
    - Dependencies flow inward: infrastructure &#x279C; orchestration &#x279C; logic &#x279C; types
@@ -372,7 +373,7 @@ The refactoring follows these principles to maintain code quality:
    - Pure functions are in separate modules for easy unit testing
    - API interactions are grouped for easy mocking
    - Orchestration logic in action.ts can be tested with mocked dependencies
-   - Runtime integration in main.ts is intentionally untested (0% coverage)
+   - Runtime integration in main.ts is tested using vitest mocks for the GitHub Actions environment
 
 #### Naming Conventions
 
@@ -415,13 +416,13 @@ When adding new features or making changes, follow these guidelines:
    - Add new pure functions to `validation.ts` or create domain-specific validation modules
    - Add new API calls to `github-api.ts` or create endpoint-specific modules
    - Keep testable orchestration in `action.ts` focused on business logic
-   - Keep main.ts minimal - only GitHub Actions runtime integration, no business logic
+   - Keep main.ts focused on GitHub Actions runtime integration with tested backward compatibility logic
 
 4. **Testing Strategy**
    - All business logic MUST be testable and have tests
-   - Extract any logic from main.ts to action.ts if it needs testing
-   - main.ts should remain a thin adapter with 0% coverage
-   - Target 80%+ coverage for all testable modules (action.ts, validation.ts, etc.)
+   - main.ts contains runtime integration logic tested with vitest mocks
+   - Merge business logic should be in action.ts for comprehensive testing without mocks
+   - Target 80%+ coverage for all modules (action.ts, validation.ts, main.ts, etc.)
 
 5. **Breaking Changes**
    - Update tests when splitting modules
