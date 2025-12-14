@@ -65,23 +65,23 @@ inputs:
     default: ''
   # DEPRECATED: The following inputs are deprecated and will be removed in a future version.
   # Use the 'options' parameter instead with kebab-case keys.
-  release_branch_prefix:
+  release-branch-prefix:
     description: 'DEPRECATED: Use options parameter instead. Branch prefix for release branches (e.g., "release/")'
     required: false
     deprecationMessage: 'This input is deprecated. Use the options parameter with release-branch-prefix key instead.'
-  develop_branch:
+  develop-branch:
     description: 'DEPRECATED: Use options parameter instead. Name of the develop branch (default: "develop")'
     required: false
     deprecationMessage: 'This input is deprecated. Use the options parameter with develop-branch key instead.'
-  sync_branch_prefix:
+  sync-branch-prefix:
     description: 'DEPRECATED: Use options parameter instead. Branch prefix for sync branches (e.g., "fix/sync/")'
     required: false
     deprecationMessage: 'This input is deprecated. Use the options parameter with sync-branch-prefix key instead.'
-  mergeable_retry_count:
+  mergeable-retry-count:
     description: 'DEPRECATED: Use options parameter instead. Number of retries for checking mergeable status'
     required: false
     deprecationMessage: 'This input is deprecated. Use the options parameter with mergeable-retry-count key instead.'
-  mergeable_retry_interval:
+  mergeable-retry-interval:
     description: 'DEPRECATED: Use options parameter instead. Interval in seconds between mergeable status checks'
     required: false
     deprecationMessage: 'This input is deprecated. Use the options parameter with mergeable-retry-interval key instead.'
