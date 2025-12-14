@@ -60,6 +60,16 @@ npm run build       # Build the action
 
 **Why this matters**: The project uses Node.js 24+ features and TypeScript configuration loading that may not work in older Node.js versions. Using a different version may cause linting, formatting, or build errors that don't occur in the correct environment. Always match the environment specified in package.json and used in GitHub Actions workflows.
 
+**Node 20 Compatibility Workaround**: If you're using Node 20 instead of Node 24+, you can enable TypeScript config file loading with the `tsx` package (already in devDependencies):
+
+```bash
+export NODE_OPTIONS='--import tsx'
+npm run format:check  # Works with tsx
+npm run lint          # May still have issues with eslint
+```
+
+Note: This workaround enables prettier to load `.ts` config files in Node 20, but eslint may still have compatibility issues. For full compatibility, use Node 24+ as specified in package.json engines.
+
 **MANDATORY**: If you cannot run `npm run lint` or `npm run format:check` due to environment limitations (e.g., Node.js version mismatch), you MUST:
 1. Still run `npm test` and `npm run package` to verify tests pass and build succeeds
 2. Manually review code for common lint issues (e.g., use `Number.isNaN` instead of `isNaN`, proper imports, etc.)
