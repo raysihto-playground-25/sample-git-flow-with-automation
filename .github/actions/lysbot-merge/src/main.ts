@@ -30,7 +30,8 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 
 import { executeAction, buildSummaryMarkdown } from './action.js';
-import type { ActionConfig, EventContext } from './types.js';
+import { parseOptions, buildConfig } from './options-parser.js';
+import type { EventContext } from './types.js';
 
 /**
  * Main function that runs the action.
@@ -65,13 +66,11 @@ export async function run(): Promise<void> {
   try {
     // Get inputs
     const token = core.getInput('github-token', { required: true });
-    const config: ActionConfig = {
-      releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
-      developBranch: core.getInput('develop_branch') || 'develop',
-      syncBranchPrefix: core.getInput('sync_branch_prefix') || 'fix/sync/',
-      mergeableRetryCount: parseInt(core.getInput('mergeable_retry_count') || '5', 10),
-      mergeableRetryInterval: parseInt(core.getInput('mergeable_retry_interval') || '10', 10),
-    };
+    const optionsYaml = core.getInput('options') || '';
+
+    // Parse options and build config with defaults
+    const parsedOptions = parseOptions(optionsYaml);
+    const config = buildConfig(parsedOptions);
 
     // Get event context
     //

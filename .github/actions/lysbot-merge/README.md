@@ -194,9 +194,36 @@ jobs:
       - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          release_branch_prefix: "release/"
-          develop_branch: "develop"
-          sync_branch_prefix: "fix/sync/"
+          options: |
+            release_branch_prefix: "release/"
+            develop_branch: "develop"
+            sync_branch_prefix: "fix/sync/"
+```
+
+The `options` parameter accepts YAML-like key-value pairs. All options are optional and can be omitted if you want to use the defaults. Comments are also supported:
+
+```yaml
+steps:
+  - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
+    with:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+      options: |
+        ## Project-specific branch naming configuration
+        release_branch_prefix: release/
+        develop_branch: develop
+        sync_branch_prefix: fix/sync/
+        ## Optional: customize retry behavior for mergeable status
+        # mergeable_retry_count: 5
+        # mergeable_retry_interval: 10
+```
+
+You can also omit the `options` parameter entirely to use all defaults:
+
+```yaml
+steps:
+  - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
+    with:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 > [!NOTE]
@@ -206,14 +233,22 @@ jobs:
 
 ## Inputs
 
-| Input                      | Type   | Required | Default     | Description                                        |
-| -------------------------- | ------ | -------- | ----------- | -------------------------------------------------- |
-| `github-token`             | string | Yes      | -           | GitHub token for API authentication                |
-| `release_branch_prefix`    | string | No       | `release/`  | Prefix for release branches                        |
-| `develop_branch`           | string | No       | `develop`   | Name of the develop branch                         |
-| `sync_branch_prefix`       | string | No       | `fix/sync/` | Prefix for sync branches (back-merges)             |
-| `mergeable_retry_count`    | number | No       | `5`         | Number of retries for mergeable status calculation |
-| `mergeable_retry_interval` | number | No       | `10`        | Interval in seconds between retries                |
+| Input          | Type   | Required | Default | Description                                                                                                                                                                                                 |
+| -------------- | ------ | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `github-token` | string | Yes      | -       | GitHub token for API authentication                                                                                                                                                                         |
+| `options`      | string | No       | -       | Optional configuration in YAML format with key-value pairs. Supports: `release_branch_prefix`, `develop_branch`, `sync_branch_prefix`, `mergeable_retry_count`, `mergeable_retry_interval`. See examples above. |
+
+### Default Values
+
+When options are not specified, the following defaults are used:
+
+| Option                     | Default     | Description                                        |
+| -------------------------- | ----------- | -------------------------------------------------- |
+| `release_branch_prefix`    | `release/`  | Prefix for release branches                        |
+| `develop_branch`           | `develop`   | Name of the develop branch                         |
+| `sync_branch_prefix`       | `fix/sync/` | Prefix for sync branches (back-merges)             |
+| `mergeable_retry_count`    | `5`         | Number of retries for mergeable status calculation |
+| `mergeable_retry_interval` | `10`        | Interval in seconds between retries                |
 
 ## Outputs
 

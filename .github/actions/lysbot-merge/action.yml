@@ -23,9 +23,10 @@
 #         - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
 #           with:
 #             github-token: ${{ secrets.GITHUB_TOKEN }}
-#             release_branch_prefix: "release/"
-#             develop_branch: "develop"
-#             sync_branch_prefix: "fix/sync/"
+#             options: |
+#               release_branch_prefix: "release/"
+#               develop_branch: "develop"
+#               sync_branch_prefix: "fix/sync/"
 #
 # NOTES:
 # - Replace `{ORG}` with the organization or user name and `{REPO}` with the
@@ -50,26 +51,18 @@ inputs:
   github-token:
     description: 'GitHub token for API authentication'
     required: true
-  release_branch_prefix:
-    description: 'Prefix for release branches (e.g., "release/")'
+  options:
+    description: |
+      Optional configuration in YAML format. All options are optional.
+      Example:
+        options: |
+          release_branch_prefix: "release/"
+          develop_branch: "develop"
+          sync_branch_prefix: "fix/sync/"
+          mergeable_retry_count: 5
+          mergeable_retry_interval: 10
     required: false
-    default: 'release/'
-  develop_branch:
-    description: 'Name of the develop branch'
-    required: false
-    default: 'develop'
-  sync_branch_prefix:
-    description: 'Prefix for sync branches used in back-merges (e.g., "fix/sync/")'
-    required: false
-    default: 'fix/sync/'
-  mergeable_retry_count:
-    description: 'Number of retries for waiting on GitHub to calculate mergeable status'
-    required: false
-    default: '5'
-  mergeable_retry_interval:
-    description: 'Interval in seconds between retries'
-    required: false
-    default: '10'
+    default: ''
 
 outputs:
   result:
