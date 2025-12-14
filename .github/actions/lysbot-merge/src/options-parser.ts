@@ -85,8 +85,11 @@ export function parseOptions(optionsYaml: string): ParsedOptions {
     const key = match[1];
     let value = match[2].trim();
 
-    // Remove quotes if present
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    // Remove quotes if present (only if value has at least 2 characters)
+    if (
+      value.length >= 2 &&
+      ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))
+    ) {
       value = value.slice(1, -1);
     }
 

@@ -184,6 +184,18 @@ mergeable_retry_interval: 0
       mergeable_retry_interval: 0,
     });
   });
+
+  it('should handle single-character quoted values', () => {
+    const yaml = `
+release_branch_prefix: "/"
+develop_branch: 'd'
+    `;
+    const result = parseOptions(yaml);
+    expect(result).toEqual({
+      release_branch_prefix: '/',
+      develop_branch: 'd',
+    });
+  });
 });
 
 // =============================================================================
