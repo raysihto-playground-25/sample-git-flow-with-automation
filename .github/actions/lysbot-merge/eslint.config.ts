@@ -91,7 +91,6 @@ export default tseslint.config(
       'coverage/',
       'dist/',
       'node_modules/',
-      'prettier.config.ts',
     ],
   },
 );

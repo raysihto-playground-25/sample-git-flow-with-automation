@@ -1,97 +1,47 @@
 /**
  * options-parser.ts - Parser for YAML options input
  *
- * This module provides a YAML parser for the options parameter using the `yaml` library.
- * The parser validates types and provides clear error messages for invalid inputs.
+ * This module provides a YAML parser for the options parameter using the `yaml` library
+ * with zod schema validation for type checking and error messages.
  */
 
 import YAML from 'yaml';
+import { z } from 'zod';
 
 import type { ActionConfig } from './types.js';
 
 /**
- * Parsed options from the YAML input.
- */
-export interface ParsedOptions {
-  release_branch_prefix?: string;
-  develop_branch?: string;
-  sync_branch_prefix?: string;
-  mergeable_retry_count?: number;
-  mergeable_retry_interval?: number;
-}
-
-/**
  * Default values for options.
  */
-const DEFAULT_OPTIONS: Required<ParsedOptions> = {
+const DEFAULT_OPTIONS = {
   release_branch_prefix: 'release/',
   develop_branch: 'develop',
   sync_branch_prefix: 'fix/sync/',
   mergeable_retry_count: 5,
   mergeable_retry_interval: 10,
-};
+} as const;
 
 /**
- * Known option keys and their expected types.
+ * Zod schema for validating parsed options.
+ * Each field has specific type requirements:
+ * - String fields for branch prefixes
+ * - Non-negative integer fields for retry settings
+ * Using strict() to reject unknown properties
  */
-const OPTION_SCHEMA: Record<string, 'string' | 'number'> = {
-  release_branch_prefix: 'string',
-  develop_branch: 'string',
-  sync_branch_prefix: 'string',
-  mergeable_retry_count: 'number',
-  mergeable_retry_interval: 'number',
-};
+const optionsSchema = z
+  .object({
+    release_branch_prefix: z.string().optional(),
+    develop_branch: z.string().optional(),
+    sync_branch_prefix: z.string().optional(),
+    mergeable_retry_count: z.number().int().nonnegative().optional(),
+    mergeable_retry_interval: z.number().int().nonnegative().optional(),
+  })
+  .strict();
 
 /**
- * Validates that a value is a string.
- * @param value - Value to validate
- * @param key - Field name for error messages
- * @throws Error if value is not a string
+ * Parsed options from the YAML input.
  */
-function validateString(value: unknown, key: string): asserts value is string {
-  if (typeof value !== 'string') {
-    const actualType = value === null ? 'null' : typeof value;
-    const displayValue = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value === 'object' ? 'object' : String(value);
-    throw new Error(
-      `Invalid type for "${key}": expected string, but got ${actualType} (value: ${displayValue}). String fields must be text values, not numbers, booleans, null, arrays, or objects.`,
-    );
-  }
-}
-
-/**
- * Validates that a value is a non-negative integer.
- * @param value - Value to validate
- * @param key - Field name for error messages
- * @throws Error if value is not a valid non-negative integer
- */
-function validateNonNegativeInteger(value: unknown, key: string): asserts value is number {
-  // Check if it's a string number like "10"
-  if (typeof value === 'string') {
-    throw new Error(
-      `Invalid type for "${key}": expected number, but got string (value: "${value}"). Numeric fields must be unquoted numbers like 5, not quoted strings like "5".`,
-    );
-  }
-  
-  if (typeof value !== 'number') {
-    const actualType = value === null ? 'null' : typeof value;
-    const displayValue = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value === 'object' ? 'object' : String(value);
-    throw new Error(
-      `Invalid type for "${key}": expected number, but got ${actualType} (value: ${displayValue}). Numeric fields must be numbers, not strings, booleans, null, arrays, or objects.`,
-    );
-  }
-
-  if (!Number.isInteger(value)) {
-    throw new Error(
-      `Invalid value for "${key}": expected integer, but got ${value}. The value must be a whole number.`,
-    );
-  }
-
-  if (value < 0) {
-    throw new Error(
-      `Invalid value for "${key}": expected non-negative integer, but got ${value}. The value must be 0 or greater.`,
-    );
-  }
-}
+export type ParsedOptions = z.infer<typeof optionsSchema>;
 
 /**
  * Parses the options YAML string into a ParsedOptions object.
@@ -101,11 +51,9 @@ function validateNonNegativeInteger(value: unknown, key: string): asserts value 
  * @throws Error if parsing fails or validation fails
  */
 export function parseOptions(optionsYaml: string): ParsedOptions {
-  const options: ParsedOptions = {};
-
   // If empty string, return empty options
   if (!optionsYaml || optionsYaml.trim() === '') {
-    return options;
+    return {};
   }
 
   // Parse YAML
@@ -117,34 +65,14 @@ export function parseOptions(optionsYaml: string): ParsedOptions {
     throw new Error(`Failed to parse YAML options: ${message}`);
   }
 
-  // Validate that parsed result is an object
-  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error(
-      `Invalid options format: expected YAML object with key-value pairs, but got ${parsed === null ? 'null' : Array.isArray(parsed) ? 'array' : typeof parsed}`,
-    );
+  // Validate using zod schema
+  const result = optionsSchema.safeParse(parsed);
+  if (!result.success) {
+    // Use zod's default error formatting
+    throw new Error(`Invalid options: ${result.error.message}`);
   }
 
-  // Validate each option
-  for (const [key, value] of Object.entries(parsed)) {
-    // Check if it's a known option
-    const expectedType = OPTION_SCHEMA[key];
-    if (!expectedType) {
-      throw new Error(
-        `Unknown option: "${key}". Valid options are: ${Object.keys(OPTION_SCHEMA).join(', ')}`,
-      );
-    }
-
-    // Validate based on expected type
-    if (expectedType === 'string') {
-      validateString(value, key);
-      (options as Record<string, string>)[key] = value as string;
-    } else if (expectedType === 'number') {
-      validateNonNegativeInteger(value, key);
-      (options as Record<string, number>)[key] = value as number;
-    }
-  }
-
-  return options;
+  return result.data;
 }
 
 /**

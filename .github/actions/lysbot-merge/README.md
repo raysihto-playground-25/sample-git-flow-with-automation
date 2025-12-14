@@ -200,7 +200,7 @@ jobs:
             sync_branch_prefix: "fix/sync/"
 ```
 
-The `options` parameter accepts YAML-like key-value pairs. All options are optional and can be omitted if you want to use the defaults. Comments are also supported:
+The `options` parameter accepts YAML format key-value pairs. All options are optional and can be omitted if you want to use the defaults. Comments are also supported:
 
 ```yaml
 steps:
@@ -294,12 +294,13 @@ The codebase has been modularized for better maintainability and testability, fo
 
 ```
 src/
-├── action.ts      # Core business logic (executeAction, buildSummaryMarkdown)
-├── constants.ts   # Configuration constants and regex patterns
-├── github-api.ts  # GitHub API interaction wrappers
-├── main.ts        # GitHub Actions runtime integration (untestable)
-├── types.ts       # Type definitions and interfaces
-└── validation.ts  # Pure validation and business logic functions
+├── action.ts         # Core business logic (executeAction, buildSummaryMarkdown)
+├── constants.ts      # Configuration constants and regex patterns
+├── github-api.ts     # GitHub API interaction wrappers
+├── main.ts           # GitHub Actions runtime integration (untestable)
+├── options-parser.ts # YAML options parser with zod validation
+├── types.ts          # Type definitions and interfaces
+└── validation.ts     # Pure validation and business logic functions
 ```
 
 **Module Responsibilities:**
@@ -330,12 +331,19 @@ src/
    - Contains no business logic, only runtime integration
    - See comments in main.ts for detailed explanation of why it's untestable
 
-5. **`types.ts`**
+5. **`options-parser.ts`** (YAML parsing and validation)
+   - Parses YAML options input using `yaml` library
+   - Validates option types using `zod` schema
+   - Provides default values for missing options
+   - Pure functions with comprehensive test coverage
+   - Depends on: types, yaml (for parsing), zod (for validation)
+
+6. **`types.ts`**
    - All TypeScript type definitions and interfaces
    - No runtime logic, purely type declarations
    - Imported by all other modules as needed
 
-6. **`validation.ts`**
+7. **`validation.ts`**
    - Pure functions for validation and business logic
    - Command parsing, permission checks, merge method determination
    - Easily testable with no side effects
