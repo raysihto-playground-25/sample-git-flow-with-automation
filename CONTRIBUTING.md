@@ -74,6 +74,7 @@ To reduce maintenance burden and prevent documentation drift, **do not include s
 **Rationale**: These specific numbers change frequently as the codebase evolves. Maintaining them accurately requires ongoing effort with minimal benefit. Outdated metrics can mislead readers and create unnecessary maintenance overhead.
 
 **Examples of what to avoid**:
+
 - ❌ "The project has 150 tests"
 - ❌ "The main file is 1,088 lines"
 - ❌ "There are 25 TypeScript files"
@@ -81,6 +82,7 @@ To reduce maintenance burden and prevent documentation drift, **do not include s
 - ❌ "80+ tests validate this functionality" (in code comments)
 
 **Examples of acceptable alternatives**:
+
 - ✅ "The project has comprehensive test coverage"
 - ✅ "The codebase follows modular design principles"
 - ✅ "Multiple TypeScript files implement the functionality"
@@ -97,6 +99,7 @@ While specific metrics should be avoided in documentation, **PR descriptions are
 **Rationale**: PR descriptions capture a snapshot of changes at a specific point in time. They serve as historical records and do not require ongoing maintenance.
 
 **Examples of acceptable PR description content**:
+
 - ✅ "This PR splits a 1,088-line file into 15 smaller modules"
 - ✅ "Added 23 new test cases to improve coverage"
 - ✅ "Reduced file size from 500 lines to 150 lines"
@@ -108,12 +111,14 @@ When addressing individual review comments in a PR conversation, **always refere
 **Rationale**: This creates clear traceability in the GitHub PR conversation, making it easy to verify that each piece of feedback has been addressed.
 
 **How to respond**:
+
 - Reply to each conversation thread with the commit hash (short or full form) that addresses that specific feedback
 - A simple hash-only reply is acceptable (e.g., `abc1234`)
 - If the comment is addressed across multiple commits, reference all relevant hashes or provide a brief explanation (e.g., "Fixed across a1b2c3d and b2c3d4e due to refactoring split")
 - Do not resolve the review thread until the reviewer has confirmed the fix
 
 **Examples**:
+
 - ✅ `a1b2c3d`
 - ✅ `a1b2c3d - refactored as suggested`
 - ✅ `Fixed in a1b2c3d and b2c3d4e`

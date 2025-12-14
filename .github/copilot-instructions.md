@@ -51,27 +51,56 @@ npm run build       # Build the action
 
 ## Development Environment
 
-**CRITICAL**: When working on code in `.github/actions/lysbot-merge/`, use the same Node.js and npm versions specified in package.json engines and GitHub Actions workflows to ensure consistent behavior.
+**CRITICAL**: Development for `.github/actions/lysbot-merge/` **MUST** be performed in an environment that matches the Node.js version specified in `package.json` and the GitHub Actions workflows.
 
-- **Node.js version**: Match the version specified in `package.json` engines field and `.github/workflows/lysbot-merge-action-test.yml`
-- **npm version**: Use a compatible version for the Node.js version above
+### Supported Node.js Versions
 
-**Example (as of December 14, 2025)**: The project currently uses Node.js 24.11.1 and npm 11.6.2, but these may change over time. Always check package.json and workflow files for the current requirements.
+- **Node.js 24.x (REQUIRED)**  
+  This project is developed and validated primarily on Node.js 24.x.  
+  Full compatibility, including TypeScript-based configuration loading, linting, formatting, and packaging, is guaranteed **only** on Node.js 24.x.
 
-**Why this matters**: The project uses Node.js 24+ features and TypeScript configuration loading that may not work in older Node.js versions. Using a different version may cause linting, formatting, or build errors that don't occur in the correct environment. Always match the environment specified in package.json and used in GitHub Actions workflows.
+- **Node.js 22.x (MINIMUM / DEGRADED SUPPORT)**  
+  Node.js 22.x is the **absolute minimum** version allowed for local development **only when Node.js 24.x cannot be used**.  
+  In this environment, additional workarounds are required, and some tooling (especially ESLint) may still behave inconsistently.
 
-**Node 20 Compatibility Workaround**: If you're using Node 20 instead of Node 24+, you can enable TypeScript config file loading with the `tsx` package (already in devDependencies):
+- **Node.js 20.x and earlier (UNSUPPORTED)**  
+  Node.js 20.x and older versions are **completely unsupported**.  
+  Development, linting, or formatting using these versions is **not allowed** and will lead to inconsistent or broken behavior.
+
+### npm Version
+
+- Use an npm version compatible with the selected Node.js version above.
+- Always follow the versions defined in `package.json` and CI workflows.
+
+### Why Node.js 24 Is Required
+
+This project relies on:
+
+- Node.js 24+ runtime behavior
+- Native ESM handling
+- TypeScript configuration files (`.ts`) being loaded directly by tooling
+
+These features are **not reliably supported** in older Node.js versions.
+
+### Node.js 22 Workaround (Limited Support Only)
+
+When using **Node.js 22.x**, you **must** enable TypeScript config loading explicitly using `tsx` (already included in `devDependencies`):
 
 ```bash
-export NODE_OPTIONS='--import tsx'
-npm run format:check  # Works with tsx
-npm run lint          # May still have issues with eslint
+    env 'NODE_OPTIONS=--import tsx' npm run format:check
+    env 'NODE_OPTIONS=--import tsx' npm run lint   # ESLint may still fail in some cases
 ```
 
-Note: This workaround enables prettier to load `.ts` config files in Node 20, but eslint may still have compatibility issues. For full compatibility, use Node 24+ as specified in package.json engines.
+This workaround exists **only** to unblock development in constrained environments.  
+It is **not** equivalent to full Node.js 24 compatibility.
 
-**MANDATORY**: If you cannot run `npm run lint` or `npm run format:check` due to environment limitations (e.g., Node.js version mismatch), you MUST:
-1. Still run `npm test` and `npm run package` to verify tests pass and build succeeds
-2. Manually review code for common lint issues (e.g., use `Number.isNaN` instead of `isNaN`, proper imports, etc.)
-3. Note in the commit message that linting will be validated in CI with Node 24+
-4. **DO NOT** skip validation entirely - the CI will catch issues and require fixes
+### Mandatory Requirements
+
+If you are unable to run all checks locally due to environment limitations:
+
+1. You **must still** run `npm test` and `npm run package`
+2. You **must** manually review changes for obvious lint or style violations
+3. You **must** clearly state in the commit message that validation relies on CI with Node.js 24
+4. You **must not** treat this as a substitute for setting up a proper Node.js 24 environment
+
+**Developers are expected to provision Node.js 24.x, or at minimum Node.js 22.x, by any means necessary.**
