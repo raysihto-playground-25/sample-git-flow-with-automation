@@ -46,7 +46,7 @@ export type ParsedOptions = z.infer<typeof OPTIONS_SCHEMA>;
  * @returns Parsed options object with camelCase keys
  * @throws Error if parsing fails or validation fails
  */
-export function parseOptions(optionsYaml: string, deprecatedInputs?: Partial<ParsedOptions>): ParsedOptions {
+export function parseOptions(optionsYaml: string, deprecatedInputs?: Partial<ParsedOptions>): ActionConfig {
   // If empty string, use deprecated inputs or defaults
   if (!optionsYaml || optionsYaml.trim() === '') {
     const inputToValidate = deprecatedInputs || {};
