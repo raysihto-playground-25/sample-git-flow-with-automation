@@ -66,6 +66,15 @@ export function parseOptions(optionsYaml: string, deprecatedInputs?: Partial<Par
     throw new Error(`Failed to parse YAML options: ${message}`);
   }
 
+  // Ensure the parsed YAML is a plain object (not array, not null, not primitive)
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error(
+      'Options YAML must be a mapping (object) at the top level. ' +
+        'Received: ' +
+        (parsed === null ? 'null' : Array.isArray(parsed) ? 'array' : typeof parsed),
+    );
+  }
+
   // Convert kebab-case keys to camelCase
   const camelCased = camelcaseKeys(parsed as Record<string, unknown>, { deep: true });
 

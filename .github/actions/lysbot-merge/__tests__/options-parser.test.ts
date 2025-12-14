@@ -302,4 +302,73 @@ develop-branch: yaml-dev
       mergeableRetryInterval: 99, // From deprecated (not in YAML)
     });
   });
+
+  // Tests for top-level YAML structure validation
+  it('should accept top-level mapping (object) YAML', () => {
+    const yaml = `
+release-branch-prefix: release/
+develop-branch: develop
+    `;
+    const result = parseOptions(yaml);
+    expect(result).toEqual({
+      releaseBranchPrefix: 'release/',
+      developBranch: 'develop',
+      syncBranchPrefix: 'fix/sync/', // Default value
+      mergeableRetryCount: 5, // Default value
+      mergeableRetryInterval: 10, // Default value
+    });
+  });
+
+  it('should accept top-level empty mapping ({}) YAML', () => {
+    const yaml = '{}';
+    const result = parseOptions(yaml);
+    expect(result).toEqual({
+      releaseBranchPrefix: 'release/', // Default value
+      developBranch: 'develop', // Default value
+      syncBranchPrefix: 'fix/sync/', // Default value
+      mergeableRetryCount: 5, // Default value
+      mergeableRetryInterval: 10, // Default value
+    });
+  });
+
+  it('should reject top-level string YAML', () => {
+    const yaml = '"hello"';
+    expect(() => parseOptions(yaml)).toThrow(
+      'Options YAML must be a mapping (object) at the top level. Received: string',
+    );
+  });
+
+  it('should reject top-level number YAML', () => {
+    const yaml = '42';
+    expect(() => parseOptions(yaml)).toThrow(
+      'Options YAML must be a mapping (object) at the top level. Received: number',
+    );
+  });
+
+  it('should reject top-level boolean YAML', () => {
+    const yaml = 'true';
+    expect(() => parseOptions(yaml)).toThrow(
+      'Options YAML must be a mapping (object) at the top level. Received: boolean',
+    );
+  });
+
+  it('should reject top-level null YAML', () => {
+    const yaml = 'null';
+    expect(() => parseOptions(yaml)).toThrow(
+      'Options YAML must be a mapping (object) at the top level. Received: null',
+    );
+  });
+
+  it('should reject top-level array YAML', () => {
+    const yaml = '[1, 2, 3]';
+    expect(() => parseOptions(yaml)).toThrow(
+      'Options YAML must be a mapping (object) at the top level. Received: array',
+    );
+  });
+
+  it('should reject syntactically invalid YAML', () => {
+    // Use truly invalid YAML syntax (unclosed bracket)
+    const yaml = 'release-branch-prefix: [unclosed';
+    expect(() => parseOptions(yaml)).toThrow('Failed to parse YAML options');
+  });
 });
