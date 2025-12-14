@@ -34,6 +34,24 @@ const DEFAULT_OPTIONS: Required<ParsedOptions> = {
 };
 
 /**
+ * Validates and parses a numeric value.
+ * @param value - String value to parse
+ * @param fieldName - Name of the field for error messages
+ * @param lineNumber - Line number for error messages
+ * @returns Parsed number
+ * @throws Error if value is not a valid non-negative integer
+ */
+function parseNonNegativeInteger(value: string, fieldName: string, lineNumber: number): number {
+  const num = parseInt(value, 10);
+  if (isNaN(num) || num < 0) {
+    throw new Error(
+      `Invalid value for ${fieldName} at line ${lineNumber}: "${value}". Must be a non-negative integer.`,
+    );
+  }
+  return num;
+}
+
+/**
  * Parses the options YAML-like string into a ParsedOptions object.
  *
  * @param optionsYaml - YAML-like string with key: value pairs
@@ -83,26 +101,12 @@ export function parseOptions(optionsYaml: string): ParsedOptions {
       case 'sync_branch_prefix':
         options.sync_branch_prefix = value;
         break;
-      case 'mergeable_retry_count': {
-        const num = parseInt(value, 10);
-        if (isNaN(num) || num < 0) {
-          throw new Error(
-            `Invalid value for mergeable_retry_count at line ${i + 1}: "${value}". Must be a non-negative integer.`,
-          );
-        }
-        options.mergeable_retry_count = num;
+      case 'mergeable_retry_count':
+        options.mergeable_retry_count = parseNonNegativeInteger(value, 'mergeable_retry_count', i + 1);
         break;
-      }
-      case 'mergeable_retry_interval': {
-        const num = parseInt(value, 10);
-        if (isNaN(num) || num < 0) {
-          throw new Error(
-            `Invalid value for mergeable_retry_interval at line ${i + 1}: "${value}". Must be a non-negative integer.`,
-          );
-        }
-        options.mergeable_retry_interval = num;
+      case 'mergeable_retry_interval':
+        options.mergeable_retry_interval = parseNonNegativeInteger(value, 'mergeable_retry_interval', i + 1);
         break;
-      }
       default:
         throw new Error(`Unknown option at line ${i + 1}: "${key}"`);
     }
