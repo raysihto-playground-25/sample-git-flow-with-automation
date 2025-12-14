@@ -288,7 +288,7 @@ npm run bundle         # Bundle with ncc
 
 ### Code Structure
 
-The codebase has been modularized for better maintainability and testability, following the **Single Responsibility Principle** and **Humble Object Pattern**. Each module focuses on a specific concern:
+The codebase has been modularized for better maintainability and testability, following the **Single Responsibility Principle**. Each module focuses on a specific concern:
 
 #### Current File Structure
 
