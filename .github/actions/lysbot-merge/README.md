@@ -374,6 +374,27 @@ The refactoring follows these principles to maintain code quality:
    - Orchestration logic in action.ts can be tested with mocked dependencies
    - Runtime integration in main.ts is intentionally untested (0% coverage)
 
+#### Naming Conventions
+
+The codebase follows these naming conventions:
+
+1. **Constants**
+   - `SCREAMING_SNAKE_CASE` for module-level constants and schemas
+   - Examples: `OPTIONS_SCHEMA`, `DEFAULT_OPTIONS`, `COMMAND_REGEX`, `VALID_FLAGS`
+   - Rationale: Makes constants immediately recognizable and distinguishable from variables
+
+2. **Functions and Variables**
+   - `camelCase` for functions, variables, and parameters
+   - Examples: `parseOptions`, `buildConfig`, `optionsYaml`
+
+3. **Types and Interfaces**
+   - `PascalCase` for type names and interfaces
+   - Examples: `ParsedOptions`, `ActionConfig`, `EventContext`
+
+4. **Files and Modules**
+   - `kebab-case` for file names
+   - Examples: `options-parser.ts`, `github-api.ts`, `action.test.ts`
+
 #### Future Refactoring Guidelines
 
 When adding new features or making changes, follow these guidelines:

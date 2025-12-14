@@ -15,14 +15,26 @@ import { parseOptions, buildConfig } from '../src/options-parser.js';
 // =============================================================================
 
 describe('parseOptions', () => {
-  it('should return empty object for empty string', () => {
+  it('should return defaults for empty string', () => {
     const result = parseOptions('');
-    expect(result).toEqual({});
+    expect(result).toEqual({
+      release_branch_prefix: 'release/',
+      develop_branch: 'develop',
+      sync_branch_prefix: 'fix/sync/',
+      mergeable_retry_count: 5,
+      mergeable_retry_interval: 10,
+    });
   });
 
-  it('should return empty object for whitespace-only string', () => {
+  it('should return defaults for whitespace-only string', () => {
     const result = parseOptions('   \n  \n  ');
-    expect(result).toEqual({});
+    expect(result).toEqual({
+      release_branch_prefix: 'release/',
+      develop_branch: 'develop',
+      sync_branch_prefix: 'fix/sync/',
+      mergeable_retry_count: 5,
+      mergeable_retry_interval: 10,
+    });
   });
 
   it('should parse full options with quotes', () => {
@@ -72,6 +84,8 @@ sync_branch_prefix: fix/sync/
       release_branch_prefix: 'release/',
       develop_branch: 'develop',
       sync_branch_prefix: 'fix/sync/',
+      mergeable_retry_count: 5, // Default value
+      mergeable_retry_interval: 10, // Default value
     });
   });
 
@@ -90,6 +104,8 @@ sync_branch_prefix: fix/sync/
       release_branch_prefix: 'release/',
       develop_branch: 'develop',
       sync_branch_prefix: 'fix/sync/',
+      mergeable_retry_count: 5, // Default value
+      mergeable_retry_interval: 10, // Default value
     });
   });
 
@@ -104,6 +120,8 @@ sync_branch_prefix: fix/sync/
       release_branch_prefix: 'release/',
       develop_branch: 'develop',
       sync_branch_prefix: 'fix/sync/',
+      mergeable_retry_count: 5, // Default value
+      mergeable_retry_interval: 10, // Default value
     });
   });
 
@@ -118,6 +136,8 @@ sync_branch_prefix: fix/sync/
       release_branch_prefix: 'release/',
       develop_branch: 'develop',
       sync_branch_prefix: 'fix/sync/',
+      mergeable_retry_count: 5, // Default value
+      mergeable_retry_interval: 10, // Default value
     });
   });
 
@@ -135,7 +155,11 @@ mergeable_retry_count: 0
     `;
     const result = parseOptions(yaml);
     expect(result).toEqual({
+      release_branch_prefix: 'release/', // Default value
+      develop_branch: 'develop', // Default value
+      sync_branch_prefix: 'fix/sync/', // Default value
       mergeable_retry_count: 0,
+      mergeable_retry_interval: 10, // Default value
     });
   });
 
@@ -145,6 +169,10 @@ mergeable_retry_interval: 0
     `;
     const result = parseOptions(yaml);
     expect(result).toEqual({
+      release_branch_prefix: 'release/', // Default value
+      develop_branch: 'develop', // Default value
+      sync_branch_prefix: 'fix/sync/', // Default value
+      mergeable_retry_count: 5, // Default value
       mergeable_retry_interval: 0,
     });
   });
@@ -158,6 +186,9 @@ develop_branch: 'd'
     expect(result).toEqual({
       release_branch_prefix: '/',
       develop_branch: 'd',
+      sync_branch_prefix: 'fix/sync/', // Default value
+      mergeable_retry_count: 5, // Default value
+      mergeable_retry_interval: 10, // Default value
     });
   });
 
@@ -241,7 +272,8 @@ release_branch_prefix:
 
 describe('buildConfig', () => {
   it('should apply all defaults for empty options', () => {
-    const config = buildConfig({});
+    const parsed = parseOptions('');
+    const config = buildConfig(parsed);
     expect(config).toEqual({
       releaseBranchPrefix: 'release/',
       developBranch: 'develop',
@@ -252,10 +284,11 @@ describe('buildConfig', () => {
   });
 
   it('should use provided values and apply defaults for missing ones', () => {
-    const config = buildConfig({
-      release_branch_prefix: 'rel/',
-      develop_branch: 'main',
-    });
+    const parsed = parseOptions(`
+release_branch_prefix: 'rel/'
+develop_branch: 'main'
+    `);
+    const config = buildConfig(parsed);
     expect(config).toEqual({
       releaseBranchPrefix: 'rel/',
       developBranch: 'main',
@@ -266,13 +299,14 @@ describe('buildConfig', () => {
   });
 
   it('should use all provided values', () => {
-    const config = buildConfig({
-      release_branch_prefix: 'rel/',
-      develop_branch: 'main',
-      sync_branch_prefix: 'sync/',
-      mergeable_retry_count: 3,
-      mergeable_retry_interval: 5,
-    });
+    const parsed = parseOptions(`
+release_branch_prefix: 'rel/'
+develop_branch: 'main'
+sync_branch_prefix: 'sync/'
+mergeable_retry_count: 3
+mergeable_retry_interval: 5
+    `);
+    const config = buildConfig(parsed);
     expect(config).toEqual({
       releaseBranchPrefix: 'rel/',
       developBranch: 'main',
@@ -283,10 +317,11 @@ describe('buildConfig', () => {
   });
 
   it('should handle zero values correctly', () => {
-    const config = buildConfig({
-      mergeable_retry_count: 0,
-      mergeable_retry_interval: 0,
-    });
+    const parsed = parseOptions(`
+mergeable_retry_count: 0
+mergeable_retry_interval: 0
+    `);
+    const config = buildConfig(parsed);
     expect(config).toEqual({
       releaseBranchPrefix: 'release/',
       developBranch: 'develop',

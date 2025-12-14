@@ -51,9 +51,11 @@ npm run build       # Build the action
 
 ## Development Environment
 
-**CRITICAL**: When working on code in `.github/actions/lysbot-merge/`, use Node.js 24+ and npm 11+ to match the project requirements and CI environment.
+**CRITICAL**: When working on code in `.github/actions/lysbot-merge/`, use the same Node.js and npm versions specified in package.json engines and GitHub Actions workflows to ensure consistent behavior.
 
-- **Node.js version**: 24.11.1 or higher (as specified in package.json engines)
-- **npm version**: 11.6.2 or higher
+- **Node.js version**: Match the version specified in `package.json` engines field and `.github/workflows/lysbot-merge-action-test.yml`
+- **npm version**: Use a compatible version for the Node.js version above
+
+**Example (as of December 14, 2025)**: The project currently uses Node.js 24.11.1 and npm 11.6.2, but these may change over time. Always check package.json and workflow files for the current requirements.
 
 **Why this matters**: The project uses Node.js 24+ features and TypeScript configuration loading that may not work in older Node.js versions. Using a different version may cause linting, formatting, or build errors that don't occur in the correct environment. Always match the environment specified in package.json and used in GitHub Actions workflows.

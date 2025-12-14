@@ -11,37 +11,26 @@ import { z } from 'zod';
 import type { ActionConfig } from './types.js';
 
 /**
- * Default values for options.
- */
-const DEFAULT_OPTIONS = {
-  release_branch_prefix: 'release/',
-  develop_branch: 'develop',
-  sync_branch_prefix: 'fix/sync/',
-  mergeable_retry_count: 5,
-  mergeable_retry_interval: 10,
-} as const;
-
-/**
  * Zod schema for validating parsed options.
- * Each field has specific type requirements:
+ * Each field has specific type requirements and default values:
  * - String fields for branch prefixes
  * - Non-negative integer fields for retry settings
  * Using strict() to reject unknown properties
  */
-const optionsSchema = z
+const OPTIONS_SCHEMA = z
   .object({
-    release_branch_prefix: z.string().optional(),
-    develop_branch: z.string().optional(),
-    sync_branch_prefix: z.string().optional(),
-    mergeable_retry_count: z.number().int().nonnegative().optional(),
-    mergeable_retry_interval: z.number().int().nonnegative().optional(),
+    release_branch_prefix: z.string().default('release/'),
+    develop_branch: z.string().default('develop'),
+    sync_branch_prefix: z.string().default('fix/sync/'),
+    mergeable_retry_count: z.number().int().nonnegative().default(5),
+    mergeable_retry_interval: z.number().int().nonnegative().default(10),
   })
   .strict();
 
 /**
  * Parsed options from the YAML input.
  */
-export type ParsedOptions = z.infer<typeof optionsSchema>;
+export type ParsedOptions = z.infer<typeof OPTIONS_SCHEMA>;
 
 /**
  * Parses the options YAML string into a ParsedOptions object.
@@ -51,9 +40,13 @@ export type ParsedOptions = z.infer<typeof optionsSchema>;
  * @throws Error if parsing fails or validation fails
  */
 export function parseOptions(optionsYaml: string): ParsedOptions {
-  // If empty string, return empty options
+  // If empty string, parse as empty object to get defaults
   if (!optionsYaml || optionsYaml.trim() === '') {
-    return {};
+    const result = OPTIONS_SCHEMA.safeParse({});
+    if (!result.success) {
+      throw new Error(`Invalid options: ${result.error.message}`);
+    }
+    return result.data;
   }
 
   // Parse YAML
@@ -66,7 +59,7 @@ export function parseOptions(optionsYaml: string): ParsedOptions {
   }
 
   // Validate using zod schema
-  const result = optionsSchema.safeParse(parsed);
+  const result = OPTIONS_SCHEMA.safeParse(parsed);
   if (!result.success) {
     // Use zod's default error formatting
     throw new Error(`Invalid options: ${result.error.message}`);
@@ -83,10 +76,10 @@ export function parseOptions(optionsYaml: string): ParsedOptions {
  */
 export function buildConfig(parsedOptions: ParsedOptions): ActionConfig {
   return {
-    releaseBranchPrefix: parsedOptions.release_branch_prefix ?? DEFAULT_OPTIONS.release_branch_prefix,
-    developBranch: parsedOptions.develop_branch ?? DEFAULT_OPTIONS.develop_branch,
-    syncBranchPrefix: parsedOptions.sync_branch_prefix ?? DEFAULT_OPTIONS.sync_branch_prefix,
-    mergeableRetryCount: parsedOptions.mergeable_retry_count ?? DEFAULT_OPTIONS.mergeable_retry_count,
-    mergeableRetryInterval: parsedOptions.mergeable_retry_interval ?? DEFAULT_OPTIONS.mergeable_retry_interval,
+    releaseBranchPrefix: parsedOptions.release_branch_prefix,
+    developBranch: parsedOptions.develop_branch,
+    syncBranchPrefix: parsedOptions.sync_branch_prefix,
+    mergeableRetryCount: parsedOptions.mergeable_retry_count,
+    mergeableRetryInterval: parsedOptions.mergeable_retry_interval,
   };
 }
