@@ -1,18 +1,16 @@
 /**
- * options-parser.ts - Parser for YAML-like options input
+ * options-parser.ts - Parser for YAML options input
  *
- * This module provides a simple parser for the options parameter which accepts
- * YAML-like key: value pairs. The parser:
- * - Supports comments (lines starting with #)
- * - Supports quoted and unquoted values
- * - Ignores empty lines
- * - Validates that only known options are provided
+ * This module provides a YAML parser for the options parameter using the `yaml` library.
+ * The parser validates types and provides clear error messages for invalid inputs.
  */
+
+import YAML from 'yaml';
 
 import type { ActionConfig } from './types.js';
 
 /**
- * Parsed options from the YAML-like input.
+ * Parsed options from the YAML input.
  */
 export interface ParsedOptions {
   release_branch_prefix?: string;
@@ -34,29 +32,73 @@ const DEFAULT_OPTIONS: Required<ParsedOptions> = {
 };
 
 /**
- * Validates and parses a numeric value.
- * @param value - String value to parse
- * @param fieldName - Name of the field for error messages
- * @param lineNumber - Line number for error messages
- * @returns Parsed number
- * @throws Error if value is not a valid non-negative integer
+ * Known option keys and their expected types.
  */
-function parseNonNegativeInteger(value: string, fieldName: string, lineNumber: number): number {
-  const num = parseInt(value, 10);
-  if (isNaN(num) || num < 0) {
+const OPTION_SCHEMA: Record<string, 'string' | 'number'> = {
+  release_branch_prefix: 'string',
+  develop_branch: 'string',
+  sync_branch_prefix: 'string',
+  mergeable_retry_count: 'number',
+  mergeable_retry_interval: 'number',
+};
+
+/**
+ * Validates that a value is a string.
+ * @param value - Value to validate
+ * @param key - Field name for error messages
+ * @throws Error if value is not a string
+ */
+function validateString(value: unknown, key: string): asserts value is string {
+  if (typeof value !== 'string') {
+    const actualType = value === null ? 'null' : typeof value;
+    const displayValue = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value === 'object' ? 'object' : String(value);
     throw new Error(
-      `Invalid value for ${fieldName} at line ${lineNumber}: "${value}". Must be a non-negative integer.`,
+      `Invalid type for "${key}": expected string, but got ${actualType} (value: ${displayValue}). String fields must be text values, not numbers, booleans, null, arrays, or objects.`,
     );
   }
-  return num;
 }
 
 /**
- * Parses the options YAML-like string into a ParsedOptions object.
+ * Validates that a value is a non-negative integer.
+ * @param value - Value to validate
+ * @param key - Field name for error messages
+ * @throws Error if value is not a valid non-negative integer
+ */
+function validateNonNegativeInteger(value: unknown, key: string): asserts value is number {
+  // Check if it's a string number like "10"
+  if (typeof value === 'string') {
+    throw new Error(
+      `Invalid type for "${key}": expected number, but got string (value: "${value}"). Numeric fields must be unquoted numbers like 5, not quoted strings like "5".`,
+    );
+  }
+  
+  if (typeof value !== 'number') {
+    const actualType = value === null ? 'null' : typeof value;
+    const displayValue = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value === 'object' ? 'object' : String(value);
+    throw new Error(
+      `Invalid type for "${key}": expected number, but got ${actualType} (value: ${displayValue}). Numeric fields must be numbers, not strings, booleans, null, arrays, or objects.`,
+    );
+  }
+
+  if (!Number.isInteger(value)) {
+    throw new Error(
+      `Invalid value for "${key}": expected integer, but got ${value}. The value must be a whole number.`,
+    );
+  }
+
+  if (value < 0) {
+    throw new Error(
+      `Invalid value for "${key}": expected non-negative integer, but got ${value}. The value must be 0 or greater.`,
+    );
+  }
+}
+
+/**
+ * Parses the options YAML string into a ParsedOptions object.
  *
- * @param optionsYaml - YAML-like string with key: value pairs
+ * @param optionsYaml - YAML string with key: value pairs
  * @returns Parsed options object
- * @throws Error if parsing fails or unknown options are provided
+ * @throws Error if parsing fails or validation fails
  */
 export function parseOptions(optionsYaml: string): ParsedOptions {
   const options: ParsedOptions = {};
@@ -66,52 +108,39 @@ export function parseOptions(optionsYaml: string): ParsedOptions {
     return options;
   }
 
-  const lines = optionsYaml.split('\n');
+  // Parse YAML
+  let parsed: unknown;
+  try {
+    parsed = YAML.parse(optionsYaml);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to parse YAML options: ${message}`);
+  }
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+  // Validate that parsed result is an object
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(
+      `Invalid options format: expected YAML object with key-value pairs, but got ${parsed === null ? 'null' : Array.isArray(parsed) ? 'array' : typeof parsed}`,
+    );
+  }
 
-    // Skip empty lines and comments
-    if (line === '' || line.startsWith('#')) {
-      continue;
+  // Validate each option
+  for (const [key, value] of Object.entries(parsed)) {
+    // Check if it's a known option
+    const expectedType = OPTION_SCHEMA[key];
+    if (!expectedType) {
+      throw new Error(
+        `Unknown option: "${key}". Valid options are: ${Object.keys(OPTION_SCHEMA).join(', ')}`,
+      );
     }
 
-    // Parse key: value
-    const match = line.match(/^([a-z_]+)\s*:\s*(.+)$/);
-    if (!match) {
-      throw new Error(`Invalid option format at line ${i + 1}: "${line}". Expected format: "key: value"`);
-    }
-
-    const key = match[1];
-    let value = match[2].trim();
-
-    // Remove quotes if present (only if value has at least 2 characters)
-    if (
-      value.length >= 2 &&
-      ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))
-    ) {
-      value = value.slice(1, -1);
-    }
-
-    // Parse based on key
-    switch (key) {
-      case 'release_branch_prefix':
-        options.release_branch_prefix = value;
-        break;
-      case 'develop_branch':
-        options.develop_branch = value;
-        break;
-      case 'sync_branch_prefix':
-        options.sync_branch_prefix = value;
-        break;
-      case 'mergeable_retry_count':
-        options.mergeable_retry_count = parseNonNegativeInteger(value, 'mergeable_retry_count', i + 1);
-        break;
-      case 'mergeable_retry_interval':
-        options.mergeable_retry_interval = parseNonNegativeInteger(value, 'mergeable_retry_interval', i + 1);
-        break;
-      default:
-        throw new Error(`Unknown option at line ${i + 1}: "${key}"`);
+    // Validate based on expected type
+    if (expectedType === 'string') {
+      validateString(value, key);
+      (options as Record<string, string>)[key] = value as string;
+    } else if (expectedType === 'number') {
+      validateNonNegativeInteger(value, key);
+      (options as Record<string, number>)[key] = value as number;
     }
   }
 

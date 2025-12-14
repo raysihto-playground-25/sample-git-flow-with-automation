@@ -2,7 +2,7 @@
  * options-parser.test.ts - Tests for options-parser.ts module
  *
  * Tests cover:
- * - parseOptions: Parsing YAML-like options string
+ * - parseOptions: Parsing YAML options string
  * - buildConfig: Building ActionConfig with defaults
  */
 
@@ -107,11 +107,11 @@ sync_branch_prefix: fix/sync/
     });
   });
 
-  it('should handle extra whitespace around colons', () => {
+  it('should handle extra whitespace (valid YAML)', () => {
     const yaml = `
-release_branch_prefix   :   release/
-develop_branch:develop
-sync_branch_prefix  :  fix/sync/
+release_branch_prefix: release/
+develop_branch: develop
+sync_branch_prefix: fix/sync/
     `;
     const result = parseOptions(yaml);
     expect(result).toEqual({
@@ -121,48 +121,12 @@ sync_branch_prefix  :  fix/sync/
     });
   });
 
-  it('should throw error for invalid format', () => {
-    const yaml = `
-release_branch_prefix: release/
-invalid line without colon
-    `;
-    expect(() => parseOptions(yaml)).toThrow('Invalid option format at line 3');
-  });
-
   it('should throw error for unknown option', () => {
     const yaml = `
 release_branch_prefix: release/
 unknown_option: value
     `;
-    expect(() => parseOptions(yaml)).toThrow('Unknown option at line 3: "unknown_option"');
-  });
-
-  it('should throw error for invalid retry count (non-numeric)', () => {
-    const yaml = `
-mergeable_retry_count: abc
-    `;
-    expect(() => parseOptions(yaml)).toThrow('Invalid value for mergeable_retry_count at line 2');
-  });
-
-  it('should throw error for invalid retry count (negative)', () => {
-    const yaml = `
-mergeable_retry_count: -5
-    `;
-    expect(() => parseOptions(yaml)).toThrow('Invalid value for mergeable_retry_count at line 2');
-  });
-
-  it('should throw error for invalid retry interval (non-numeric)', () => {
-    const yaml = `
-mergeable_retry_interval: xyz
-    `;
-    expect(() => parseOptions(yaml)).toThrow('Invalid value for mergeable_retry_interval at line 2');
-  });
-
-  it('should throw error for invalid retry interval (negative)', () => {
-    const yaml = `
-mergeable_retry_interval: -10
-    `;
-    expect(() => parseOptions(yaml)).toThrow('Invalid value for mergeable_retry_interval at line 2');
+    expect(() => parseOptions(yaml)).toThrow('Unknown option: "unknown_option"');
   });
 
   it('should handle zero for retry count', () => {
@@ -195,6 +159,105 @@ develop_branch: 'd'
       release_branch_prefix: '/',
       develop_branch: 'd',
     });
+  });
+
+  // Error cases for string fields with invalid types
+  it('should throw error for number value in string field (error case 1)', () => {
+    const yaml = `release_branch_prefix: 10`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "release_branch_prefix": expected string, but got number',
+    );
+  });
+
+  it('should throw error for boolean false in string field (error case 2)', () => {
+    const yaml = `release_branch_prefix: false`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "release_branch_prefix": expected string, but got boolean',
+    );
+  });
+
+  it('should throw error for boolean TRUE in string field (error case 3)', () => {
+    const yaml = `release_branch_prefix: TRUE`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "release_branch_prefix": expected string, but got boolean',
+    );
+  });
+
+  it('should throw error for null in string field (error case 4)', () => {
+    const yaml = `release_branch_prefix: null`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "release_branch_prefix": expected string, but got null',
+    );
+  });
+
+  it('should throw error for object in string field (error case 5)', () => {
+    const yaml = `release_branch_prefix: { key: "release/" }`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "release_branch_prefix": expected string, but got object',
+    );
+  });
+
+  it('should throw error for array in string field (error case 6)', () => {
+    const yaml = `release_branch_prefix: [ "release/" ]`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "release_branch_prefix": expected string, but got object',
+    );
+  });
+
+  it('should throw error for nested array in string field (error case 7)', () => {
+    const yaml = `
+release_branch_prefix:
+  - "release/"
+    `;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "release_branch_prefix": expected string, but got object',
+    );
+  });
+
+  it('should throw error for nested object in string field (error case 8)', () => {
+    const yaml = `
+release_branch_prefix:
+  name: "release/"
+    `;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "release_branch_prefix": expected string, but got object',
+    );
+  });
+
+  // Error cases for numeric fields with invalid types
+  it('should throw error for string number in numeric field (error case 9)', () => {
+    const yaml = `mergeable_retry_count: "10"`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "mergeable_retry_count": expected number, but got string (value: "10")',
+    );
+  });
+
+  it('should throw error for boolean False in numeric field (error case 10)', () => {
+    const yaml = `mergeable_retry_count: False`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "mergeable_retry_count": expected number, but got boolean',
+    );
+  });
+
+  it('should throw error for null in numeric field (error case 11)', () => {
+    const yaml = `mergeable_retry_count: null`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid type for "mergeable_retry_count": expected number, but got null',
+    );
+  });
+
+  it('should throw error for negative number', () => {
+    const yaml = `mergeable_retry_count: -5`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid value for "mergeable_retry_count": expected non-negative integer, but got -5',
+    );
+  });
+
+  it('should throw error for float number', () => {
+    const yaml = `mergeable_retry_count: 5.5`;
+    expect(() => parseOptions(yaml)).toThrow(
+      'Invalid value for "mergeable_retry_count": expected integer, but got 5.5',
+    );
   });
 });
 

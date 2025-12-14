@@ -35,3 +35,14 @@ npm test            # Run tests
 npm run build       # Build the action
 # Now commit
 ```
+
+## Configuration Files
+
+**CRITICAL**: Do NOT change the file extension of configuration files in `.github/actions/lysbot-merge/`:
+
+- `prettier.config.ts` - **MUST remain as `.ts`** extension (do NOT change to `.mjs`, `.js`, or `.cjs`)
+- `eslint.config.ts` - **MUST remain as `.ts`** extension
+- `rollup.config.ts` - **MUST remain as `.ts`** extension
+- `vitest.config.ts` - **MUST remain as `.ts`** extension
+
+**Why this matters**: These configuration files use TypeScript and are loaded correctly with the `.ts` extension in the project's environment (Node.js 24+ with proper tooling). Changing extensions will break the configuration loading and cause CI/build failures.
