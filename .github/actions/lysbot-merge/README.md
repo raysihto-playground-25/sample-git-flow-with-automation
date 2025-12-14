@@ -233,9 +233,9 @@ steps:
 
 ## Inputs
 
-| Input          | Type   | Required | Default | Description                                                                                                                                                                                                 |
-| -------------- | ------ | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `github-token` | string | Yes      | -       | GitHub token for API authentication                                                                                                                                                                         |
+| Input          | Type   | Required | Default | Description                                                                                                                                                                                                     |
+| -------------- | ------ | -------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `github-token` | string | Yes      | -       | GitHub token for API authentication                                                                                                                                                                             |
 | `options`      | string | No       | -       | Optional configuration in YAML format with key-value pairs. Supports: `release_branch_prefix`, `develop_branch`, `sync_branch_prefix`, `mergeable_retry_count`, `mergeable_retry_interval`. See examples above. |
 
 ### Default Values
