@@ -97,7 +97,9 @@ describe('main.ts', () => {
 
     // Default input values
     mockCore.getInput.mockImplementation((name: string) => {
-      if (name === 'github-token') return 'test-token';
+      if (name === 'github-token') {
+        return 'test-token';
+      }
       return '';
     });
   });
@@ -109,8 +111,12 @@ describe('main.ts', () => {
   describe('deprecated inputs handling', () => {
     it('should show warning when release_branch_prefix deprecated input is used', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
-        if (name === 'release_branch_prefix') return 'custom-release/';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        if (name === 'release_branch_prefix') {
+          return 'custom-release/';
+        }
         return '';
       });
 
@@ -127,8 +133,12 @@ describe('main.ts', () => {
 
     it('should show warning when develop_branch deprecated input is used', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
-        if (name === 'develop_branch') return 'main';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        if (name === 'develop_branch') {
+          return 'main';
+        }
         return '';
       });
 
@@ -145,8 +155,12 @@ describe('main.ts', () => {
 
     it('should show warning when sync_branch_prefix deprecated input is used', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
-        if (name === 'sync_branch_prefix') return 'sync/';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        if (name === 'sync_branch_prefix') {
+          return 'sync/';
+        }
         return '';
       });
 
@@ -163,8 +177,12 @@ describe('main.ts', () => {
 
     it('should show warning and parse integer when mergeable_retry_count deprecated input is used', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
-        if (name === 'mergeable_retry_count') return '10';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        if (name === 'mergeable_retry_count') {
+          return '10';
+        }
         return '';
       });
 
@@ -181,8 +199,12 @@ describe('main.ts', () => {
 
     it('should show warning and parse integer when mergeable_retry_interval deprecated input is used', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
-        if (name === 'mergeable_retry_interval') return '15';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        if (name === 'mergeable_retry_interval') {
+          return '15';
+        }
         return '';
       });
 
@@ -199,10 +221,18 @@ describe('main.ts', () => {
 
     it('should handle multiple deprecated inputs and show multiple warnings', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
-        if (name === 'release_branch_prefix') return 'rel/';
-        if (name === 'develop_branch') return 'main';
-        if (name === 'mergeable_retry_count') return '3';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        if (name === 'release_branch_prefix') {
+          return 'rel/';
+        }
+        if (name === 'develop_branch') {
+          return 'main';
+        }
+        if (name === 'mergeable_retry_count') {
+          return '3';
+        }
         return '';
       });
 
@@ -218,8 +248,12 @@ describe('main.ts', () => {
 
     it('should skip invalid numeric values for retry count', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
-        if (name === 'mergeable_retry_count') return 'not-a-number';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        if (name === 'mergeable_retry_count') {
+          return 'not-a-number';
+        }
         return '';
       });
 
@@ -235,8 +269,12 @@ describe('main.ts', () => {
 
     it('should skip invalid numeric values for retry interval', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
-        if (name === 'mergeable_retry_interval') return 'invalid';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        if (name === 'mergeable_retry_interval') {
+          return 'invalid';
+        }
         return '';
       });
 
@@ -254,8 +292,12 @@ describe('main.ts', () => {
   describe('options parameter handling', () => {
     it('should parse options YAML without deprecated inputs', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
-        if (name === 'options') return 'release-branch-prefix: custom/\ndevelop-branch: dev';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        if (name === 'options') {
+          return 'release-branch-prefix: custom/\ndevelop-branch: dev';
+        }
         return '';
       });
 
@@ -267,9 +309,15 @@ describe('main.ts', () => {
 
     it('should parse options YAML with deprecated inputs as fallback', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
-        if (name === 'options') return 'release-branch-prefix: from-yaml/';
-        if (name === 'develop_branch') return 'from-deprecated';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        if (name === 'options') {
+          return 'release-branch-prefix: from-yaml/';
+        }
+        if (name === 'develop_branch') {
+          return 'from-deprecated';
+        }
         return '';
       });
 
@@ -338,7 +386,7 @@ describe('main.ts', () => {
 
     it('should handle non-Error exceptions', async () => {
       mockParseOptions.mockImplementationOnce(() => {
-        throw 'String error';
+        throw new Error('Unknown error');
       });
 
       await run();
