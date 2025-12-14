@@ -111,7 +111,7 @@ export async function run(): Promise<void> {
           'Please use the "options" parameter with "mergeable-retry-count" key instead.',
       );
       const count = parseInt(mergeableRetryCount, 10);
-      if (!isNaN(count)) {
+      if (!Number.isNaN(count)) {
         deprecatedInputs.mergeableRetryCount = count;
       }
     }
@@ -121,7 +121,7 @@ export async function run(): Promise<void> {
           'Please use the "options" parameter with "mergeable-retry-interval" key instead.',
       );
       const interval = parseInt(mergeableRetryInterval, 10);
-      if (!isNaN(interval)) {
+      if (!Number.isNaN(interval)) {
         deprecatedInputs.mergeableRetryInterval = interval;
       }
     }
