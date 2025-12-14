@@ -107,17 +107,17 @@ describe('main.ts', () => {
   });
 
   describe('deprecated inputs handling', () => {
-    it('should show warning when release-branch-prefix deprecated input is used', async () => {
+    it('should show warning when release_branch_prefix deprecated input is used', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
         if (name === 'github-token') return 'test-token';
-        if (name === 'release-branch-prefix') return 'custom-release/';
+        if (name === 'release_branch_prefix') return 'custom-release/';
         return '';
       });
 
       await run();
 
       expect(mockCore.warning).toHaveBeenCalledWith(
-        'The "release-branch-prefix" input is deprecated and will be removed in a future version. ' +
+        'The "release_branch_prefix" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "release-branch-prefix" key instead.',
       );
       expect(mockParseOptions).toHaveBeenCalledWith('', {
@@ -125,17 +125,17 @@ describe('main.ts', () => {
       });
     });
 
-    it('should show warning when develop-branch deprecated input is used', async () => {
+    it('should show warning when develop_branch deprecated input is used', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
         if (name === 'github-token') return 'test-token';
-        if (name === 'develop-branch') return 'main';
+        if (name === 'develop_branch') return 'main';
         return '';
       });
 
       await run();
 
       expect(mockCore.warning).toHaveBeenCalledWith(
-        'The "develop-branch" input is deprecated and will be removed in a future version. ' +
+        'The "develop_branch" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "develop-branch" key instead.',
       );
       expect(mockParseOptions).toHaveBeenCalledWith('', {
@@ -143,17 +143,17 @@ describe('main.ts', () => {
       });
     });
 
-    it('should show warning when sync-branch-prefix deprecated input is used', async () => {
+    it('should show warning when sync_branch_prefix deprecated input is used', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
         if (name === 'github-token') return 'test-token';
-        if (name === 'sync-branch-prefix') return 'sync/';
+        if (name === 'sync_branch_prefix') return 'sync/';
         return '';
       });
 
       await run();
 
       expect(mockCore.warning).toHaveBeenCalledWith(
-        'The "sync-branch-prefix" input is deprecated and will be removed in a future version. ' +
+        'The "sync_branch_prefix" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "sync-branch-prefix" key instead.',
       );
       expect(mockParseOptions).toHaveBeenCalledWith('', {
@@ -161,17 +161,17 @@ describe('main.ts', () => {
       });
     });
 
-    it('should show warning and parse integer when mergeable-retry-count deprecated input is used', async () => {
+    it('should show warning and parse integer when mergeable_retry_count deprecated input is used', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
         if (name === 'github-token') return 'test-token';
-        if (name === 'mergeable-retry-count') return '10';
+        if (name === 'mergeable_retry_count') return '10';
         return '';
       });
 
       await run();
 
       expect(mockCore.warning).toHaveBeenCalledWith(
-        'The "mergeable-retry-count" input is deprecated and will be removed in a future version. ' +
+        'The "mergeable_retry_count" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "mergeable-retry-count" key instead.',
       );
       expect(mockParseOptions).toHaveBeenCalledWith('', {
@@ -179,17 +179,17 @@ describe('main.ts', () => {
       });
     });
 
-    it('should show warning and parse integer when mergeable-retry-interval deprecated input is used', async () => {
+    it('should show warning and parse integer when mergeable_retry_interval deprecated input is used', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
         if (name === 'github-token') return 'test-token';
-        if (name === 'mergeable-retry-interval') return '15';
+        if (name === 'mergeable_retry_interval') return '15';
         return '';
       });
 
       await run();
 
       expect(mockCore.warning).toHaveBeenCalledWith(
-        'The "mergeable-retry-interval" input is deprecated and will be removed in a future version. ' +
+        'The "mergeable_retry_interval" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "mergeable-retry-interval" key instead.',
       );
       expect(mockParseOptions).toHaveBeenCalledWith('', {
@@ -200,9 +200,9 @@ describe('main.ts', () => {
     it('should handle multiple deprecated inputs and show multiple warnings', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
         if (name === 'github-token') return 'test-token';
-        if (name === 'release-branch-prefix') return 'rel/';
-        if (name === 'develop-branch') return 'main';
-        if (name === 'mergeable-retry-count') return '3';
+        if (name === 'release_branch_prefix') return 'rel/';
+        if (name === 'develop_branch') return 'main';
+        if (name === 'mergeable_retry_count') return '3';
         return '';
       });
 
@@ -219,14 +219,14 @@ describe('main.ts', () => {
     it('should skip invalid numeric values for retry count', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
         if (name === 'github-token') return 'test-token';
-        if (name === 'mergeable-retry-count') return 'not-a-number';
+        if (name === 'mergeable_retry_count') return 'not-a-number';
         return '';
       });
 
       await run();
 
       expect(mockCore.warning).toHaveBeenCalledWith(
-        'The "mergeable-retry-count" input is deprecated and will be removed in a future version. ' +
+        'The "mergeable_retry_count" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "mergeable-retry-count" key instead.',
       );
       // Should not include mergeableRetryCount since parsing failed
@@ -236,14 +236,14 @@ describe('main.ts', () => {
     it('should skip invalid numeric values for retry interval', async () => {
       mockCore.getInput.mockImplementation((name: string) => {
         if (name === 'github-token') return 'test-token';
-        if (name === 'mergeable-retry-interval') return 'invalid';
+        if (name === 'mergeable_retry_interval') return 'invalid';
         return '';
       });
 
       await run();
 
       expect(mockCore.warning).toHaveBeenCalledWith(
-        'The "mergeable-retry-interval" input is deprecated and will be removed in a future version. ' +
+        'The "mergeable_retry_interval" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "mergeable-retry-interval" key instead.',
       );
       // Should not include mergeableRetryInterval since parsing failed
@@ -269,7 +269,7 @@ describe('main.ts', () => {
       mockCore.getInput.mockImplementation((name: string) => {
         if (name === 'github-token') return 'test-token';
         if (name === 'options') return 'release-branch-prefix: from-yaml/';
-        if (name === 'develop-branch') return 'from-deprecated';
+        if (name === 'develop_branch') return 'from-deprecated';
         return '';
       });
 

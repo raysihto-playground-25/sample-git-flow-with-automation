@@ -77,37 +77,37 @@ export async function run(): Promise<void> {
       mergeableRetryInterval?: number;
     } = {};
 
-    const releaseBranchPrefix = core.getInput('release-branch-prefix');
-    const developBranch = core.getInput('develop-branch');
-    const syncBranchPrefix = core.getInput('sync-branch-prefix');
-    const mergeableRetryCount = core.getInput('mergeable-retry-count');
-    const mergeableRetryInterval = core.getInput('mergeable-retry-interval');
+    const releaseBranchPrefix = core.getInput('release_branch_prefix');
+    const developBranch = core.getInput('develop_branch');
+    const syncBranchPrefix = core.getInput('sync_branch_prefix');
+    const mergeableRetryCount = core.getInput('mergeable_retry_count');
+    const mergeableRetryInterval = core.getInput('mergeable_retry_interval');
 
     // Collect deprecated inputs and show warnings
     if (releaseBranchPrefix) {
       core.warning(
-        'The "release-branch-prefix" input is deprecated and will be removed in a future version. ' +
+        'The "release_branch_prefix" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "release-branch-prefix" key instead.',
       );
       deprecatedInputs.releaseBranchPrefix = releaseBranchPrefix;
     }
     if (developBranch) {
       core.warning(
-        'The "develop-branch" input is deprecated and will be removed in a future version. ' +
+        'The "develop_branch" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "develop-branch" key instead.',
       );
       deprecatedInputs.developBranch = developBranch;
     }
     if (syncBranchPrefix) {
       core.warning(
-        'The "sync-branch-prefix" input is deprecated and will be removed in a future version. ' +
+        'The "sync_branch_prefix" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "sync-branch-prefix" key instead.',
       );
       deprecatedInputs.syncBranchPrefix = syncBranchPrefix;
     }
     if (mergeableRetryCount) {
       core.warning(
-        'The "mergeable-retry-count" input is deprecated and will be removed in a future version. ' +
+        'The "mergeable_retry_count" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "mergeable-retry-count" key instead.',
       );
       const count = parseInt(mergeableRetryCount, 10);
@@ -117,7 +117,7 @@ export async function run(): Promise<void> {
     }
     if (mergeableRetryInterval) {
       core.warning(
-        'The "mergeable-retry-interval" input is deprecated and will be removed in a future version. ' +
+        'The "mergeable_retry_interval" input is deprecated and will be removed in a future version. ' +
           'Please use the "options" parameter with "mergeable-retry-interval" key instead.',
       );
       const interval = parseInt(mergeableRetryInterval, 10);
