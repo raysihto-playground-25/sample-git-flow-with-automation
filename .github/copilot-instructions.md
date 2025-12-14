@@ -59,3 +59,9 @@ npm run build       # Build the action
 **Example (as of December 14, 2025)**: The project currently uses Node.js 24.11.1 and npm 11.6.2, but these may change over time. Always check package.json and workflow files for the current requirements.
 
 **Why this matters**: The project uses Node.js 24+ features and TypeScript configuration loading that may not work in older Node.js versions. Using a different version may cause linting, formatting, or build errors that don't occur in the correct environment. Always match the environment specified in package.json and used in GitHub Actions workflows.
+
+**MANDATORY**: If you cannot run `npm run lint` or `npm run format:check` due to environment limitations (e.g., Node.js version mismatch), you MUST:
+1. Still run `npm test` and `npm run package` to verify tests pass and build succeeds
+2. Manually review code for common lint issues (e.g., use `Number.isNaN` instead of `isNaN`, proper imports, etc.)
+3. Note in the commit message that linting will be validated in CI with Node 24+
+4. **DO NOT** skip validation entirely - the CI will catch issues and require fixes
