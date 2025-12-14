@@ -3,46 +3,54 @@
  *
  * This module provides a YAML parser for the options parameter using the `yaml` library
  * with zod schema validation for type checking and error messages.
+ * Uses camelcase-keys to normalize kebab-case keys to camelCase for internal use.
  */
 
+import camelcaseKeys from 'camelcase-keys';
 import YAML from 'yaml';
 import { z } from 'zod';
 
 import type { ActionConfig } from './types.js';
 
 /**
- * Zod schema for validating parsed options.
+ * Zod schema for validating parsed options with camelCase keys.
  * Each field has specific type requirements and default values:
  * - String fields for branch prefixes
  * - Non-negative integer fields for retry settings
  * Using strict() to reject unknown properties
+ *
+ * Note: Input uses kebab-case (release-branch-prefix) but is converted
+ * to camelCase (releaseBranchPrefix) before validation.
  */
 const OPTIONS_SCHEMA = z
   .object({
-    release_branch_prefix: z.string().default('release/'),
-    develop_branch: z.string().default('develop'),
-    sync_branch_prefix: z.string().default('fix/sync/'),
-    mergeable_retry_count: z.number().int().nonnegative().default(5),
-    mergeable_retry_interval: z.number().int().nonnegative().default(10),
+    releaseBranchPrefix: z.string().default('release/'),
+    developBranch: z.string().default('develop'),
+    syncBranchPrefix: z.string().default('fix/sync/'),
+    mergeableRetryCount: z.number().int().nonnegative().default(5),
+    mergeableRetryInterval: z.number().int().nonnegative().default(10),
   })
   .strict();
 
 /**
- * Parsed options from the YAML input.
+ * Parsed options type matches ActionConfig directly now.
  */
 export type ParsedOptions = z.infer<typeof OPTIONS_SCHEMA>;
 
 /**
  * Parses the options YAML string into a ParsedOptions object.
+ * Accepts kebab-case keys in YAML and converts them to camelCase.
  *
- * @param optionsYaml - YAML string with key: value pairs
- * @returns Parsed options object
+ * @param optionsYaml - YAML string with key: value pairs (kebab-case keys)
+ * @param deprecatedInputs - Optional deprecated individual inputs to merge as defaults
+ * @returns Parsed options object with camelCase keys
  * @throws Error if parsing fails or validation fails
  */
-export function parseOptions(optionsYaml: string): ParsedOptions {
-  // If empty string, parse as empty object to get defaults
+export function parseOptions(optionsYaml: string, deprecatedInputs?: Partial<ParsedOptions>): ParsedOptions {
+  // If empty string, use deprecated inputs or defaults
   if (!optionsYaml || optionsYaml.trim() === '') {
-    const result = OPTIONS_SCHEMA.safeParse({});
+    const inputToValidate = deprecatedInputs || {};
+    const result = OPTIONS_SCHEMA.safeParse(inputToValidate);
     if (!result.success) {
       throw new Error(`Invalid options: ${result.error.message}`);
     }
@@ -58,28 +66,18 @@ export function parseOptions(optionsYaml: string): ParsedOptions {
     throw new Error(`Failed to parse YAML options: ${message}`);
   }
 
+  // Convert kebab-case keys to camelCase
+  const camelCased = camelcaseKeys(parsed as Record<string, unknown>, { deep: true });
+
+  // Merge with deprecated inputs (deprecated inputs serve as defaults if not in YAML)
+  const mergedOptions = { ...deprecatedInputs, ...camelCased };
+
   // Validate using zod schema
-  const result = OPTIONS_SCHEMA.safeParse(parsed);
+  const result = OPTIONS_SCHEMA.safeParse(mergedOptions);
   if (!result.success) {
     // Use zod's default error formatting
     throw new Error(`Invalid options: ${result.error.message}`);
   }
 
   return result.data;
-}
-
-/**
- * Builds ActionConfig from parsed options, applying defaults for missing values.
- *
- * @param parsedOptions - Parsed options from YAML input
- * @returns Complete ActionConfig with defaults applied
- */
-export function buildConfig(parsedOptions: ParsedOptions): ActionConfig {
-  return {
-    releaseBranchPrefix: parsedOptions.release_branch_prefix,
-    developBranch: parsedOptions.develop_branch,
-    syncBranchPrefix: parsedOptions.sync_branch_prefix,
-    mergeableRetryCount: parsedOptions.mergeable_retry_count,
-    mergeableRetryInterval: parsedOptions.mergeable_retry_interval,
-  };
 }

@@ -38,6 +38,7 @@
   "dependencies": {
     "@actions/core": "^2.0.1",
     "@actions/github": "^6.0.1",
+    "camelcase-keys": "^10.0.1",
     "yaml": "^2.8.2",
     "zod": "^4.1.13"
   },

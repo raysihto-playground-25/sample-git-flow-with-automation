@@ -24,9 +24,9 @@
 #           with:
 #             github-token: ${{ secrets.GITHUB_TOKEN }}
 #             options: |
-#               release_branch_prefix: "release/"
-#               develop_branch: "develop"
-#               sync_branch_prefix: "fix/sync/"
+#               release-branch-prefix: "release/"
+#               develop-branch: "develop"
+#               sync-branch-prefix: "fix/sync/"
 #
 # NOTES:
 # - Replace `{ORG}` with the organization or user name and `{REPO}` with the
@@ -56,13 +56,35 @@ inputs:
       Optional configuration in YAML format. All options are optional.
       Example:
         options: |
-          release_branch_prefix: "release/"
-          develop_branch: "develop"
-          sync_branch_prefix: "fix/sync/"
-          mergeable_retry_count: 5
-          mergeable_retry_interval: 10
+          release-branch-prefix: "release/"
+          develop-branch: "develop"
+          sync-branch-prefix: "fix/sync/"
+          mergeable-retry-count: 5
+          mergeable-retry-interval: 10
     required: false
     default: ''
+  # DEPRECATED: The following inputs are deprecated and will be removed in a future version.
+  # Use the 'options' parameter instead with kebab-case keys.
+  release-branch-prefix:
+    description: 'DEPRECATED: Use options parameter instead. Branch prefix for release branches (e.g., "release/")'
+    required: false
+    deprecationMessage: 'This input is deprecated. Use the options parameter with release-branch-prefix key instead.'
+  develop-branch:
+    description: 'DEPRECATED: Use options parameter instead. Name of the develop branch (default: "develop")'
+    required: false
+    deprecationMessage: 'This input is deprecated. Use the options parameter with develop-branch key instead.'
+  sync-branch-prefix:
+    description: 'DEPRECATED: Use options parameter instead. Branch prefix for sync branches (e.g., "fix/sync/")'
+    required: false
+    deprecationMessage: 'This input is deprecated. Use the options parameter with sync-branch-prefix key instead.'
+  mergeable-retry-count:
+    description: 'DEPRECATED: Use options parameter instead. Number of retries for checking mergeable status'
+    required: false
+    deprecationMessage: 'This input is deprecated. Use the options parameter with mergeable-retry-count key instead.'
+  mergeable-retry-interval:
+    description: 'DEPRECATED: Use options parameter instead. Interval in seconds between mergeable status checks'
+    required: false
+    deprecationMessage: 'This input is deprecated. Use the options parameter with mergeable-retry-interval key instead.'
 
 outputs:
   result:

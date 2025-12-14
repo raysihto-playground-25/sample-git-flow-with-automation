@@ -30,7 +30,7 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 
 import { executeAction, buildSummaryMarkdown } from './action.js';
-import { parseOptions, buildConfig } from './options-parser.js';
+import { parseOptions } from './options-parser.js';
 import type { EventContext } from './types.js';
 
 /**
@@ -68,9 +68,66 @@ export async function run(): Promise<void> {
     const token = core.getInput('github-token', { required: true });
     const optionsYaml = core.getInput('options') || '';
 
-    // Parse options and build config with defaults
-    const parsedOptions = parseOptions(optionsYaml);
-    const config = buildConfig(parsedOptions);
+    // Check for deprecated individual inputs
+    const deprecatedInputs: {
+      releaseBranchPrefix?: string;
+      developBranch?: string;
+      syncBranchPrefix?: string;
+      mergeableRetryCount?: number;
+      mergeableRetryInterval?: number;
+    } = {};
+
+    const releaseBranchPrefix = core.getInput('release-branch-prefix');
+    const developBranch = core.getInput('develop-branch');
+    const syncBranchPrefix = core.getInput('sync-branch-prefix');
+    const mergeableRetryCount = core.getInput('mergeable-retry-count');
+    const mergeableRetryInterval = core.getInput('mergeable-retry-interval');
+
+    // Collect deprecated inputs and show warnings
+    if (releaseBranchPrefix) {
+      core.warning(
+        'The "release-branch-prefix" input is deprecated and will be removed in a future version. ' +
+          'Please use the "options" parameter with "release-branch-prefix" key instead.',
+      );
+      deprecatedInputs.releaseBranchPrefix = releaseBranchPrefix;
+    }
+    if (developBranch) {
+      core.warning(
+        'The "develop-branch" input is deprecated and will be removed in a future version. ' +
+          'Please use the "options" parameter with "develop-branch" key instead.',
+      );
+      deprecatedInputs.developBranch = developBranch;
+    }
+    if (syncBranchPrefix) {
+      core.warning(
+        'The "sync-branch-prefix" input is deprecated and will be removed in a future version. ' +
+          'Please use the "options" parameter with "sync-branch-prefix" key instead.',
+      );
+      deprecatedInputs.syncBranchPrefix = syncBranchPrefix;
+    }
+    if (mergeableRetryCount) {
+      core.warning(
+        'The "mergeable-retry-count" input is deprecated and will be removed in a future version. ' +
+          'Please use the "options" parameter with "mergeable-retry-count" key instead.',
+      );
+      const count = parseInt(mergeableRetryCount, 10);
+      if (!isNaN(count)) {
+        deprecatedInputs.mergeableRetryCount = count;
+      }
+    }
+    if (mergeableRetryInterval) {
+      core.warning(
+        'The "mergeable-retry-interval" input is deprecated and will be removed in a future version. ' +
+          'Please use the "options" parameter with "mergeable-retry-interval" key instead.',
+      );
+      const interval = parseInt(mergeableRetryInterval, 10);
+      if (!isNaN(interval)) {
+        deprecatedInputs.mergeableRetryInterval = interval;
+      }
+    }
+
+    // Parse options with deprecated inputs as defaults
+    const config = parseOptions(optionsYaml, Object.keys(deprecatedInputs).length > 0 ? deprecatedInputs : undefined);
 
     // Get event context
     //
