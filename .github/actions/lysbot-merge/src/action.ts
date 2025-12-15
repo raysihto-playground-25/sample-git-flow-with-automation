@@ -5,7 +5,7 @@
  * 1. executeAction() - The main orchestration function for merge operations
  * 2. buildSummaryMarkdown() - Helper to build summary markdown
  *
- * This is separated from main.ts which contains untestable GitHub Actions runtime code.
+ * This is separated from main.ts which contains GitHub Actions runtime integration code.
  */
 
 import * as core from '@actions/core';
