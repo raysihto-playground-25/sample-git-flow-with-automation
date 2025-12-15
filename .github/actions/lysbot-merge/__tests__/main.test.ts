@@ -7,61 +7,77 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock @actions/core
-vi.mock('@actions/core', () => ({
+// Mock modules before importing
+const mockCore = {
   getInput: vi.fn(),
   setOutput: vi.fn(),
   setFailed: vi.fn(),
+  warning: vi.fn(),
   info: vi.fn(),
   summary: {
     addRaw: vi.fn().mockReturnThis(),
     write: vi.fn().mockResolvedValue(undefined),
   },
-}));
+};
 
-// Mock @actions/github
-vi.mock('@actions/github', () => ({
-  getOctokit: vi.fn(),
+const mockGithub = {
   context: {
-    repo: {
-      owner: 'test-owner',
-      repo: 'test-repo',
-    },
+    repo: { owner: 'test-owner', repo: 'test-repo' },
+    actor: 'test-actor',
+    runId: 12345,
+    eventName: 'issue_comment',
     payload: {
       issue: {
-        number: 123,
+        number: 42,
         pull_request: {},
       },
       comment: {
-        id: 456,
+        id: 999,
         body: '/lysbot merge',
-        user: {
-          type: 'User',
-        },
+        user: { type: 'User' },
         author_association: 'MEMBER',
       },
     },
-    actor: 'test-actor',
-    runId: 789,
-    eventName: 'issue_comment',
   },
-}));
+  getOctokit: vi.fn().mockReturnValue({
+    rest: {
+      pulls: {
+        get: vi.fn(),
+        merge: vi.fn(),
+      },
+      issues: {
+        listComments: vi.fn(),
+        createComment: vi.fn(),
+      },
+      reactions: {
+        createForIssueComment: vi.fn(),
+      },
+    },
+  }),
+};
 
-// Mock the executeAction function
+const mockExecuteAction = vi.fn().mockResolvedValue({
+  status: 'skipped',
+  message: 'Not a merge command',
+  mergeMethod: null,
+});
+
+const mockBuildSummaryMarkdown = vi.fn().mockReturnValue('# Summary');
+
+vi.mock('@actions/core', () => mockCore);
+vi.mock('@actions/github', () => mockGithub);
+
 vi.mock('../src/action.js', () => ({
-  executeAction: vi.fn(),
-  buildSummaryMarkdown: vi.fn(),
+  executeAction: mockExecuteAction,
+  buildSummaryMarkdown: mockBuildSummaryMarkdown,
 }));
 
-// Import the module under test after mocks are set up
-import { run } from '../src/main.js';
-import * as core from '@actions/core';
-import * as github from '@actions/github';
-import * as action from '../src/action.js';
+// Import after mocks are set up
+const { run } = await import('../src/main.js');
 
 // Helper function to safely set mock context payload
 function setMockContextPayload(payload: Record<string, unknown>): void {
-  const ctx = github.context as { payload: unknown };
+  const ctx = mockGithub.context as { payload: unknown };
   ctx.payload = payload;
 }
 
@@ -70,23 +86,17 @@ describe('main.ts', () => {
   let mockSetOutput: ReturnType<typeof vi.fn>;
   let mockSetFailed: ReturnType<typeof vi.fn>;
   let mockInfo: ReturnType<typeof vi.fn>;
-  let mockSummary: typeof core.summary;
+  let mockSummary: typeof mockCore.summary;
   let mockGetOctokit: ReturnType<typeof vi.fn>;
-  let mockContext: typeof github.context;
-  let mockExecuteAction: ReturnType<typeof vi.fn>;
-  let mockBuildSummaryMarkdown: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     // Get references to the mocked functions
-    mockGetInput = vi.mocked(core.getInput);
-    mockSetOutput = vi.mocked(core.setOutput);
-    mockSetFailed = vi.mocked(core.setFailed);
-    mockInfo = vi.mocked(core.info);
-    mockSummary = core.summary;
-    mockGetOctokit = vi.mocked(github.getOctokit);
-    mockContext = github.context;
-    mockExecuteAction = vi.mocked(action.executeAction);
-    mockBuildSummaryMarkdown = vi.mocked(action.buildSummaryMarkdown);
+    mockGetInput = vi.mocked(mockCore.getInput);
+    mockSetOutput = vi.mocked(mockCore.setOutput);
+    mockSetFailed = vi.mocked(mockCore.setFailed);
+    mockInfo = vi.mocked(mockCore.info);
+    mockSummary = mockCore.summary;
+    mockGetOctokit = vi.mocked(mockGithub.getOctokit);
 
     // Reset all mocks before each test
     vi.clearAllMocks();
@@ -208,7 +218,9 @@ describe('main.ts', () => {
 
     it('should use default values when optional inputs are empty', async () => {
       mockGetInput.mockImplementation((name: string) => {
-        if (name === 'github-token') return 'test-token';
+        if (name === 'github-token') {
+          return 'test-token';
+        }
         return '';
       });
 
@@ -285,7 +297,7 @@ describe('main.ts', () => {
         userType: 'User',
         authorAssociation: 'MEMBER',
         serverUrl: 'https://github.com',
-        runId: 789,
+        runId: 12345,
         eventName: 'issue_comment',
         isPullRequest: true,
       });
