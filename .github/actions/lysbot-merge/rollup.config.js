@@ -1,11 +1,12 @@
 // See: https://rollupjs.org/introduction/
 
-import commonjs from '@rollup/plugin-commonjs';
+import commonjsPlugin from '@rollup/plugin-commonjs';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import terser from '@rollup/plugin-terser';
 import typescript from '@rollup/plugin-typescript';
+import { defineConfig } from 'rollup';
 
-const config = {
+const config = defineConfig({
   input: 'src/index.ts',
   output: {
     esModule: true,
@@ -16,7 +17,7 @@ const config = {
   },
   plugins: [
     //
-    commonjs(),
+    commonjsPlugin(),
     nodeResolve({ preferBuiltins: true }),
     terser({
       compress: { drop_console: true, drop_debugger: true },
@@ -24,6 +25,6 @@ const config = {
     }),
     typescript(),
   ],
-};
+});
 
 export default config;

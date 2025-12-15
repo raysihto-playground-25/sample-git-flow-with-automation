@@ -1,6 +1,4 @@
-import type { Options } from 'prettier';
-
-const config: Options = {
+const config = {
   printWidth: 120,
   singleQuote: true,
   trailingComma: 'all',

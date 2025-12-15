@@ -23,7 +23,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "npm run lint -- --fix",
-    "package": "npx --yes rimraf dist && rollup --config rollup.config.ts --configPlugin '@rollup/plugin-typescript'",
+    "package": "npx --yes rimraf dist && rollup -c",
     "package:watch": "npm run package -- --watch",
     "test": "vitest run",
     "test:coverage": "npm run test -- --coverage",
@@ -32,7 +32,8 @@
     "all": "npm run lint:fix && npm run format:write && npm run check && npm run package",
     "upgrade": "npx --yes npm-check-updates -u && npm install",
     "all:upgrade": "npm run upgrade && npm run all",
-    "all:full-upgrade": "npx --yes rimraf package-lock.json && npm run all:upgrade"
+    "all:full-upgrade": "npx --yes rimraf package-lock.json && npm run all:upgrade",
+    "reinstall": "npx --yes rimraf package-lock.json && npm install"
   },
   "license": "MIT",
   "dependencies": {
@@ -44,6 +45,7 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^12.3.0",
+    "@stylistic/eslint-plugin": "^5.6.1",
     "@types/node": "^24.10.3",
     "@typescript-eslint/parser": "^8.49.0",
     "@vitest/coverage-v8": "^4.0.15",
@@ -53,11 +55,9 @@
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-promise": "^7.2.1",
     "eslint-plugin-unused-imports": "^4.3.0",
-    "jiti": "^2.6.1",
     "prettier": "^3.7.4",
     "rollup": "^4.53.3",
     "tslib": "^2.8.1",
-    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.49.0",
     "vitest": "^4.0.15"
