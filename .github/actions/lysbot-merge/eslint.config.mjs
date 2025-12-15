@@ -9,7 +9,7 @@ import tseslint from 'typescript-eslint';
 const configFiles = [
   // keep this list sorted alphabetically
   '.ncurc.cjs',
-  '*.config.js',
+  '*.config.mjs',
 ];
 
 const config = tseslint.config(
