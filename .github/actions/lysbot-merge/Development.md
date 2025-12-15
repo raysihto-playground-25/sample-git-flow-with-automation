@@ -30,26 +30,22 @@ src/
 **Module Responsibilities:**
 
 1. **`action.ts`** (testable business logic)
-
    - Main `executeAction()` function that orchestrates the merge flow
    - Pure `buildSummaryMarkdown()` function for generating summaries
    - All business logic that can be tested without GitHub Actions runtime
    - Depends on: types, validation, github-api
 
 2. **`constants.ts`**
-
    - Configuration constants (regex patterns, valid flags, emoji)
    - Immutable reference data
    - No dependencies on other modules except types
 
 3. **`github-api.ts`**
-
    - All functions that interact with GitHub API
    - API calls, data fetching, mutations (reactions, comments, merges)
    - Depends on: types
 
 4. **`main.ts`** (GitHub Actions runtime integration - tested with mocks)
-
    - Integration layer with GitHub Actions runtime
    - Reads inputs from GitHub Actions environment (`core.getInput`)
    - Handles deprecated input parameters with warnings
@@ -60,7 +56,6 @@ src/
    - Contains conditional logic for backward compatibility with deprecated inputs
 
 5. **`types.ts`**
-
    - All TypeScript type definitions and interfaces
    - No runtime logic, purely type declarations
    - Imported by all other modules as needed
@@ -76,19 +71,16 @@ src/
 The refactoring follows these principles to maintain code quality:
 
 1. **Single Responsibility Principle (SRP)**
-
    - Each module has one clear reason to change
    - Pure logic is separated from I/O operations
    - Business rules are isolated from infrastructure
 
 2. **Testing Strategy**
-
    - GitHub Actions runtime integration code in main.ts is tested using vitest mocks
    - All merge business logic is extracted to action.ts for comprehensive testing
    - This separation maximizes maintainability and test coverage
 
 3. **Dependency Direction**
-
    - Dependencies flow inward: infrastructure &#x279C; orchestration &#x279C; logic &#x279C; types
    - No circular dependencies
    - Pure modules (validation) don't depend on I/O modules (github-api)
@@ -104,18 +96,15 @@ The refactoring follows these principles to maintain code quality:
 The codebase follows these naming conventions:
 
 1. **Constants**
-
    - `SCREAMING_SNAKE_CASE` for module-level constants and schemas
    - Examples: `OPTIONS_SCHEMA`, `DEFAULT_OPTIONS`, `COMMAND_REGEX`, `VALID_FLAGS`
    - Rationale: Makes constants immediately recognizable and distinguishable from variables
 
 2. **Functions and Variables**
-
    - `camelCase` for functions, variables, and parameters
    - Examples: `parseOptions`, `buildConfig`, `optionsYaml`
 
 3. **Types and Interfaces**
-
    - `PascalCase` for type names and interfaces
    - Examples: `ParsedOptions`, `ActionConfig`, `EventContext`
 
@@ -128,19 +117,16 @@ The codebase follows these naming conventions:
 When adding new features or making changes, follow these guidelines:
 
 1. **When to Create a New Module**
-
    - When a logical grouping exceeds ~300 lines
    - When a distinct new responsibility emerges (e.g., notification system, metrics)
    - When multiple files start duplicating similar code
 
 2. **When NOT to Split Further**
-
    - Don't create modules with fewer than ~50 lines
    - Don't split functions that are tightly coupled (modify together frequently)
    - Don't create "utils" grab-bags without clear responsibility
 
 3. **Maintaining the Structure**
-
    - Keep types centralized in `types.ts`
    - Keep constants centralized in `constants.ts`
    - Add new pure functions to `validation.ts` or create domain-specific validation modules
@@ -149,7 +135,6 @@ When adding new features or making changes, follow these guidelines:
    - Keep main.ts focused on GitHub Actions runtime integration with tested backward compatibility logic
 
 4. **Testing Strategy**
-
    - All business logic MUST be testable and have tests
    - main.ts contains runtime integration logic tested with vitest mocks
    - Merge business logic should be in action.ts for comprehensive testing without mocks
