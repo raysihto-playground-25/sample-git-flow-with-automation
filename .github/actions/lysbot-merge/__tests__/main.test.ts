@@ -7,77 +7,62 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock modules before importing
-const mockCore = {
+// Mock @actions/core
+vi.mock('@actions/core', () => ({
   getInput: vi.fn(),
   setOutput: vi.fn(),
   setFailed: vi.fn(),
-  warning: vi.fn(),
   info: vi.fn(),
   summary: {
     addRaw: vi.fn().mockReturnThis(),
     write: vi.fn().mockResolvedValue(undefined),
   },
-};
+}));
 
-const mockGithub = {
+// Mock @actions/github
+vi.mock('@actions/github', () => ({
+  getOctokit: vi.fn(),
   context: {
-    repo: { owner: 'test-owner', repo: 'test-repo' },
-    actor: 'test-actor',
-    runId: 12345,
-    eventName: 'issue_comment',
+    repo: {
+      owner: 'test-owner',
+      repo: 'test-repo',
+    },
     payload: {
       issue: {
-        number: 42,
+        number: 123,
         pull_request: {},
       },
       comment: {
-        id: 999,
+        id: 456,
         body: '/lysbot merge',
-        user: { type: 'User' },
+        user: {
+          type: 'User',
+        },
         author_association: 'MEMBER',
       },
     },
+    actor: 'test-actor',
+    runId: 789,
+    eventName: 'issue_comment',
   },
-  getOctokit: vi.fn().mockReturnValue({
-    rest: {
-      pulls: {
-        get: vi.fn(),
-        merge: vi.fn(),
-      },
-      issues: {
-        listComments: vi.fn(),
-        createComment: vi.fn(),
-      },
-      reactions: {
-        createForIssueComment: vi.fn(),
-      },
-    },
-  }),
-};
-
-const mockExecuteAction = vi.fn().mockResolvedValue({
-  status: 'skipped',
-  message: 'Not a merge command',
-  mergeMethod: null,
-});
-
-const mockBuildSummaryMarkdown = vi.fn().mockReturnValue('# Summary');
-
-vi.mock('@actions/core', () => mockCore);
-vi.mock('@actions/github', () => mockGithub);
-
-vi.mock('../src/action.js', () => ({
-  executeAction: mockExecuteAction,
-  buildSummaryMarkdown: mockBuildSummaryMarkdown,
 }));
 
-// Import after mocks are set up
-const { run } = await import('../src/main.js');
+// Mock the executeAction function
+vi.mock('../src/action.js', () => ({
+  executeAction: vi.fn(),
+  buildSummaryMarkdown: vi.fn(),
+}));
+
+// Import the module under test after mocks are set up
+import { run } from '../src/main.js';
+import * as core from '@actions/core';
+import * as github from '@actions/github';
+import * as action from '../src/action.js';
+import type { ActionConfig, EventContext, Octokit } from '../src/types.js';
 
 // Helper function to safely set mock context payload
 function setMockContextPayload(payload: Record<string, unknown>): void {
-  const ctx = mockGithub.context as { payload: unknown };
+  const ctx = github.context as { payload: unknown };
   ctx.payload = payload;
 }
 
@@ -86,17 +71,30 @@ describe('main.ts', () => {
   let mockSetOutput: ReturnType<typeof vi.fn>;
   let mockSetFailed: ReturnType<typeof vi.fn>;
   let mockInfo: ReturnType<typeof vi.fn>;
-  let mockSummary: typeof mockCore.summary;
+  let mockSummary: typeof core.summary;
   let mockGetOctokit: ReturnType<typeof vi.fn>;
+  let mockExecuteAction: ReturnType<typeof vi.fn>;
+  let mockBuildSummaryMarkdown: ReturnType<typeof vi.fn>;
+
+  // Helper function to get typed executeAction call arguments
+  function getExecuteActionCallArgs(callIndex: number): [Octokit, EventContext, ActionConfig] {
+    const calls = mockExecuteAction.mock.calls;
+    if (!calls[callIndex]) {
+      throw new Error(`No call at index ${callIndex}`);
+    }
+    return calls[callIndex] as [Octokit, EventContext, ActionConfig];
+  }
 
   beforeEach(() => {
     // Get references to the mocked functions
-    mockGetInput = vi.mocked(mockCore.getInput);
-    mockSetOutput = vi.mocked(mockCore.setOutput);
-    mockSetFailed = vi.mocked(mockCore.setFailed);
-    mockInfo = vi.mocked(mockCore.info);
-    mockSummary = mockCore.summary;
-    mockGetOctokit = vi.mocked(mockGithub.getOctokit);
+    mockGetInput = vi.mocked(core.getInput);
+    mockSetOutput = vi.mocked(core.setOutput);
+    mockSetFailed = vi.mocked(core.setFailed);
+    mockInfo = vi.mocked(core.info);
+    mockSummary = core.summary;
+    mockGetOctokit = vi.mocked(github.getOctokit);
+    mockExecuteAction = vi.mocked(action.executeAction);
+    mockBuildSummaryMarkdown = vi.mocked(action.buildSummaryMarkdown);
 
     // Reset all mocks before each test
     vi.clearAllMocks();
@@ -204,8 +202,7 @@ describe('main.ts', () => {
       await run();
 
       // Verify executeAction was called with custom config
-      const executeActionCall = mockExecuteAction.mock.calls[0];
-      const config = executeActionCall[2];
+      const [, , config] = getExecuteActionCallArgs(0);
 
       expect(config).toEqual({
         releaseBranchPrefix: 'rel/',
@@ -218,16 +215,13 @@ describe('main.ts', () => {
 
     it('should use default values when optional inputs are empty', async () => {
       mockGetInput.mockImplementation((name: string) => {
-        if (name === 'github-token') {
-          return 'test-token';
-        }
+        if (name === 'github-token') return 'test-token';
         return '';
       });
 
       await run();
 
-      const executeActionCall = mockExecuteAction.mock.calls[0];
-      const config = executeActionCall[2];
+      const [, , config] = getExecuteActionCallArgs(0);
 
       expect(config).toEqual({
         releaseBranchPrefix: 'release/',
@@ -284,8 +278,7 @@ describe('main.ts', () => {
     it('should build correct event context from GitHub context', async () => {
       await run();
 
-      const executeActionCall = mockExecuteAction.mock.calls[0];
-      const context = executeActionCall[1];
+      const [, context] = getExecuteActionCallArgs(0);
 
       expect(context).toEqual({
         owner: 'test-owner',
@@ -297,7 +290,7 @@ describe('main.ts', () => {
         userType: 'User',
         authorAssociation: 'MEMBER',
         serverUrl: 'https://github.com',
-        runId: 12345,
+        runId: 789,
         eventName: 'issue_comment',
         isPullRequest: true,
       });
@@ -320,8 +313,7 @@ describe('main.ts', () => {
 
       await run();
 
-      const executeActionCall = mockExecuteAction.mock.calls[0];
-      const context = executeActionCall[1];
+      const [, context] = getExecuteActionCallArgs(0);
 
       expect(context.isPullRequest).toBe(false);
     });
@@ -336,8 +328,7 @@ describe('main.ts', () => {
 
       await run();
 
-      const executeActionCall = mockExecuteAction.mock.calls[0];
-      const context = executeActionCall[1];
+      const [, context] = getExecuteActionCallArgs(0);
 
       expect(context.commentId).toBe(0);
       expect(context.commentBody).toBe('');
@@ -351,8 +342,7 @@ describe('main.ts', () => {
 
       await run();
 
-      const executeActionCall = mockExecuteAction.mock.calls[0];
-      const context = executeActionCall[1];
+      const [, context] = getExecuteActionCallArgs(0);
 
       expect(context.serverUrl).toBe('https://github.enterprise.com');
 
@@ -412,8 +402,7 @@ describe('main.ts', () => {
 
       await run();
 
-      const executeActionCall = mockExecuteAction.mock.calls[0];
-      const config = executeActionCall[2];
+      const [, , config] = getExecuteActionCallArgs(0);
 
       expect(config.mergeableRetryCount).toBe(10);
       expect(config.mergeableRetryInterval).toBe(20);
@@ -431,8 +420,7 @@ describe('main.ts', () => {
 
       await run();
 
-      const executeActionCall = mockExecuteAction.mock.calls[0];
-      const config = executeActionCall[2];
+      const [, , config] = getExecuteActionCallArgs(0);
 
       // parseInt returns NaN for invalid numbers
       expect(Number.isNaN(config.mergeableRetryCount)).toBe(true);
