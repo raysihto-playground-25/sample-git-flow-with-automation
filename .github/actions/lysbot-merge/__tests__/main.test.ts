@@ -59,6 +59,12 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as action from '../src/action.js';
 
+// Helper function to safely set mock context payload
+function setMockContextPayload(payload: Record<string, unknown>): void {
+  const ctx = github.context as { payload: unknown };
+  ctx.payload = payload;
+}
+
 describe('main.ts', () => {
   let mockGetInput: ReturnType<typeof vi.fn>;
   let mockSetOutput: ReturnType<typeof vi.fn>;
@@ -85,9 +91,13 @@ describe('main.ts', () => {
     // Reset all mocks before each test
     vi.clearAllMocks();
 
-    // Re-initialize summary methods
-    (mockSummary.addRaw as any) = vi.fn().mockReturnValue(mockSummary);
-    (mockSummary.write as any) = vi.fn().mockResolvedValue(undefined);
+    // Re-initialize summary methods with proper typing
+    const summaryWithMocks = mockSummary as unknown as {
+      addRaw: ReturnType<typeof vi.fn>;
+      write: ReturnType<typeof vi.fn>;
+    };
+    summaryWithMocks.addRaw = vi.fn().mockReturnValue(mockSummary);
+    summaryWithMocks.write = vi.fn().mockResolvedValue(undefined);
 
     // Set default mock implementations
     mockGetInput.mockImplementation((name: string) => {
@@ -102,11 +112,13 @@ describe('main.ts', () => {
       return defaults[name] || '';
     });
 
-    mockGetOctokit.mockReturnValue({
+    // Mock Octokit with minimal required structure
+    const mockOctokitInstance = {
       rest: {},
       paginate: vi.fn(),
       graphql: vi.fn(),
-    } as any);
+    };
+    mockGetOctokit.mockReturnValue(mockOctokitInstance as never);
 
     mockExecuteAction.mockResolvedValue({
       status: 'merged',
@@ -116,8 +128,8 @@ describe('main.ts', () => {
 
     mockBuildSummaryMarkdown.mockReturnValue('# Test Summary');
 
-    // Reset context to default
-    (mockContext as any).payload = {
+    // Reset context to default using helper
+    setMockContextPayload({
       issue: {
         number: 123,
         pull_request: {},
@@ -130,7 +142,7 @@ describe('main.ts', () => {
         },
         author_association: 'MEMBER',
       },
-    };
+    });
   });
 
   afterEach(() => {
@@ -280,7 +292,7 @@ describe('main.ts', () => {
     });
 
     it('should handle missing pull_request in payload', async () => {
-      (mockContext as any).payload = {
+      setMockContextPayload({
         issue: {
           number: 123,
         },
@@ -292,7 +304,7 @@ describe('main.ts', () => {
           },
           author_association: 'MEMBER',
         },
-      };
+      });
 
       await run();
 
@@ -303,12 +315,12 @@ describe('main.ts', () => {
     });
 
     it('should handle missing comment in payload', async () => {
-      (mockContext as any).payload = {
+      setMockContextPayload({
         issue: {
           number: 123,
           pull_request: {},
         },
-      };
+      });
 
       await run();
 
