@@ -79,14 +79,13 @@ jobs:
       - name: Verify dist is up to date
         run: |
           set -Eeuo pipefail
-          # Check if dist/ directory exists and has changes
-          if [ -d "dist" ] && [ -n "$(git status --porcelain dist/)" ]; then
-            echo "::error::dist/ directory is out of date. Run 'npm run all' and commit the changes."
-            git diff dist/
-            exit 1
-          fi
-          # If dist/ doesn't exist after build, that's also an error
+          # If dist/ doesn't exist after build, that's an error
           if [ ! -d "dist" ]; then
             echo "::error::dist/ directory was not created by the build. Check the build configuration."
+            exit 1
+          # Check if dist/ directory exists and has changes
+          elif [ -n "$(git status --porcelain dist/)" ]; then
+            echo "::error::dist/ directory is out of date. Run 'npm run all' and commit the changes."
+            git diff dist/
             exit 1
           fi
