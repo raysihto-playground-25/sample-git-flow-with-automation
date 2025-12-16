@@ -1,7 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
+    "allowJs": true,
     "allowSyntheticDefaultImports": true,
+    "checkJs": true,
     "declaration": false,
     "declarationMap": false,
     "esModuleInterop": true,
@@ -11,6 +13,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "newLine": "lf",
+    "noEmit": true,
     "noImplicitAny": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -22,5 +25,5 @@
     "target": "ES2022"
   },
   "exclude": ["coverage", "dist", "node_modules"],
-  "include": ["__fixtures__", "__tests__", "src"]
+  "include": [".", "**/.*.*js", "**/.*.ts"]
 }

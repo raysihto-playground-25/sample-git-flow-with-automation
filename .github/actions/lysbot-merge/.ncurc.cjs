@@ -1,3 +1,3 @@
 module.exports = {
-  target: (name /*, semver */) => (name === '@types/node' ? 'minor' : 'latest'),
+  target: (/** @type {string} */ name /*, semver */) => (name === '@types/node' ? 'minor' : 'latest'),
 };
