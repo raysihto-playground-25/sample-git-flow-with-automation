@@ -40,9 +40,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           ## Project-specific branch naming configuration
-          # release-branch-prefix: "release/"
-          # develop-branch: "develop"
-          # sync-branch-prefix: "fix/sync/"
+          # release_branch_prefix: "release/"
+          # develop_branch: "develop"
+          # sync_branch_prefix: "fix/sync/"
           ## Optional: customize retry behavior for mergeable status
-          # mergeable-retry-count: 5
-          # mergeable-retry-interval: 10
+          # mergeable_retry_count: 5
+          # mergeable_retry_interval: 10
