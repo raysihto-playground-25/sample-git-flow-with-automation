@@ -22,6 +22,7 @@ src/
 ├── action.ts         # Core business logic (executeAction, buildSummaryMarkdown)
 ├── constants.ts      # Configuration constants and regex patterns
 ├── github-api.ts     # GitHub API interaction wrappers
+├── index.ts          # Action entry point for bundler
 ├── main.ts           # GitHub Actions runtime integration (tested with mocks)
 ├── types.ts          # Type definitions and interfaces
 └── validation.ts     # Pure validation and business logic functions
