@@ -30,9 +30,10 @@ For changes to `.github/actions/lysbot-merge/`, ensure you pass all checks that 
 cd .github/actions/lysbot-merge
 npm ci
 # Make your code changes...
-npm run format:check # Verify formatting
-npm run lint         # Check code style
-npm run test:coverage # Run tests with coverage
+npm run check:format # Verify formatting
+npm run check:lint   # Run linter
+npm run check:type   # Run type checks
+npm run check:test   # Run tests with coverage
 npm run bundle       # Build and package the action
 # Now commit
 ```

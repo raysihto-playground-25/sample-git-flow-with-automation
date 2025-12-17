@@ -1,6 +1,6 @@
 // See: https://rollupjs.org/introduction/
 
-import commonjsPlugin from '@rollup/plugin-commonjs';
+import commonjs from '@rollup/plugin-commonjs';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import terser from '@rollup/plugin-terser';
 import typescript from '@rollup/plugin-typescript';
@@ -16,13 +16,16 @@ const config = defineConfig({
     sourcemap: false,
   },
   plugins: [
-    //
-    commonjsPlugin(),
+    // @ts-expect-error Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config
+    commonjs(),
+    // @ts-expect-error Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config
     nodeResolve({ preferBuiltins: true }),
+    // @ts-expect-error Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config
     terser({
       compress: { drop_console: true, drop_debugger: true },
       format: { comments: false },
     }),
+    // @ts-expect-error Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config
     typescript(),
   ],
 });

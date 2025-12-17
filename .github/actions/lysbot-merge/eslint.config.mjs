@@ -2,15 +2,9 @@ import eslint from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
 import import_ from 'eslint-plugin-import';
 import prettier from 'eslint-plugin-prettier';
+// @ts-expect-error --- eslint-plugin-promise has no typings here
 import promise from 'eslint-plugin-promise';
 import tseslint from 'typescript-eslint';
-
-// Configuration files that need special handling with allowDefaultProject
-const configFiles = [
-  // keep this list sorted alphabetically
-  '.ncurc.cjs',
-  '*.config.mjs',
-];
 
 const config = tseslint.config(
   eslint.configs.recommended,
@@ -18,7 +12,7 @@ const config = tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: { allowDefaultProject: configFiles },
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -26,6 +20,7 @@ const config = tseslint.config(
       // keep this list sorted alphabetically
       import_,
       prettier,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       promise,
       stylistic,
     },
