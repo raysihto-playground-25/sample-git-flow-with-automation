@@ -1284,14 +1284,17 @@ describe('executeAction', () => {
       // Verify Co-authored-by appears in the correct position (after commit list, before additional messages)
       const parts = commitMessage.split('\n\n');
       expect(parts.length).toBeGreaterThanOrEqual(3);
-      expect(parts[1]).toContain('Co-authored-by:');
+      expect(parts.at(1)).toContain('Co-authored-by:');
 
       // Verify order is by commit order (Bob first, then Alice), not alphabetical
-      const coAuthorSection = parts[1];
-      const bobIndex = coAuthorSection.indexOf('Co-authored-by: Bob Developer');
-      const aliceIndex = coAuthorSection.indexOf('Co-authored-by: Alice Contributor');
-      expect(bobIndex).toBeLessThan(aliceIndex); // Bob should appear before Alice (commit order)
-      expect(parts[parts.length - 1]).toContain('Merged-by: lysbot-merge');
+      const coAuthorSection = parts.at(1);
+      expect(coAuthorSection).toBeDefined();
+      if (coAuthorSection) {
+        const bobIndex = coAuthorSection.indexOf('Co-authored-by: Bob Developer');
+        const aliceIndex = coAuthorSection.indexOf('Co-authored-by: Alice Contributor');
+        expect(bobIndex).toBeLessThan(aliceIndex); // Bob should appear before Alice (commit order)
+      }
+      expect(parts.at(-1)).toContain('Merged-by: lysbot-merge');
     });
   });
 });
