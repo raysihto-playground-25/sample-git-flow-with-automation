@@ -55,26 +55,24 @@ npm run bundle       # Build and package the action
 **CRITICAL**: Development for `.github/actions/lysbot-merge/` should be performed using Node.js 24.x to match the production runtime environment.
 
 **Production Runtime**: This action runs on Node.js 24 in production:
+
 - `action.yml` specifies `runs.using: 'node24'`
 - CI workflow (`.github/workflows/lysbot-merge-action-test.yml`) uses `node-version: '24'`
 
 ### Supported Node.js Versions
 
 - **Node.js 24.x (REQUIRED / STANDARD)**
-
   - This is the **required and standard development environment** and matches the production runtime.
   - Full compatibility, including ES module configuration loading, linting, formatting, and packaging, is guaranteed on Node.js 24.x.
   - All development work **must** be performed using Node.js 24.x.
 
 - **Node.js 22.x (NOT RECOMMENDED / FALLBACK ONLY)**
-
   - Node.js 22.x is **not recommended** for development, although it may work in limited cases.
   - This version does **not** match the production runtime.
   - Use Node.js 22.x **only if Node.js 24.x cannot be used**, and upgrade to Node.js 24.x as soon as possible.
   - Relying on Node.js 22.x may result in behavioral differences from production.
 
 - **Node.js 20.x (STRONGLY DISCOURAGED / UNSUPPORTED)**
-
   - Node.js 20.x is **strongly discouraged** and effectively **unsupported**.
   - Any current compatibility is incidental and **not a design goal**.
   - Compatibility **may break at any time** without notice.
