@@ -42,12 +42,14 @@ npm run build       # Build the action
 
 **CRITICAL**: Do NOT change the file extension of configuration files in `.github/actions/lysbot-merge/`:
 
-- `prettier.config.ts` - **MUST remain as `.ts`** extension (do NOT change to `.mjs`, `.js`, or `.cjs`)
-- `eslint.config.ts` - **MUST remain as `.ts`** extension
-- `rollup.config.ts` - **MUST remain as `.ts`** extension
-- `vitest.config.ts` - **MUST remain as `.ts`** extension
+- `prettier.config.mjs` - **MUST remain as `.mjs`** extension (do NOT change to `.ts`, `.js`, or `.cjs`)
+- `eslint.config.mjs` - **MUST remain as `.mjs`** extension
+- `rollup.config.mjs` - **MUST remain as `.mjs`** extension
+- `vitest.config.mjs` - **MUST remain as `.mjs`** extension
 
-**Why this matters**: These configuration files use TypeScript and are loaded correctly with the `.ts` extension in the project's environment (Node.js 24+ with proper tooling). Changing extensions will break the configuration loading and cause CI/build failures.
+**Why this matters**: These configuration files use ES modules (`.mjs`) to ensure compatibility across different Node.js versions and development environments. The `.mjs` extension was specifically chosen to resolve compatibility issues with GitHub Copilot and various tooling, while maintaining support for Node.js 20 environments (though deprecated). Changing extensions will break the configuration loading and cause CI/build failures.
+
+**Historical Context**: This project originally used `.ts` extensions for configuration files, which worked well with Node.js 24+ but caused issues with GitHub Copilot and older Node.js versions. The migration to `.mjs` was a pragmatic decision to improve developer experience and tooling compatibility, though it was not the originally preferred approach.
 
 ## Development Environment
 
@@ -55,54 +57,59 @@ npm run build       # Build the action
 
 ### Supported Node.js Versions
 
-- **Node.js 24.x (REQUIRED)**
+- **Node.js 24.x (RECOMMENDED)**
 
   - This project is developed and validated primarily on Node.js 24.x.
-  - Full compatibility, including TypeScript-based configuration loading, linting, formatting, and packaging, is guaranteed **only** on Node.js 24.x.
+  - Full compatibility, including ES module configuration loading, linting, formatting, and packaging, is guaranteed on Node.js 24.x.
+  - This is the recommended version for all development work.
 
-- **Node.js 22.x (MINIMUM / DEGRADED SUPPORT)**
+- **Node.js 22.x (SUPPORTED)**
 
-  - Node.js 22.x is the **absolute minimum** version allowed for local development **only when Node.js 24.x cannot be used**.
-  - In this environment, additional workarounds are required, and some tooling (especially ESLint) may still behave inconsistently.
+  - Node.js 22.x is fully supported for local development.
+  - All tooling (ESLint, Prettier, Vitest, Rollup) works correctly with the `.mjs` configuration files.
 
-- **Node.js 20.x and earlier (UNSUPPORTED)**
-  - Node.js 20.x and older versions are **completely unsupported**.
-  - Development, linting, or formatting using these versions is **not allowed** and will lead to inconsistent or broken behavior.
+- **Node.js 20.x (DEPRECATED BUT SUPPORTED)**
+  - Node.js 20.x is **deprecated** but currently supported for local development.
+  - The migration to `.mjs` configuration files was made specifically to maintain compatibility with Node.js 20 environments, addressing issues that existed with the previous `.ts` configuration files.
+  - While all tooling works correctly with Node.js 20, this support is considered deprecated and may be removed in future versions.
+  - **Production runtime**: The action itself still targets Node.js 24+ for production use (as specified in `package.json` engines field).
+  - Developers are encouraged to upgrade to Node.js 22 or 24 when possible.
 
 ### npm Version
 
 - Use an npm version compatible with the selected Node.js version above.
 - Always follow the versions defined in `package.json` and CI workflows.
 
-### Why Node.js 24 Is Required
+### Why Node.js 24 Is Recommended
 
-This project relies on:
+This project is designed for:
 
 - Node.js 24+ runtime behavior
 - Native ESM handling
-- TypeScript configuration files (`.ts`) being loaded directly by tooling
+- Modern JavaScript tooling ecosystem
 
-These features are **not reliably supported** in older Node.js versions.
+While Node.js 20 is currently supported through `.mjs` configuration files, Node.js 24 provides the best development experience.
 
-### Node.js 22 Workaround (Limited Support Only)
+### Configuration File Format Rationale
 
-When using **Node.js 22.x**, you **must** enable TypeScript config loading explicitly using `tsx` (already included in `devDependencies`):
+The `.mjs` extension for configuration files was adopted to:
 
-```bash
-    env 'NODE_OPTIONS=--import tsx' npm run format:check
-    env 'NODE_OPTIONS=--import tsx' npm run lint   # ESLint may still fail in some cases
-```
+1. **Resolve GitHub Copilot compatibility issues**: The previous `.ts` configuration files caused problems with GitHub Copilot's analysis and suggestions.
+2. **Support Node.js 20 environments**: Enable development on Node.js 20 for teams with version constraints, though this support is deprecated.
+3. **Ensure consistent tooling behavior**: Provide predictable behavior across different Node.js versions without requiring additional environment variables or workarounds.
 
-This workaround exists **only** to unblock development in constrained environments.
-It is **not** equivalent to full Node.js 24 compatibility.
+**Note**: This was a pragmatic decision prioritizing developer experience and compatibility over the original preference for TypeScript configuration files. The `.mjs` approach works reliably across Node.js 20, 22, and 24 without requiring special workarounds.
 
-### Mandatory Requirements
+### Development Environment Setup
 
-If you are unable to run all checks locally due to environment limitations:
+**Recommended approach:**
 
-1. You **must still** run `npm test` and `npm run package`
-2. You **must** manually review changes for obvious lint or style violations
-3. You **must** clearly state in the commit message that validation relies on CI with Node.js 24
-4. You **must not** treat this as a substitute for setting up a proper Node.js 24 environment
+1. Use Node.js 24.x for the best experience
+2. All npm scripts work without additional configuration
+3. No environment variable workarounds needed
 
-**Developers are expected to provision Node.js 24.x, or at minimum Node.js 22.x, by any means necessary.**
+**For Node.js 20/22 environments:**
+
+1. All tooling works correctly with the `.mjs` configuration files
+2. No special setup or workarounds required
+3. Simply run `npm ci` and use the npm scripts as documented
