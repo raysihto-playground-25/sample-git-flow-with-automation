@@ -60,26 +60,26 @@ npm run bundle       # Build and package the action
 
 ### Supported Node.js Versions
 
-- **Node.js 24.x (STANDARD / PRINCIPLE)**
+- **Node.js 24.x (REQUIRED / STANDARD)**
 
-  - **This is the standard development environment** and matches the production runtime.
-  - Development on Node.js 24.x is the **principle** (原則) for this project.
+  - This is the **required and standard development environment** and matches the production runtime.
   - Full compatibility, including ES module configuration loading, linting, formatting, and packaging, is guaranteed on Node.js 24.x.
-  - All developers should use Node.js 24.x for development work.
+  - All development work **must** be performed using Node.js 24.x.
 
-- **Node.js 22.x (SHOULD BE AVOIDED)**
+- **Node.js 22.x (NOT RECOMMENDED / FALLBACK ONLY)**
 
-  - Node.js 22.x **should be avoided** for development, though it is technically possible.
-  - While all tooling works correctly with the `.mjs` configuration files, this version does not match the production runtime.
-  - **Strongly recommended**: Upgrade to Node.js 24.x (not just to Node.js 22.x) to match production.
-  - Use only if you cannot upgrade to Node.js 24.x, and be aware of potential runtime differences.
+  - Node.js 22.x is **not recommended** for development, although it may work in limited cases.
+  - This version does **not** match the production runtime.
+  - Use Node.js 22.x **only if Node.js 24.x cannot be used**, and upgrade to Node.js 24.x as soon as possible.
+  - Relying on Node.js 22.x may result in behavioral differences from production.
 
-- **Node.js 20.x (STRONGLY DISCOURAGED)**
-  - Node.js 20.x **should be strongly avoided** for development.
-  - While the migration to `.mjs` configuration files currently allows tooling to work on Node.js 20, this is a side effect, not a design goal.
-  - **This may break at any time**: There is no guarantee that future changes will maintain Node.js 20 compatibility.
-  - The production runtime is Node.js 24, creating a significant version gap that may lead to unexpected issues.
-  - **Strongly recommended**: Upgrade directly to Node.js 24.x (skip Node.js 22) to match production and ensure reliable development.
+- **Node.js 20.x (STRONGLY DISCOURAGED / UNSUPPORTED)**
+
+  - Node.js 20.x is **strongly discouraged** and effectively **unsupported**.
+  - Any current compatibility is incidental and **not a design goal**.
+  - Compatibility **may break at any time** without notice.
+  - The significant version gap from the production runtime (Node.js 24) can lead to serious and hard-to-debug issues.
+  - **Upgrade directly to Node.js 24.x**.
 
 ### npm Version
 
