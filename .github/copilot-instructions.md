@@ -28,14 +28,10 @@ For changes to `.github/actions/lysbot-merge/`, ensure you pass all checks that 
 
 ```bash
 cd .github/actions/lysbot-merge
-npm ci
+npm ci          # Install dependencies as per package-lock.json
 # Make your code changes...
-npm run check:format # Verify formatting
-npm run check:lint   # Run linter
-npm run check:type   # Run type checks
-npm run check:test   # Run tests with coverage
-npm run bundle       # Build and package the action
-# Now commit
+npm run all     # Run all fix, check, and package steps
+# Now commit your changes only if the above command passes without errors
 ```
 
 ## Configuration Files
