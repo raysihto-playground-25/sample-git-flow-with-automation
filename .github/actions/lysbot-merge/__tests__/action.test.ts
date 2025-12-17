@@ -1287,11 +1287,13 @@ describe('executeAction', () => {
       expect(parts[1]).toContain('Co-authored-by:');
 
       // Verify order is by commit order (Bob first, then Alice), not alphabetical
-      const coAuthorSection = parts[1];
+      const coAuthorSection = parts.at(1);
       expect(coAuthorSection).toBeDefined();
-      const bobIndex = coAuthorSection!.indexOf('Co-authored-by: Bob Developer');
-      const aliceIndex = coAuthorSection!.indexOf('Co-authored-by: Alice Contributor');
-      expect(bobIndex).toBeLessThan(aliceIndex); // Bob should appear before Alice (commit order)
+      if (coAuthorSection) {
+        const bobIndex = coAuthorSection.indexOf('Co-authored-by: Bob Developer');
+        const aliceIndex = coAuthorSection.indexOf('Co-authored-by: Alice Contributor');
+        expect(bobIndex).toBeLessThan(aliceIndex); // Bob should appear before Alice (commit order)
+      }
       expect(parts[parts.length - 1]).toContain('Merged-by: lysbot-merge');
     });
   });
