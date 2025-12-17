@@ -260,11 +260,11 @@ describe('fetchPullRequestCommits', () => {
     const commits = await fetchPullRequestCommits(octokit, 'owner', 'repo', 1);
 
     expect(commits).toHaveLength(3);
-    expect(commits[0].commit.message).toBe('feat: add new feature');
-    expect(commits[0].commit.author?.name).toBe('Alice');
-    expect(commits[0].commit.author?.email).toBe('alice@example.com');
-    expect(commits[1].commit.message).toBe('fix: fix bug\n\nDetailed description');
-    expect(commits[2].commit.message).toBe('docs: update readme');
+    expect(commits[0]?.commit.message).toBe('feat: add new feature');
+    expect(commits[0]?.commit.author?.name).toBe('Alice');
+    expect(commits[0]?.commit.author?.email).toBe('alice@example.com');
+    expect(commits[1]?.commit.message).toBe('fix: fix bug\n\nDetailed description');
+    expect(commits[2]?.commit.message).toBe('docs: update readme');
   });
 });
 

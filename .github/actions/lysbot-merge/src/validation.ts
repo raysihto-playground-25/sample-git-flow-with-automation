@@ -194,7 +194,7 @@ export function validatePRState(prData: PullRequestData): CheckResult[] {
   checks.push({
     name: 'PR is ready for review',
     passed: allPassed,
-    details: failureReasons.length > 0 ? failureReasons.join(', ') : undefined,
+    ...(failureReasons.length > 0 && { details: failureReasons.join(', ') }),
   });
 
   return checks;

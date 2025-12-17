@@ -162,7 +162,7 @@ export async function executeAction(
   const threadsCheck: CheckResult = {
     name: 'All review conversations are resolved',
     passed: unresolvedCount === 0,
-    details: unresolvedCount > 0 ? `${unresolvedCount} unresolved` : undefined,
+    ...(unresolvedCount > 0 && { details: `${unresolvedCount} unresolved` }),
   };
 
   // Approval check - fetch and validate reviews
@@ -220,9 +220,9 @@ export async function executeAction(
   const approvalCheck: CheckResult = {
     name: 'At least one valid approval from another user',
     passed: approvalCheckPassed,
-    details: approvalDetails,
+    ...(approvalDetails !== undefined && { details: approvalDetails }),
     // Mark as optional when override flag is used, so it shows warning instead of failure
-    optional: approvalOverridden,
+    ...(approvalOverridden && { optional: true }),
   };
 
   // Merge conflicts check (based on mergeable_state)
@@ -230,7 +230,7 @@ export async function executeAction(
   const conflictsCheck: CheckResult = {
     name: 'No merge conflicts',
     passed: noConflicts,
-    details: !noConflicts ? getMergeableStateDescription(prData.mergeableState) : undefined,
+    ...(!noConflicts && { details: getMergeableStateDescription(prData.mergeableState) }),
   };
 
   // Optional: Conventional Commits check for PR title
@@ -238,7 +238,7 @@ export async function executeAction(
   const conventionalCommitsCheck: CheckResult = {
     name: 'PR title follows [Conventional Commits](https://www.conventionalcommits.org/)',
     passed: isConventionalTitle,
-    details: !isConventionalTitle ? 'title does not follow conventional format' : undefined,
+    ...(!isConventionalTitle && { details: 'title does not follow conventional format' }),
     optional: true,
   };
 
