@@ -58,7 +58,7 @@
     "@rollup/plugin-typescript": "^12.3.0",
     "@stylistic/eslint-plugin": "^5.6.1",
     "@types/node": "^24.10.3",
-    "@typescript-eslint/parser": "^8.49.0",
+    "@typescript-eslint/parser": "^8.50.0",
     "@vitest/coverage-v8": "^4.0.15",
     "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
