@@ -155,9 +155,18 @@ describe('main.ts', () => {
 
       await run();
 
-      // Verify executeAction was called - we can't easily check the exact config passed
-      // because accessing mockExecuteAction.mock.calls would trigger unsafe any errors
-      expect(mockExecuteAction).toHaveBeenCalled();
+      // Verify executeAction was called with the custom config
+      expect(mockExecuteAction).toHaveBeenCalledWith(
+        expect.any(Object), // octokit
+        expect.any(Object), // context
+        expect.objectContaining({
+          releaseBranchPrefix: 'rel/',
+          developBranch: 'main',
+          syncBranchPrefix: 'sync/',
+          mergeableRetryCount: 3,
+          mergeableRetryInterval: 5,
+        }),
+      );
     });
 
     it('should use default values when optional inputs are empty', async () => {
