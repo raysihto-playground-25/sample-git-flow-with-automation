@@ -5,10 +5,17 @@ To work on the lysbot-merge action:
 ```bash
 cd .github/actions/lysbot-merge
 npm ci
+# Make your code changes...
+npm run all     # Run all fix, check, and package steps
+```
+
+Individual commands for specific tasks:
+
+```bash
 npm run test:coverage  # Run unit tests with coverage
 npm run format:write   # Run formatter (format:check for checking only)
 npm run lint           # Run ESLint
-npm run bundle         # Bundle with ncc
+npm run bundle         # Bundle with rollup
 ```
 
 ## Code Structure

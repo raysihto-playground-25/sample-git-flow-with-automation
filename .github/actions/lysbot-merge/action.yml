@@ -73,7 +73,7 @@ inputs:
 
 outputs:
   result:
-    description: 'Result of the merge operation (merged, skipped, failed)'
+    description: 'Result of the merge operation (merged, skipped, failed, already_merged)'
   merge_method:
     description: 'Merge method used (squash or merge)'
 
