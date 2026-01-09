@@ -24,22 +24,100 @@ This action follows a **Lightweight Modular Monolith** architecture optimized fo
 
 ## Code Structure
 
-The codebase has been modularized for better maintainability and testability, following the **Single Responsibility Principle**. Each module focuses on a specific concern:
+The codebase follows a strict layered architecture with clear boundaries:
 
 ### Current File Structure
 
 ```
 src/
-├── action.ts         # Core business logic (executeAction, buildSummaryMarkdown)
-├── constants.ts      # Configuration constants and regex patterns
-├── github-api.ts     # GitHub API interaction wrappers
-├── index.ts          # Action entry point for bundler
-├── main.ts           # GitHub Actions runtime integration (tested with mocks)
-├── types.ts          # Type definitions and interfaces
-└── validation.ts     # Pure validation and business logic functions
+├── modules/
+│   └── merge/              # Merge feature module
+│       ├── action.ts       # Action layer: Input/output mapping
+│       ├── app.ts          # App layer: Orchestration & port definitions
+│       ├── domain.ts       # Domain layer: Pure business logic
+│       ├── infra.ts        # Infra layer: Adapter implementations
+│       └── index.ts        # Public API for the module
+├── shared/
+│   ├── kernel/             # Pure types, constants (all layers can use)
+│   │   ├── constants.ts    # Configuration constants and regex patterns
+│   │   ├── result.ts       # Result type for error handling
+│   │   └── index.ts        # Public API
+│   └── infra-shared/       # @actions/* wrappers (only action/infra can use)
+│       ├── actions-core-wrapper.ts
+│       ├── actions-logger.ts
+│       └── index.ts
+├── main.ts                 # Composition root: Assembles dependencies
+└── index.ts                # Entry point for bundler
+
+__tests__/
+├── doubles/                # Test doubles (fakes) for infrastructure
+│   ├── fake-github-repository.ts
+│   ├── fake-logger.ts
+│   ├── fake-time-provider.ts
+│   └── fake-actions-core.ts
+├── modules/
+│   └── merge/              # Tests mirroring module structure
+│       ├── app.test.ts     # App layer tests (using fakes)
+│       └── domain.test.ts  # Domain layer tests (pure)
+└── shared/
+    └── kernel/
+        └── constants.test.ts
 ```
 
 **Module Responsibilities:**
+
+1. **Domain Layer** (`domain.ts`)
+   - Pure business logic and validation functions
+   - NO dependencies on @actions/* or external I/O
+   - Contains types used by the domain (ActionConfig, PullRequestData, etc.)
+   - Easily testable with no side effects
+
+2. **App Layer** (`app.ts`)
+   - Orchestration logic and workflows
+   - Port definitions (interfaces for external dependencies)
+   - Result<T, E> return types for explicit error handling
+   - NO dependencies on @actions/* or infra implementation details
+
+3. **Infra Layer** (`infra.ts`)
+   - Adapter implementations for ports defined in app layer
+   - GitHub API interactions using Octokit
+   - Can import from app and kernel, but NOT from domain directly
+
+4. **Action Layer** (`action.ts`)
+   - Input/output mapping between GitHub Actions and app layer
+   - Translates GitHub-specific strings to domain-friendly types
+   - Minimal logic, delegates to app layer
+
+5. **Composition Root** (`main.ts`)
+   - Wiring: Instantiates adapters and injects dependencies
+   - Thin layer: "Initialize, Inject, and Run"
+   - Only place where all layers come together
+
+### Legacy Files (Deprecated)
+
+The following files are kept for backward compatibility but will be removed:
+- `action.ts` (old) - replaced by `modules/merge/action.ts` and `modules/merge/app.ts`
+- `validation.ts` (old) - replaced by `modules/merge/domain.ts`
+- `github-api.ts` (old) - replaced by `modules/merge/infra.ts`
+- `constants.ts` (old) - replaced by `shared/kernel/constants.ts`
+- `types.ts` (old) - types now distributed across layers
+
+### Legacy Code Structure (Deprecated)
+
+The following structure is deprecated and kept for reference:
+
+```
+src/
+├── action.ts         # DEPRECATED: Core business logic (executeAction, buildSummaryMarkdown)
+├── constants.ts      # DEPRECATED: Configuration constants and regex patterns
+├── github-api.ts     # DEPRECATED: GitHub API interaction wrappers
+├── index.ts          # Action entry point for bundler
+├── main.ts           # DEPRECATED: GitHub Actions runtime integration (tested with mocks)
+├── types.ts          # DEPRECATED: Type definitions and interfaces
+└── validation.ts     # DEPRECATED: Pure validation and business logic functions
+```
+
+**Module Responsibilities (Deprecated):**
 
 1. **`action.ts`** (testable business logic)
    - Main `executeAction()` function that orchestrates the merge flow

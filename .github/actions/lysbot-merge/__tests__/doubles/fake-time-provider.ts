@@ -13,6 +13,7 @@ import type { ITimeProvider } from '../../src/modules/merge/app.js';
 export class FakeTimeProvider implements ITimeProvider {
   waitCalls: number[] = [];
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async waitMs(ms: number): Promise<void> {
     this.waitCalls.push(ms);
     // Don't actually wait - this makes tests fast

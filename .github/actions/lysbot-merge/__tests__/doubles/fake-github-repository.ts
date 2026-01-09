@@ -4,12 +4,7 @@
  * This is a test double (fake) that maintains in-memory state for testing purposes.
  */
 
-import type {
-  IGitHubRepository,
-  Review,
-  Commit,
-  MergeOperationResult,
-} from '../../src/modules/merge/app.js';
+import type { IGitHubRepository, Review, Commit, MergeOperationResult } from '../../src/modules/merge/app.js';
 import type { PullRequestData } from '../../src/modules/merge/domain.js';
 
 /**
@@ -30,6 +25,7 @@ export class FakeGitHubRepository implements IGitHubRepository {
   commits: Map<number, Commit[]> = new Map();
   mergeResults: Map<number, MergeOperationResult> = new Map();
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async addReaction(
     owner: string,
     repo: string,
@@ -39,14 +35,17 @@ export class FakeGitHubRepository implements IGitHubRepository {
     this.reactions.push({ owner, repo, commentId, reaction });
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async postComment(owner: string, repo: string, prNumber: number, body: string): Promise<void> {
     this.comments.push({ owner, repo, prNumber, body });
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async getCollaboratorPermission(owner: string, repo: string, username: string): Promise<string> {
     return this.permissions.get(username) ?? 'none';
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async fetchPullRequestData(owner: string, repo: string, prNumber: number): Promise<PullRequestData> {
     const prData = this.pullRequests.get(prNumber);
     if (!prData) {
@@ -55,10 +54,12 @@ export class FakeGitHubRepository implements IGitHubRepository {
     return prData;
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async fetchApprovedReviews(owner: string, repo: string, prNumber: number): Promise<Review[]> {
     return this.reviews.get(prNumber) ?? [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async dismissReview(
     owner: string,
     repo: string,
@@ -70,22 +71,25 @@ export class FakeGitHubRepository implements IGitHubRepository {
     return true;
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async countUnresolvedThreads(owner: string, repo: string, prNumber: number): Promise<number> {
     return this.unresolvedThreadCounts.get(prNumber) ?? 0;
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async fetchPullRequestCommits(owner: string, repo: string, prNumber: number): Promise<Commit[]> {
     return this.commits.get(prNumber) ?? [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   async mergePullRequest(
-    owner: string,
-    repo: string,
+    _owner: string,
+    _repo: string,
     prNumber: number,
-    method: 'squash' | 'merge',
-    sha: string,
-    commitTitle: string,
-    commitMessage: string,
+    _method: 'squash' | 'merge', // eslint-disable-line @typescript-eslint/no-unused-vars
+    _sha: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+    _commitTitle: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+    _commitMessage: string, // eslint-disable-line @typescript-eslint/no-unused-vars
   ): Promise<MergeOperationResult> {
     const result = this.mergeResults.get(prNumber);
     if (result) {

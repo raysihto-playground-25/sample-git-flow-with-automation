@@ -3,12 +3,13 @@
  *
  * This file handles input/output mapping between GitHub Actions and the app layer.
  * It translates GitHub-specific strings to domain-friendly types.
- * 
+ *
  * ARCHITECTURE: This is the ACTION layer - it can import from @actions/* and app,
  * but should delegate business logic to the app layer.
  */
 
 import type { IActionsCore } from '../../shared/infra-shared/index.js';
+
 import type { EventContext, MergeResult } from './app.js';
 import { MergeAppService, type MergeAppDependencies } from './app.js';
 import type { ActionConfig } from './domain.js';
@@ -16,7 +17,7 @@ import { parseCommand } from './domain.js';
 
 /**
  * Runs the merge action.
- * 
+ *
  * @param core - Actions core wrapper
  * @param context - Event context from GitHub
  * @param deps - Application dependencies (injected by main.ts)
@@ -79,12 +80,7 @@ export async function runMergeAction(
  * Builds a summary markdown table for the merge operation.
  * This is a pure helper function for formatting output.
  */
-export function buildSummaryMarkdown(
-  result: string,
-  prNumber: number,
-  actor: string,
-  mergeMethod?: string,
-): string {
+export function buildSummaryMarkdown(result: string, prNumber: number, actor: string, mergeMethod?: string): string {
   let summary = `## lysbot-merge Summary\n\n`;
   summary += `| Item | Value |\n`;
   summary += `|------|-------|\n`;

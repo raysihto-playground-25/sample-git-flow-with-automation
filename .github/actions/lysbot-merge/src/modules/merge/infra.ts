@@ -2,12 +2,13 @@
  * infra.ts - Infrastructure adapters for GitHub API
  *
  * This module implements the ports defined in app.ts using Octokit.
- * 
+ *
  * ARCHITECTURE: This is the INFRA layer - it can import from app and kernel,
  * but must NOT import from domain directly.
  */
 
 import type { GitHub } from '@actions/github/lib/utils.js';
+
 import type { IGitHubRepository, Review, Commit, MergeOperationResult, ILogger, ITimeProvider } from './app.js';
 import type { PullRequestData } from './domain.js';
 
@@ -96,12 +97,14 @@ export class GitHubRepositoryAdapter implements IGitHubRepository {
       pull_number: prNumber,
       per_page: 100,
     });
-    return reviews.filter((review) => review.state === 'APPROVED').map((review) => ({
-      id: review.id,
-      state: review.state,
-      commit_id: review.commit_id,
-      user: review.user,
-    }));
+    return reviews
+      .filter((review) => review.state === 'APPROVED')
+      .map((review) => ({
+        id: review.id,
+        state: review.state,
+        commit_id: review.commit_id,
+        user: review.user,
+      }));
   }
 
   async dismissReview(
@@ -217,14 +220,17 @@ export class GitHubRepositoryAdapter implements IGitHubRepository {
  */
 export class ConsoleLogger implements ILogger {
   info(message: string): void {
+    // eslint-disable-next-line no-console
     console.log(`[INFO] ${message}`);
   }
 
   warning(message: string): void {
+    // eslint-disable-next-line no-console
     console.warn(`[WARN] ${message}`);
   }
 
   error(message: string): void {
+    // eslint-disable-next-line no-console
     console.error(`[ERROR] ${message}`);
   }
 }

@@ -6,7 +6,6 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { TWEMOJI } from '../../../src/shared/kernel/index.js';
 import type { ActionConfig, PullRequestData, CheckResult } from '../../../src/modules/merge/domain.js';
 import {
   isCommand,
@@ -21,6 +20,7 @@ import {
   isConventionalCommitTitle,
   waitBeforeRetryMs,
 } from '../../../src/modules/merge/domain.js';
+import { TWEMOJI } from '../../../src/shared/kernel/index.js';
 
 // =============================================================================
 // Test Utilities

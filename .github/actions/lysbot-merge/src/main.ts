@@ -3,14 +3,13 @@
  *
  * This file is responsible for wiring up dependencies and running the action.
  * It instantiates infra adapters and passes them to the action layer.
- * 
+ *
  * ARCHITECTURE: This is the COMPOSITION ROOT - it assembles all dependencies
  * and delegates to the action layer.
  */
 
 import * as github from '@actions/github';
 
-import { ActionsCore, ActionsLogger } from './shared/infra-shared/index.js';
 import {
   runMergeAction,
   buildSummaryMarkdown,
@@ -18,6 +17,7 @@ import {
   TimeProvider,
   type EventContext,
 } from './modules/merge/index.js';
+import { ActionsCore, ActionsLogger } from './shared/infra-shared/index.js';
 
 /**
  * Main function that runs the action.

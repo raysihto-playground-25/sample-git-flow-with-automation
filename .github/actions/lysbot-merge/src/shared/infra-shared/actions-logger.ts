@@ -5,6 +5,7 @@
  */
 
 import * as core from '@actions/core';
+
 import type { ILogger } from '../../modules/merge/app.js';
 
 /**

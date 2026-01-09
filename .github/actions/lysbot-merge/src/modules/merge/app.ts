@@ -3,18 +3,14 @@
  *
  * This module defines the ports (interfaces) for external dependencies
  * and contains the orchestration logic for the merge operation.
- * 
+ *
  * ARCHITECTURE: This is the APP layer - it must NOT import from @actions/* or infra-shared.
  * It defines ports that will be implemented by the infra layer.
  */
 
-import { Result } from '../../shared/kernel/index.js';
-import type {
-  ActionConfig,
-  PullRequestData,
-  CheckResult,
-  MergeOptions,
-} from './domain.js';
+import type { Result } from '../../shared/kernel/index.js';
+
+import type { ActionConfig, PullRequestData, CheckResult, MergeOptions } from './domain.js';
 
 /**
  * Event context from GitHub Actions runtime.
@@ -117,13 +113,7 @@ export interface IGitHubRepository {
   /**
    * Dismisses a stale review.
    */
-  dismissReview(
-    owner: string,
-    repo: string,
-    prNumber: number,
-    reviewId: number,
-    message: string,
-  ): Promise<boolean>;
+  dismissReview(owner: string, repo: string, prNumber: number, reviewId: number, message: string): Promise<boolean>;
 
   /**
    * Counts unresolved review threads.
@@ -291,12 +281,7 @@ export class MergeAppService {
 
     // Check if already merged
     if (prData.merged) {
-      await githubRepo.postComment(
-        owner,
-        repo,
-        prNumber,
-        '## Already merged\n\nThis PR has already been merged.',
-      );
+      await githubRepo.postComment(owner, repo, prNumber, '## Already merged\n\nThis PR has already been merged.');
       return { ok: true, value: { status: 'already_merged', message: 'PR already merged' } };
     }
 
@@ -355,7 +340,8 @@ export class MergeAppService {
     if (approvalCheckPassed) {
       approvalDetails = undefined;
     } else if (approvalOverridden) {
-      approvalDetails = 'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
+      approvalDetails =
+        'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
     } else {
       approvalDetails = 'no valid approvals found';
     }

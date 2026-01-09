@@ -56,6 +56,7 @@ export class FakeActionsCore implements IActionsCore {
         this.summaryContent += text;
         return this.summary;
       },
+      // eslint-disable-next-line @typescript-eslint/require-await
       write: async () => {
         return this.summary;
       },

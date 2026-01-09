@@ -4,7 +4,7 @@
  * This module contains all pure functions for validation, formatting,
  * and business logic that don't require external I/O operations.
  * These functions are easily testable and have no side effects.
- * 
+ *
  * ARCHITECTURE: This is the DOMAIN layer - it must NOT import from @actions/* or infra-shared.
  */
 
