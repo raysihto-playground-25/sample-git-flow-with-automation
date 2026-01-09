@@ -5,17 +5,11 @@
  * Tests are structured to mirror the source code organization.
  */
 
+/* eslint-disable @typescript-eslint/unbound-method */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
 
-import type {
-  ActionConfig,
-  EventContext,
-  PullRequestData,
-  CheckResult,
-  MergeMethodResult,
-  MergeOptions,
-} from '../../../src/shared/kernel/types.js';
 import {
   // Domain functions
   isConventionalCommitTitle,
@@ -35,6 +29,7 @@ import {
   type TimePort,
   type LogPort,
 } from '../../../src/modules/merge/index.js';
+import type { ActionConfig, EventContext, PullRequestData, CheckResult } from '../../../src/shared/kernel/types.js';
 
 // =============================================================================
 // Domain Function Tests (Pure Logic)
@@ -178,8 +173,8 @@ describe('Domain: validatePRState', () => {
 
     const checks = validatePRState(prData);
     expect(checks).toHaveLength(1);
-    expect(checks[0].passed).toBe(true);
-    expect(checks[0].details).toBeUndefined();
+    expect(checks[0]?.passed).toBe(true);
+    expect(checks[0]?.details).toBeUndefined();
   });
 
   it('should fail for closed PR', () => {
@@ -199,8 +194,8 @@ describe('Domain: validatePRState', () => {
     };
 
     const checks = validatePRState(prData);
-    expect(checks[0].passed).toBe(false);
-    expect(checks[0].details).toContain('currently closed');
+    expect(checks[0]?.passed).toBe(false);
+    expect(checks[0]?.details).toContain('currently closed');
   });
 
   it('should fail for draft PR', () => {
@@ -220,8 +215,8 @@ describe('Domain: validatePRState', () => {
     };
 
     const checks = validatePRState(prData);
-    expect(checks[0].passed).toBe(false);
-    expect(checks[0].details).toContain('currently a draft');
+    expect(checks[0]?.passed).toBe(false);
+    expect(checks[0]?.details).toContain('currently a draft');
   });
 });
 
@@ -246,18 +241,14 @@ describe('Domain: buildCheckResultsMarkdown', () => {
   });
 
   it('should build markdown for failed checks', () => {
-    const checks: CheckResult[] = [
-      { name: 'Test check', passed: false, details: 'Some error' },
-    ];
+    const checks: CheckResult[] = [{ name: 'Test check', passed: false, details: 'Some error' }];
     const markdown = buildCheckResultsMarkdown(checks);
     expect(markdown).toContain('Test check');
     expect(markdown).toContain('Some error');
   });
 
   it('should build markdown for optional checks', () => {
-    const checks: CheckResult[] = [
-      { name: 'Optional check', passed: false, optional: true },
-    ];
+    const checks: CheckResult[] = [{ name: 'Optional check', passed: false, optional: true }];
     const markdown = buildCheckResultsMarkdown(checks);
     expect(markdown).toContain('Optional check');
   });
@@ -474,6 +465,7 @@ describe('App: executeAction orchestration', () => {
     const result = await executeAction(mockGitHub, mockTime, mockLog, context, config);
     expect(result.status).toBe('merged');
     expect(result.mergeMethod).toBe('merge');
+
     expect(mockGitHub.mergePullRequest).toHaveBeenCalled();
   });
 
@@ -502,6 +494,7 @@ describe('App: executeAction orchestration', () => {
 
     const result = await executeAction(mockGitHub, mockTime, mockLog, context, config);
     expect(result.status).toBe('merged');
+
     expect(mockLog.info).toHaveBeenCalledWith(expect.stringContaining('override'));
   });
 
@@ -530,6 +523,7 @@ describe('App: executeAction orchestration', () => {
 
     const result = await executeAction(mockGitHub, mockTime, mockLog, context, config);
     expect(result.status).toBe('failed');
+
     expect(mockGitHub.dismissReview).toHaveBeenCalled();
   });
 
@@ -741,6 +735,7 @@ describe('App: executeAction orchestration', () => {
     const result = await executeAction(mockGitHub, mockTime, mockLog, context, config);
     expect(result.status).toBe('merged');
     expect(result.mergeMethod).toBe('squash');
+
     expect(mockGitHub.mergePullRequest).toHaveBeenCalledWith(
       expect.any(Number),
       'squash',
@@ -774,10 +769,7 @@ describe('App: executeAction orchestration', () => {
 
     const result = await executeAction(mockGitHub, mockTime, mockLog, context, config);
     expect(result.status).toBe('failed');
-    expect(mockGitHub.postComment).toHaveBeenCalledWith(
-      expect.any(Number),
-      expect.stringContaining('3 unresolved'),
-    );
+    expect(mockGitHub.postComment).toHaveBeenCalledWith(expect.any(Number), expect.stringContaining('3 unresolved'));
   });
 });
 

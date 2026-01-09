@@ -12,6 +12,14 @@
 
 import * as core from '@actions/core';
 
+import {
+  COMMAND_REGEX,
+  VALID_FLAGS,
+  TWEMOJI,
+  VALID_AUTHOR_ASSOCIATIONS,
+  VALID_PERMISSIONS,
+  CONVENTIONAL_COMMIT_REGEX,
+} from '../../shared/kernel/constants.js';
 import type {
   ActionConfig,
   EventContext,
@@ -23,14 +31,6 @@ import type {
   PullRequestData,
   ReviewsArray,
 } from '../../shared/kernel/types.js';
-import {
-  COMMAND_REGEX,
-  VALID_FLAGS,
-  TWEMOJI,
-  VALID_AUTHOR_ASSOCIATIONS,
-  VALID_PERMISSIONS,
-  CONVENTIONAL_COMMIT_REGEX,
-} from '../../shared/kernel/constants.js';
 
 // ============================================================================
 // [SECTION: DOMAIN] - Pure Logic
@@ -227,14 +227,19 @@ export function buildSummaryMarkdown(result: string, prNumber: number, actor: st
  * Port: GitHub operations for merge workflow
  */
 export interface GitHubPort {
-  addReaction(commentId: number, reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes'): Promise<void>;
+  addReaction(
+    commentId: number,
+    reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes',
+  ): Promise<void>;
   postComment(prNumber: number, body: string): Promise<void>;
   getCollaboratorPermission(username: string): Promise<string>;
   fetchPullRequestData(prNumber: number): Promise<PullRequestData>;
   fetchApprovedReviews(prNumber: number): Promise<ReviewsArray>;
   dismissReview(prNumber: number, reviewId: number, message: string): Promise<boolean>;
   countUnresolvedThreads(prNumber: number): Promise<number>;
-  fetchPullRequestCommits(prNumber: number): Promise<Array<{ commit: { message: string; author?: { name?: string; email?: string } | null } }>>;
+  fetchPullRequestCommits(
+    prNumber: number,
+  ): Promise<Array<{ commit: { message: string; author?: { name?: string; email?: string } | null } }>>;
   mergePullRequest(
     prNumber: number,
     method: 'squash' | 'merge',
@@ -269,16 +274,7 @@ export async function executeAction(
   context: EventContext,
   config: ActionConfig,
 ): Promise<ActionResult> {
-  const {
-    prNumber,
-    commentId,
-    commentBody,
-    actor,
-    userType,
-    authorAssociation,
-    eventName,
-    isPullRequest,
-  } = context;
+  const { prNumber, commentId, commentBody, actor, userType, authorAssociation, eventName, isPullRequest } = context;
 
   // Step 1: Validate event type and context
   if (eventName !== 'issue_comment') {
@@ -578,7 +574,10 @@ export class OctokitGitHubAdapter implements GitHubPort {
     private repo: string,
   ) {}
 
-  async addReaction(commentId: number, reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes'): Promise<void> {
+  async addReaction(
+    commentId: number,
+    reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes',
+  ): Promise<void> {
     try {
       await this.octokit.rest.reactions.createForIssueComment({
         owner: this.owner,
@@ -713,7 +712,9 @@ export class OctokitGitHubAdapter implements GitHubPort {
     return unresolvedCount;
   }
 
-  async fetchPullRequestCommits(prNumber: number): Promise<Array<{ commit: { message: string; author?: { name?: string; email?: string } | null } }>> {
+  async fetchPullRequestCommits(
+    prNumber: number,
+  ): Promise<Array<{ commit: { message: string; author?: { name?: string; email?: string } | null } }>> {
     const commits = await this.octokit.paginate(this.octokit.rest.pulls.listCommits, {
       owner: this.owner,
       repo: this.repo,

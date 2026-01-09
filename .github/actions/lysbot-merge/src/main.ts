@@ -14,7 +14,6 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
-import type { ActionConfig, EventContext } from './shared/kernel/types.js';
 import {
   executeAction,
   buildSummaryMarkdown,
@@ -22,6 +21,7 @@ import {
   NodeTimeAdapter,
   CoreLogAdapter,
 } from './modules/merge/index.js';
+import type { ActionConfig, EventContext } from './shared/kernel/types.js';
 
 /**
  * Main function that assembles the application and runs it.

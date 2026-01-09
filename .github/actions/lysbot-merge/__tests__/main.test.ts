@@ -4,9 +4,11 @@
  * Tests for the composition root (main.ts) - verifies input reading and DI setup.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+/* eslint-disable @typescript-eslint/unbound-method */
+
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@actions/core');
 vi.mock('@actions/github');
@@ -17,16 +19,16 @@ import { run } from '../src/main.js';
 describe('main.ts composition root', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Setup default mocks
     vi.mocked(core.getInput).mockImplementation((name: string) => {
       const inputs: Record<string, string> = {
         'github-token': 'test-token',
-        'release_branch_prefix': 'release/',
-        'develop_branch': 'develop',
-        'sync_branch_prefix': 'fix/sync/',
-        'mergeable_retry_count': '5',
-        'mergeable_retry_interval': '10',
+        release_branch_prefix: 'release/',
+        develop_branch: 'develop',
+        sync_branch_prefix: 'fix/sync/',
+        mergeable_retry_count: '5',
+        mergeable_retry_interval: '10',
       };
       return inputs[name] || '';
     });
@@ -50,6 +52,7 @@ describe('main.ts composition root', () => {
       },
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     vi.mocked(github).context = mockContext as any;
 
     const mockOctokit = {
@@ -91,6 +94,7 @@ describe('main.ts composition root', () => {
       }),
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
     vi.mocked(github.getOctokit).mockReturnValue(mockOctokit as any);
 
     const mockSummary = {
@@ -113,6 +117,7 @@ describe('main.ts composition root', () => {
     await run();
 
     expect(core.getInput).toHaveBeenCalledWith('github-token', { required: true });
+
     expect(core.setOutput).toHaveBeenCalledWith('result', 'already_merged');
     expect(core.summary.addRaw).toHaveBeenCalled();
     expect(core.summary.write).toHaveBeenCalled();
@@ -130,15 +135,22 @@ describe('main.ts composition root', () => {
 
   it('should parse integer inputs correctly', async () => {
     vi.mocked(core.getInput).mockImplementation((name: string) => {
-      if (name === 'mergeable_retry_count') return '10';
-      if (name === 'mergeable_retry_interval') return '20';
-      if (name === 'github-token') return 'test-token';
+      if (name === 'mergeable_retry_count') {
+        return '10';
+      }
+      if (name === 'mergeable_retry_interval') {
+        return '20';
+      }
+      if (name === 'github-token') {
+        return 'test-token';
+      }
       return '';
     });
 
     await run();
 
     // Should not throw error for integer parsing
+
     expect(core.setFailed).not.toHaveBeenCalled();
   });
 });

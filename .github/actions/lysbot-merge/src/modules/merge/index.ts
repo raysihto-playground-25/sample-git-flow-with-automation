@@ -4,19 +4,9 @@
  * Exports only the necessary functions and types for external use.
  */
 
-export {
-  executeAction,
-  buildSummaryMarkdown,
-  OctokitGitHubAdapter,
-  NodeTimeAdapter,
-  CoreLogAdapter,
-} from './mod.js';
+export { executeAction, buildSummaryMarkdown, OctokitGitHubAdapter, NodeTimeAdapter, CoreLogAdapter } from './mod.js';
 
-export type {
-  GitHubPort,
-  TimePort,
-  LogPort,
-} from './mod.js';
+export type { GitHubPort, TimePort, LogPort } from './mod.js';
 
 // Re-export domain functions for testing
 export {
