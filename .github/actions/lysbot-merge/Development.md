@@ -112,7 +112,7 @@ GitHub Actions entry point - kept minimal for easy testing.
    - Adapters → Use Cases → Domain
    - Domain has no dependencies on outer layers
    - Use Cases may depend on Domain
-   - Adapters may depend on Use Cases and Domain
+   - Adapters may depend on Domain (typically just types/interfaces)
 
 2. **Testability**: Each layer can be tested independently
    - Domain: Pure functions, easy to test
