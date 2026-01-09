@@ -15,11 +15,11 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
+import { ActionLogger } from './adapters/gateways/ActionLogger.js';
+import { GitHubClient } from './adapters/gateways/GitHubClient.js';
+import { SummaryPresenter } from './adapters/presenters/SummaryPresenter.js';
 import { MergeUseCase } from './usecases/merge/MergeUseCase.js';
 import type { MergeConfig, EventContext } from './usecases/merge/MergeUseCaseInput.js';
-import { GitHubClient } from './adapters/gateways/GitHubClient.js';
-import { ActionLogger } from './adapters/gateways/ActionLogger.js';
-import { SummaryPresenter } from './adapters/presenters/SummaryPresenter.js';
 
 /**
  * Main function that runs the action.
@@ -37,7 +37,7 @@ export async function run(): Promise<void> {
     // =========================================================================
 
     const token = core.getInput('github-token', { required: true });
-    
+
     const config: MergeConfig = {
       releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
       developBranch: core.getInput('develop_branch') || 'develop',
@@ -68,14 +68,10 @@ export async function run(): Promise<void> {
     // =========================================================================
 
     const octokit = github.getOctokit(token);
-    const gitHubClient = new GitHubClient(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      octokit as any,
-      github.context.repo.owner,
-      github.context.repo.repo,
-    );
-    
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+    const gitHubClient = new GitHubClient(octokit as any, github.context.repo.owner, github.context.repo.repo);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     const logger = new ActionLogger(core as any);
 
     // =========================================================================
@@ -108,7 +104,12 @@ export async function run(): Promise<void> {
       already_merged: 'ℹ️ Already merged',
     }[result.status];
 
-    const summaryMarkdown = presenter.buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);
+    const summaryMarkdown = presenter.buildSummaryMarkdown(
+      resultEmoji,
+      context.prNumber,
+      context.actor,
+      result.mergeMethod,
+    );
     await core.summary.addRaw(summaryMarkdown).write();
 
     // Log result

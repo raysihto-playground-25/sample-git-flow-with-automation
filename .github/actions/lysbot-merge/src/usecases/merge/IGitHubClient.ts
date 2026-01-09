@@ -29,7 +29,10 @@ export interface IGitHubClient {
   /**
    * Adds a reaction to a comment.
    */
-  addReaction(commentId: number, reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes'): Promise<void>;
+  addReaction(
+    commentId: number,
+    reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes',
+  ): Promise<void>;
 
   /**
    * Posts a comment on a PR.

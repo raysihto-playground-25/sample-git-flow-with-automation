@@ -5,9 +5,9 @@
  * It converts between the domain model and the GitHub API.
  */
 
-import type { IGitHubClient, Commit } from '../../usecases/merge/IGitHubClient.js';
 import type { PullRequest } from '../../domain/entities/PullRequest.js';
 import type { Review } from '../../domain/entities/Review.js';
+import type { IGitHubClient, Commit } from '../../usecases/merge/IGitHubClient.js';
 
 /**
  * Octokit type (imported from external library)
@@ -47,12 +47,7 @@ export type Octokit = {
           title: string;
         };
       }>;
-      listReviews: (params: {
-        owner: string;
-        repo: string;
-        pull_number: number;
-        per_page: number;
-      }) => Promise<{
+      listReviews: (params: { owner: string; repo: string; pull_number: number; per_page: number }) => Promise<{
         data: Array<{
           id: number;
           state: string;
@@ -67,12 +62,7 @@ export type Octokit = {
         review_id: number;
         message: string;
       }) => Promise<unknown>;
-      listCommits: (params: {
-        owner: string;
-        repo: string;
-        pull_number: number;
-        per_page: number;
-      }) => Promise<{
+      listCommits: (params: { owner: string; repo: string; pull_number: number; per_page: number }) => Promise<{
         data: Array<{
           commit: {
             message: string;
@@ -91,10 +81,7 @@ export type Octokit = {
       }) => Promise<{ data: { sha: string } }>;
     };
   };
-  paginate: <T>(
-    method: (params: unknown) => Promise<{ data: T[] }>,
-    params: unknown,
-  ) => Promise<T[]>;
+  paginate: <T>(method: (params: unknown) => Promise<{ data: T[] }>, params: unknown) => Promise<T[]>;
   graphql: <T>(query: string, params: unknown) => Promise<T>;
 };
 

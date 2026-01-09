@@ -30,9 +30,7 @@ export const CONVENTIONAL_COMMIT_TYPES = [
  * Format: <type>(<optional scope>): <description>
  * The description must contain at least one non-whitespace character.
  */
-const CONVENTIONAL_COMMIT_REGEX = new RegExp(
-  `^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)!]+\\))?!?:\\s*\\S.*$`,
-);
+const CONVENTIONAL_COMMIT_REGEX = new RegExp(`^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)!]+\\))?!?:\\s*\\S.*$`);
 
 /**
  * Domain service for validating Conventional Commits format.

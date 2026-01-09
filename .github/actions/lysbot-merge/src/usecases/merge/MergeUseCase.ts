@@ -5,17 +5,18 @@
  * the merge operation using domain services and external ports.
  */
 
-import type { IGitHubClient } from './IGitHubClient.js';
-import type { ILogger } from './ILogger.js';
-import type { EventContext, MergeConfig } from './MergeUseCaseInput.js';
-import type { MergeResult } from '../../domain/value-objects/MergeResult.js';
 import type { MergeCheck } from '../../domain/entities/MergeCheck.js';
 import type { PullRequest } from '../../domain/entities/PullRequest.js';
 import { CommandParser } from '../../domain/services/CommandParser.js';
-import { PermissionChecker } from '../../domain/services/PermissionChecker.js';
-import { PullRequestValidator } from '../../domain/services/PullRequestValidator.js';
 import { ConventionalCommitsValidator } from '../../domain/services/ConventionalCommitsValidator.js';
 import { MergeMethodPolicy } from '../../domain/services/MergeMethodPolicy.js';
+import { PermissionChecker } from '../../domain/services/PermissionChecker.js';
+import { PullRequestValidator } from '../../domain/services/PullRequestValidator.js';
+import type { MergeResult } from '../../domain/value-objects/MergeResult.js';
+
+import type { IGitHubClient } from './IGitHubClient.js';
+import type { ILogger } from './ILogger.js';
+import type { EventContext, MergeConfig } from './MergeUseCaseInput.js';
 
 /**
  * Waits for a specified number of milliseconds before retrying.
@@ -77,7 +78,7 @@ export class MergeUseCase {
     }
 
     // Step 3: Fetch and validate PR data
-    let pr = await this.gitHubClient.fetchPullRequest(context.prNumber);
+    const pr = await this.gitHubClient.fetchPullRequest(context.prNumber);
 
     // Check if fork PR
     if (pr.isFork) {
@@ -270,7 +271,8 @@ export class MergeUseCase {
     if (approvalCheckPassed) {
       approvalDetails = undefined;
     } else if (actuallyOverridden) {
-      approvalDetails = 'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
+      approvalDetails =
+        'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
     } else {
       approvalDetails = 'no valid approvals found';
     }
