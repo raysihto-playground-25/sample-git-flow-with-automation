@@ -18,6 +18,10 @@ npm run lint           # Run ESLint
 npm run bundle         # Bundle with rollup
 ```
 
+## Architecture
+
+This action follows the **Lightweight Modular Monolith** architecture pattern. For detailed architecture guidelines, design principles, and AI instructions, see **[Architecture.md](./Architecture.md)**.
+
 ## Code Structure
 
 The codebase has been modularized for better maintainability and testability, following the **Single Responsibility Principle**. Each module focuses on a specific concern:

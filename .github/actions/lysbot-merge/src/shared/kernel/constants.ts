@@ -3,6 +3,8 @@
  *
  * This module contains all constant values, regex patterns, and configuration
  * data used throughout the lysbot-merge action.
+ *
+ * Part of: shared/kernel (Pure constants - All layers OK)
  */
 
 /**

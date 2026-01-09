@@ -3,6 +3,8 @@
  *
  * This module contains all TypeScript type definitions and interfaces
  * used throughout the lysbot-merge action.
+ *
+ * Part of: shared/kernel (Pure types - All layers OK)
  */
 
 import type { GitHub } from '@actions/github/lib/utils.js';

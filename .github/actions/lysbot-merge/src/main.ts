@@ -1,49 +1,34 @@
 /**
- * main.ts - Entry point for the lysbot-merge GitHub Action
+ * main.ts - Composition Root for lysbot-merge
  *
- * This file is the main entry point that runs in the GitHub Actions environment.
- * It is responsible for:
- * 1. Reading inputs from the GitHub Actions environment
- * 2. Handling deprecated input parameters with warnings
- * 3. Parsing options YAML and constructing configuration
- * 4. Constructing the event context from github.context
- * 5. Calling the main action logic from action.ts
- * 6. Setting outputs and writing summaries
+ * This file is responsible for:
+ * 1. Reading inputs from GitHub Actions environment
+ * 2. Instantiating infrastructure adapters
+ * 3. Injecting dependencies into feature modules (Manual DI)
+ * 4. Setting outputs and writing summaries
  *
- * TESTING APPROACH:
- * =================
- * This file contains GitHub Actions runtime integration code and has been tested
- * using vitest mocks to verify:
- * - Deprecated input handling and warning messages
- * - Options parsing with deprecated input fallbacks
- * - Integer parsing for numeric inputs
- * - Error handling and reporting
- *
- * The core business logic remains in action.ts (executeAction, buildSummaryMarkdown)
- * which has comprehensive test coverage independent of GitHub Actions runtime.
+ * Following the Lightweight Modular Monolith architecture:
+ * This is the composition root where manual dependency injection happens.
  */
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
-import { executeAction, buildSummaryMarkdown } from './action.js';
-import type { ActionConfig, EventContext } from './types.js';
+import type { ActionConfig, EventContext } from './shared/kernel/types.js';
+import {
+  executeAction,
+  buildSummaryMarkdown,
+  OctokitGitHubAdapter,
+  NodeTimeAdapter,
+  CoreLogAdapter,
+} from './modules/merge/index.js';
 
 /**
- * Main function that runs the action.
- *
- * This function:
- * 1. Reads inputs from GitHub Actions environment (core.getInput)
- * 2. Reads context from GitHub Actions runtime (github.context, process.env)
- * 3. Delegates all merge business logic to executeAction() in action.ts
- * 4. Writes outputs to GitHub Actions environment (core.setOutput, core.summary)
- *
- * This function is tested using vitest mocks to verify the deprecated input
- * handling, options parsing, and error handling logic.
+ * Main function that assembles the application and runs it.
  */
 export async function run(): Promise<void> {
   try {
-    // Get inputs
+    // Read inputs from GitHub Actions environment
     const token = core.getInput('github-token', { required: true });
     const config: ActionConfig = {
       releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
@@ -53,20 +38,12 @@ export async function run(): Promise<void> {
       mergeableRetryInterval: parseInt(core.getInput('mergeable_retry_interval') || '10', 10),
     };
 
-    // Get event context
-    //
-    // Note:
-    //   - github.context.payload is intentionally typed as unknown, so some property accesses
-    //     cannot be made fully type-safe. In those cases, we selectively disable ESLint on specific
-    //     lines rather than adding noisy type assertions.
+    // Get event context from GitHub Actions runtime
     const payload = github.context.payload;
 
-    // Build event context
     const context: EventContext = {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
-      // prNumber will be 0 if this is not a PR comment, but that's acceptable
-      // because executeAction() will skip early when isPullRequest is false
       prNumber: payload.issue?.number ?? 0,
       commentId: payload.comment?.id ?? 0,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -82,11 +59,14 @@ export async function run(): Promise<void> {
       isPullRequest: !!payload.issue?.pull_request,
     };
 
-    // Create Octokit instance
+    // Instantiate infrastructure adapters (Manual DI)
     const octokit = github.getOctokit(token);
+    const githubAdapter = new OctokitGitHubAdapter(octokit, context.owner, context.repo);
+    const timeAdapter = new NodeTimeAdapter();
+    const logAdapter = new CoreLogAdapter();
 
-    // Run the main logic
-    const result = await executeAction(octokit, context, config);
+    // Inject dependencies and run the main logic
+    const result = await executeAction(githubAdapter, timeAdapter, logAdapter, context, config);
 
     // Set outputs
     core.setOutput('result', result.status);
@@ -108,9 +88,7 @@ export async function run(): Promise<void> {
     // Log result
     core.info(`lysbot-merge result: ${result.status} - ${result.message}`);
 
-    // Mark as failed if the result status is failed
     if (result.status === 'failed') {
-      // Don't fail the workflow - failures are communicated via PR comments
       core.info('Merge checks or operation failed. See PR comments for details.');
     }
   } catch (error) {
