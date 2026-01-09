@@ -26,53 +26,13 @@ The codebase has been modularized for better maintainability and testability, fo
 
 ```
 src/
-├── action.ts         # Core business logic (executeAction, buildSummaryMarkdown)
-├── constants.ts      # Configuration constants and regex patterns
-├── github-api.ts     # GitHub API interaction wrappers
-├── index.ts          # Action entry point for bundler
-├── main.ts           # GitHub Actions runtime integration (tested with mocks)
-├── types.ts          # Type definitions and interfaces
-└── validation.ts     # Pure validation and business logic functions
+└── ([TBD])    # TBD
 ```
 
 **Module Responsibilities:**
 
-1. **`action.ts`** (testable business logic)
-   - Main `executeAction()` function that orchestrates the merge flow
-   - Pure `buildSummaryMarkdown()` function for generating summaries
-   - All business logic that can be tested without GitHub Actions runtime
-   - Depends on: types, validation, github-api
-
-2. **`constants.ts`**
-   - Configuration constants (regex patterns, valid flags, emoji)
-   - Immutable reference data
-   - No dependencies on other modules except types
-
-3. **`github-api.ts`**
-   - All functions that interact with GitHub API
-   - API calls, data fetching, mutations (reactions, comments, merges)
-   - Depends on: types
-
-4. **`main.ts`** (GitHub Actions runtime integration - tested with mocks)
-   - Integration layer with GitHub Actions runtime
-   - Reads inputs from GitHub Actions environment (`core.getInput`)
-   - Handles deprecated input parameters with warnings
-   - Constructs context from GitHub runtime (`github.context`, `process.env`)
-   - Delegates to `action.ts` for merge business logic
-   - Writes outputs and summaries to GitHub Actions (`core.setOutput`, `core.summary`)
-   - Tested using vitest mocks to verify input handling, options parsing, and error handling
-   - Contains conditional logic for backward compatibility with deprecated inputs
-
-5. **`types.ts`**
-   - All TypeScript type definitions and interfaces
-   - No runtime logic, purely type declarations
-   - Imported by all other modules as needed
-
-6. **`validation.ts`**
-   - Pure functions for validation and business logic
-   - Command parsing, permission checks, merge method determination
-   - Easily testable with no side effects
-   - Depends on: types, constants
+1. **`xxx.ts`** (TBD)
+   - TBD
 
 ### Code Quality and Naming
 
@@ -82,12 +42,7 @@ For general refactoring principles, naming conventions, and module organization 
 
 When modifying lysbot-merge specifically:
 
-- Keep types centralized in `types.ts`
-- Keep constants centralized in `constants.ts`
-- Add new pure functions to `validation.ts` or create domain-specific validation modules
-- Add new API calls to `github-api.ts` or create endpoint-specific modules
-- Keep testable orchestration in `action.ts` focused on business logic
-- Keep main.ts focused on GitHub Actions runtime integration with tested backward compatibility logic
+- TBD
 
 ## Input Handling
 

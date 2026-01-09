@@ -1,56 +1,458 @@
-/**
- * action.ts - Testable action logic for the lysbot-merge GitHub Action
- *
- * This file contains the main business logic that can be unit tested:
- * 1. executeAction() - The main orchestration function for merge operations
- * 2. buildSummaryMarkdown() - Helper to build summary markdown
- *
- * This is separated from main.ts which contains GitHub Actions runtime integration code.
- */
-
 import * as core from '@actions/core';
+import * as github from '@actions/github';
+import type { GitHub } from '@actions/github/lib/utils.js';
+import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 
-import {
-  addReaction,
-  postComment,
-  getCollaboratorPermission,
-  fetchPullRequestData,
-  fetchApprovedReviews,
-  dismissReview,
-  countUnresolvedThreads,
-  mergePullRequest,
-  fetchPullRequestCommits,
-} from './github-api.js';
-import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types.js';
-import {
-  isBot,
-  parseCommand,
-  hasValidAuthorAssociation,
-  hasValidPermission,
-  validatePRState,
-  determineMergeMethod,
-  getMergeableStateDescription,
-  buildCheckResultsMarkdown,
-  isConventionalCommitTitle,
-  waitBeforeRetryMs,
-} from './validation.js';
+export interface ActionConfig {
+  releaseBranchPrefix: string;
+  developBranch: string;
+  syncBranchPrefix: string;
+  mergeableRetryCount: number;
+  mergeableRetryInterval: number;
+}
 
-/**
- * Main function that orchestrates the lysbot-merge operation.
- *
- * This function:
- * 1. Validates the command and permissions
- * 2. Checks PR state and approval status
- * 3. Performs the merge if all checks pass
- * 4. Posts appropriate comments for feedback
- *
- * Exported for testing purposes.
- *
- * @param octokit - GitHub API client
- * @param context - Event context from GitHub Actions
- * @param config - Configuration options
- * @returns Result of the operation
- */
+export interface EventContext {
+  owner: string;
+  repo: string;
+  prNumber: number;
+  commentId: number;
+  commentBody: string;
+  actor: string;
+  userType: string;
+  authorAssociation: string;
+  serverUrl: string;
+  runId: number;
+  eventName: string;
+  isPullRequest: boolean;
+}
+
+export interface PullRequestData {
+  state: string;
+  locked: boolean;
+  draft: boolean;
+  merged: boolean;
+  mergeable: boolean | null;
+  mergeableState: string;
+  headSha: string;
+  headRef: string;
+  baseRef: string;
+  author: string;
+  isFork: boolean;
+  title: string;
+}
+
+export interface CheckResult {
+  name: string;
+  passed: boolean;
+  details?: string;
+  optional?: boolean;
+}
+
+export interface MergeMethodResult {
+  method: 'squash' | 'merge';
+  reason: string;
+}
+
+export interface ActionResult {
+  status: 'merged' | 'skipped' | 'failed' | 'already_merged';
+  message: string;
+  mergeMethod?: 'squash' | 'merge';
+}
+
+export interface MergeOptions {
+  overrideApprovalRequirement: boolean;
+}
+
+export type Octokit = InstanceType<typeof GitHub>;
+
+export type Review = RestEndpointMethodTypes['pulls']['listReviews']['response']['data'][number];
+export type ReviewsArray = RestEndpointMethodTypes['pulls']['listReviews']['response']['data'];
+
+export async function addReaction(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  commentId: number,
+  reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes',
+): Promise<void> {
+  try {
+    await octokit.rest.reactions.createForIssueComment({
+      owner,
+      repo,
+      comment_id: commentId,
+      content: reaction,
+    });
+  } catch {
+  }
+}
+
+export async function postComment(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+  body: string,
+): Promise<void> {
+  await octokit.rest.issues.createComment({
+    owner,
+    repo,
+    issue_number: prNumber,
+    body,
+  });
+}
+
+export async function getCollaboratorPermission(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  username: string,
+): Promise<string> {
+  try {
+    const response = await octokit.rest.repos.getCollaboratorPermissionLevel({
+      owner,
+      repo,
+      username,
+    });
+    return response.data.permission;
+  } catch {
+    return 'none';
+  }
+}
+
+export async function fetchPullRequestData(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<PullRequestData> {
+  const response = await octokit.rest.pulls.get({
+    owner,
+    repo,
+    pull_number: prNumber,
+  });
+  const pr = response.data;
+
+  const isFork = pr.head.repo?.fork === true || pr.head.repo?.owner?.id !== pr.base.repo?.owner?.id;
+
+  return {
+    state: pr.state,
+    locked: pr.locked,
+    draft: pr.draft ?? false,
+    merged: pr.merged,
+    mergeable: pr.mergeable,
+    mergeableState: pr.mergeable_state,
+    headSha: pr.head.sha,
+    headRef: pr.head.ref,
+    baseRef: pr.base.ref,
+    author: pr.user?.login ?? 'unknown',
+    isFork,
+    title: pr.title,
+  };
+}
+
+export async function fetchApprovedReviews(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<ReviewsArray> {
+  const reviews = await octokit.paginate(octokit.rest.pulls.listReviews, {
+    owner,
+    repo,
+    pull_number: prNumber,
+    per_page: 100,
+  });
+  return reviews.filter((review) => review.state === 'APPROVED');
+}
+
+export async function dismissReview(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+  reviewId: number,
+  message: string,
+): Promise<boolean> {
+  try {
+    await octokit.rest.pulls.dismissReview({
+      owner,
+      repo,
+      pull_number: prNumber,
+      review_id: reviewId,
+      message,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function countUnresolvedThreads(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<number> {
+  let unresolvedCount = 0;
+  let hasNextPage = true;
+  let cursor: string | null = null;
+
+  const query = `
+    query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+      repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+          reviewThreads(first: 100, after: $cursor) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            nodes {
+              isResolved
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  while (hasNextPage) {
+    const response: {
+      repository: {
+        pullRequest: {
+          reviewThreads: {
+            pageInfo: { hasNextPage: boolean; endCursor: string | null };
+            nodes: Array<{ isResolved: boolean }>;
+          };
+        };
+      };
+    } = await octokit.graphql(query, {
+      owner,
+      name: repo,
+      number: prNumber,
+      cursor,
+    });
+
+    const threads = response.repository.pullRequest.reviewThreads;
+    unresolvedCount += threads.nodes.filter((n) => !n.isResolved).length;
+    hasNextPage = threads.pageInfo.hasNextPage;
+    cursor = threads.pageInfo.endCursor;
+  }
+
+  return unresolvedCount;
+}
+
+export async function fetchPullRequestCommits(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<Array<{ commit: { message: string; author?: { name?: string; email?: string } | null } }>> {
+  const commits = await octokit.paginate(octokit.rest.pulls.listCommits, {
+    owner,
+    repo,
+    pull_number: prNumber,
+    per_page: 100,
+  });
+  return commits;
+}
+
+export async function mergePullRequest(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+  method: 'squash' | 'merge',
+  sha: string,
+  commitTitle: string,
+  commitMessage: string,
+): Promise<{ success: boolean; error?: string; mergeCommitSha?: string }> {
+  try {
+    const response = await octokit.rest.pulls.merge({
+      owner,
+      repo,
+      pull_number: prNumber,
+      merge_method: method,
+      sha,
+      commit_title: commitTitle,
+      commit_message: commitMessage,
+    });
+    return { success: true, mergeCommitSha: response.data.sha };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: message };
+  }
+}
+
+export const COMMAND_REGEX = /^\s*\/lysbot\s+merge(?:\s+(.*))?\s*$/;
+
+export const VALID_FLAGS = ['--override-approval-requirement'] as const;
+
+export const TWEMOJI = {
+  CHECK:
+    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg" width="20" height="20" alt="OK">',
+  CROSS:
+    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg" width="20" height="20" alt="NG">',
+  WARNING:
+    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/26a0.svg" width="20" height="20" alt="Warning">',
+} as const;
+
+export const VALID_AUTHOR_ASSOCIATIONS = ['OWNER', 'MEMBER', 'COLLABORATOR'] as const;
+
+export const VALID_PERMISSIONS = ['admin', 'maintain', 'write'] as const;
+
+export const CONVENTIONAL_COMMIT_TYPES = [
+  'build',
+  'chore',
+  'ci',
+  'docs',
+  'feat',
+  'fix',
+  'perf',
+  'refactor',
+  'revert',
+  'style',
+  'test',
+  'ux',
+] as const;
+
+export const CONVENTIONAL_COMMIT_REGEX = new RegExp(
+  `^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)!]+\\))?!?:\\s*\\S.*$`,
+);
+
+export function isConventionalCommitTitle(title: string): boolean {
+  return CONVENTIONAL_COMMIT_REGEX.test(title);
+}
+
+export function parseCommand(commentBody: string): MergeOptions | null {
+  const match = COMMAND_REGEX.exec(commentBody);
+  if (!match) {
+    return null;
+  }
+
+  const flagsStr = match[1]?.trim() ?? '';
+  const flags = flagsStr ? flagsStr.split(/\s+/) : [];
+
+  const validFlagsArray: readonly string[] = VALID_FLAGS;
+  if (!flags.every((flag) => validFlagsArray.includes(flag))) {
+    return null;
+  }
+
+  return {
+    overrideApprovalRequirement: flags.includes('--override-approval-requirement'),
+  };
+}
+
+export function isCommand(commentBody: string): boolean {
+  return parseCommand(commentBody) !== null;
+}
+
+export function isBot(userType: string): boolean {
+  return userType === 'Bot';
+}
+
+export function hasValidAuthorAssociation(association: string): boolean {
+  return (VALID_AUTHOR_ASSOCIATIONS as readonly string[]).includes(association);
+}
+
+export function hasValidPermission(permission: string): boolean {
+  return (VALID_PERMISSIONS as readonly string[]).includes(permission);
+}
+
+export function determineMergeMethod(headRef: string, baseRef: string, config: ActionConfig): MergeMethodResult {
+  if (headRef.startsWith(config.releaseBranchPrefix)) {
+    return {
+      method: 'merge',
+      reason: `Head branch \`${headRef}\` is a release branch (merge commit to preserve release history)`,
+    };
+  }
+  if (headRef.startsWith(config.syncBranchPrefix)) {
+    return {
+      method: 'merge',
+      reason: `Head branch \`${headRef}\` is a sync branch (merge commit to preserve back-merge history)`,
+    };
+  }
+
+  if (baseRef.startsWith(config.releaseBranchPrefix)) {
+    return {
+      method: 'squash',
+      reason: `Base branch \`${baseRef}\` is a release branch`,
+    };
+  }
+  if (baseRef === config.developBranch) {
+    return {
+      method: 'squash',
+      reason: `Base branch is \`${baseRef}\``,
+    };
+  }
+
+  return {
+    method: 'merge',
+    reason: `Default merge commit for \`${headRef}\` into \`${baseRef}\``,
+  };
+}
+
+export function validatePRState(prData: PullRequestData): CheckResult[] {
+  const checks: CheckResult[] = [];
+
+  const isOpen = prData.state === 'open';
+  const isUnlocked = !prData.locked;
+  const isNotDraft = !prData.draft;
+  const allPassed = isOpen && isUnlocked && isNotDraft;
+
+  const failureReasons: string[] = [];
+  if (!isOpen) {
+    failureReasons.push('currently closed');
+  }
+  if (!isUnlocked) {
+    failureReasons.push('currently locked');
+  }
+  if (!isNotDraft) {
+    failureReasons.push('currently a draft');
+  }
+
+  checks.push({
+    name: 'PR is ready for review',
+    passed: allPassed,
+    ...(failureReasons.length > 0 && { details: failureReasons.join(', ') }),
+  });
+
+  return checks;
+}
+
+export function getMergeableStateDescription(state: string): string {
+  const descriptions: Record<string, string> = {
+    dirty: 'has unresolved conflicts',
+    blocked: 'blocked by status checks or branch protection',
+    unstable: 'has failing status checks',
+    behind: 'branch is behind base branch',
+    unknown: 'mergeability not yet computed, please retry',
+    has_hooks: 'blocked by external hooks',
+    clean: 'ready to merge',
+  };
+  return descriptions[state] ?? `mergeable_state: ${state}`;
+}
+
+export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
+  return checks
+    .map((check) => {
+      let icon: string;
+      if (check.passed) {
+        icon = TWEMOJI.CHECK;
+      } else if (check.optional) {
+        icon = TWEMOJI.WARNING;
+      } else {
+        icon = TWEMOJI.CROSS;
+      }
+      const detail = check.details ? ` (${check.details})` : '';
+      return `- ${icon} ${check.name}${detail}`;
+    })
+    .join('\n');
+}
+
+export function waitBeforeRetryMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function executeAction(
   octokit: Octokit,
   context: EventContext,
@@ -69,38 +471,26 @@ export async function executeAction(
     isPullRequest,
   } = context;
 
-  // -------------------------------------------------------------------------
-  // Step 1: Validate event type and context
-  // -------------------------------------------------------------------------
 
-  // Validate event type - this action only works with issue_comment events
   if (eventName !== 'issue_comment') {
     return { status: 'skipped', message: 'This action only runs on issue_comment events' };
   }
 
-  // Check if this is a PR comment (not an issue comment)
   if (!isPullRequest) {
     return { status: 'skipped', message: 'Comment is not on a PR, skipping' };
   }
 
-  // Skip if bot
   if (isBot(userType)) {
     return { status: 'skipped', message: 'Comment is from a bot' };
   }
 
-  // Parse and validate the merge command
-  // Note: This replaces the previous isCommand() check to avoid parsing twice
-  // parseCommand() returns null if the command format is invalid
   const mergeOptions = parseCommand(commentBody);
   if (!mergeOptions) {
     return { status: 'skipped', message: 'Command not matched' };
   }
 
-  // Add eyes reaction for immediate feedback
-  // This happens as soon as we know it's a valid merge command
   await addReaction(octokit, owner, repo, commentId, 'eyes');
 
-  // Check author association
   if (!hasValidAuthorAssociation(authorAssociation)) {
     await postComment(
       octokit,
@@ -112,7 +502,6 @@ export async function executeAction(
     return { status: 'failed', message: 'Invalid author association' };
   }
 
-  // Check permission level
   const permission = await getCollaboratorPermission(octokit, owner, repo, actor);
   if (!hasValidPermission(permission)) {
     await postComment(
@@ -125,14 +514,9 @@ export async function executeAction(
     return { status: 'failed', message: 'Insufficient permissions' };
   }
 
-  // -------------------------------------------------------------------------
-  // Step 2: Validate user permissions
-  // -------------------------------------------------------------------------
 
   let prData = await fetchPullRequestData(octokit, owner, repo, prNumber);
 
-  // Why: GITHUB_TOKEN has limited write permissions for fork PRs by default.
-  // Merge operations would fail, so we reject early with a clear message.
   if (prData.isFork) {
     await postComment(
       octokit,
@@ -144,20 +528,14 @@ export async function executeAction(
     return { status: 'failed', message: 'Fork PR not supported' };
   }
 
-  // Check if already merged
   if (prData.merged) {
     await postComment(octokit, owner, repo, prNumber, '## Already merged\n\nThis PR has already been merged.');
     return { status: 'already_merged', message: 'PR already merged' };
   }
 
-  // -------------------------------------------------------------------------
-  // Step 3: Fetch and validate PR data
-  // -------------------------------------------------------------------------
 
-  // PR state checks (open, unlocked, ready)
   const prStateChecks = validatePRState(prData);
 
-  // Unresolved threads check
   const unresolvedCount = await countUnresolvedThreads(octokit, owner, repo, prNumber);
   const threadsCheck: CheckResult = {
     name: 'All review conversations are resolved',
@@ -165,18 +543,15 @@ export async function executeAction(
     ...(unresolvedCount > 0 && { details: `${unresolvedCount} unresolved` }),
   };
 
-  // Approval check - fetch and validate reviews
   const approvedReviews = await fetchApprovedReviews(octokit, owner, repo, prNumber);
   let validApprovals = 0;
   const dismissFailures: string[] = [];
 
   for (const review of approvedReviews) {
-    // Skip self-approval
     if (review.user?.login === prData.author) {
       continue;
     }
 
-    // Check if review is stale (not on current HEAD)
     if (review.commit_id !== prData.headSha) {
       const message = `Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${review.commit_id?.slice(0, 7)}, current HEAD: ${prData.headSha.slice(0, 7)}).`;
       const dismissed = await dismissReview(octokit, owner, repo, prNumber, review.id, message);
@@ -190,24 +565,18 @@ export async function executeAction(
     }
   }
 
-  // Post stale dismissal notification only when there are failures.
-  // Success notifications are skipped because GitHub's native "approval dismissed"
-  // notification already appears in the PR timeline when reviews are dismissed.
   if (dismissFailures.length > 0) {
     const staleComment = `## Stale approval dismiss failures\n\n> [!WARNING]\n> The following approvals could not be dismissed (consider enabling "Dismiss stale pull request approvals when new commits are pushed" in branch protection settings):\n>\n${dismissFailures.map((f) => `> ${f}`).join('\n')}`;
     await postComment(octokit, owner, repo, prNumber, staleComment);
   }
 
-  // Determine if approval requirement is overridden
   const approvalCheckPassed = validApprovals >= 1;
   const approvalOverridden = mergeOptions.overrideApprovalRequirement && !approvalCheckPassed;
 
-  // Log when approval requirement is overridden
   if (approvalOverridden) {
     core.info('Approval requirement overridden by command flag (--override-approval-requirement).');
   }
 
-  // Build approval check result
   let approvalDetails: string | undefined;
   if (approvalCheckPassed) {
     approvalDetails = undefined;
@@ -221,11 +590,9 @@ export async function executeAction(
     name: 'At least one valid approval from another user',
     passed: approvalCheckPassed,
     ...(approvalDetails !== undefined && { details: approvalDetails }),
-    // Mark as optional when override flag is used, so it shows warning instead of failure
     ...(approvalOverridden && { optional: true }),
   };
 
-  // Merge conflicts check (based on mergeable_state)
   const noConflicts = prData.mergeableState === 'clean';
   const conflictsCheck: CheckResult = {
     name: 'No merge conflicts',
@@ -233,7 +600,6 @@ export async function executeAction(
     ...(!noConflicts && { details: getMergeableStateDescription(prData.mergeableState) }),
   };
 
-  // Optional: Conventional Commits check for PR title
   const isConventionalTitle = isConventionalCommitTitle(prData.title);
   const conventionalCommitsCheck: CheckResult = {
     name: 'PR title follows [Conventional Commits](https://www.conventionalcommits.org/)',
@@ -242,10 +608,8 @@ export async function executeAction(
     optional: true,
   };
 
-  // Determine merge method
   const mergeMethodResult = determineMergeMethod(prData.headRef, prData.baseRef, config);
 
-  // Build checks array in the final order directly
   const checks: CheckResult[] = [
     ...prStateChecks,
     threadsCheck,
@@ -254,14 +618,9 @@ export async function executeAction(
     conventionalCommitsCheck,
   ];
 
-  // Build results markdown
   const checksMarkdown = buildCheckResultsMarkdown(checks);
-  // Only required (non-optional) checks must pass
   const allPassed = checks.filter((c) => !c.optional).every((c) => c.passed);
 
-  // -------------------------------------------------------------------------
-  // Step 4: Report results and merge if all passed
-  // -------------------------------------------------------------------------
 
   if (!allPassed) {
     await postComment(
@@ -274,7 +633,6 @@ export async function executeAction(
     return { status: 'failed', message: 'Merge checks failed' };
   }
 
-  // All checks passed - post status and proceed to merge
   await postComment(
     octokit,
     owner,
@@ -283,13 +641,9 @@ export async function executeAction(
     `## Merge checks passed\n\nAll checks passed. Proceeding to merge...\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`,
   );
 
-  // -------------------------------------------------------------------------
-  // Step 5: TOCTOU check and merge
-  // -------------------------------------------------------------------------
 
   const originalHeadSha = prData.headSha;
 
-  // Re-fetch PR data for TOCTOU check
   prData = await fetchPullRequestData(octokit, owner, repo, prNumber);
 
   if (prData.headSha !== originalHeadSha) {
@@ -303,15 +657,12 @@ export async function executeAction(
     return { status: 'failed', message: 'TOCTOU violation' };
   }
 
-  // Why: GitHub API returns mergeable=null while computing merge status asynchronously.
-  // This typically happens on first fetch after PR update. We retry to wait for computation.
   let retries = 0;
   while (prData.mergeable === null && retries < config.mergeableRetryCount) {
     await waitBeforeRetryMs(config.mergeableRetryInterval * 1000);
     prData = await fetchPullRequestData(octokit, owner, repo, prNumber);
     retries++;
 
-    // TOCTOU check during retry
     if (prData.headSha !== originalHeadSha) {
       await postComment(
         octokit,
@@ -324,7 +675,6 @@ export async function executeAction(
     }
   }
 
-  // Check final mergeability
   if (prData.mergeable === false || prData.mergeable === null || prData.mergeableState === 'dirty') {
     let errorComment: string;
     if (prData.mergeable === null) {
@@ -338,47 +688,33 @@ export async function executeAction(
     return { status: 'failed', message: 'Not mergeable' };
   }
 
-  // Perform merge
-  // Build explicit commit title and message according to lysbot-merge specification
   let commitTitle: string;
   let commitBody: string;
 
-  // Build additional metadata that goes in the commit body
   let additionalMessages = `Merged-by: lysbot-merge (on behalf of @${actor})`;
   if (approvalOverridden) {
     additionalMessages += `\n\n⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement`;
   }
 
   if (mergeMethodResult.method === 'merge') {
-    // For merge commits:
-    // Title: Merge pull request #{PR_NUMBER} from {PR_MERGE_HEAD}
-    // Body: {PR_TITLE}\n\n{ADDITIONAL_MESSAGES}
     commitTitle = `Merge pull request #${prNumber} from ${prData.headRef}`;
     commitBody = `${prData.title}\n\n${additionalMessages}`;
   } else {
-    // For squash commits:
-    // Title: {PR_TITLE} (#{PR_NUMBER})
-    // Body: * {COMMIT_TITLE_01}\n* {COMMIT_TITLE_02}\n...\n\nCo-authored-by: ...\n\n{ADDITIONAL_MESSAGES}
     commitTitle = `${prData.title} (#${prNumber})`;
 
-    // Fetch commits to list their titles and collect co-authors
     const commits = await fetchPullRequestCommits(octokit, owner, repo, prNumber);
     const commitTitles = commits
       .map((c) => {
-        // Extract first line of commit message (commit title)
         const message = c.commit.message || '';
         const firstLine = message.split('\n')[0];
         return firstLine ? `* ${firstLine}` : '';
       })
-      .filter((title) => title !== ''); // Filter out empty entries
+      .filter((title) => title !== '');
 
-    // Collect unique co-authors from commits in order
-    // Use array to preserve commit order (older ancestor -> recent ancestor)
     const coAuthors: string[] = [];
     commits.forEach((c) => {
       const author = c.commit.author;
       if (author?.name && author?.email) {
-        // Create unique key for author
         const authorLine = `Co-authored-by: ${author.name} <${author.email}>`;
         if (!coAuthors.includes(authorLine)) {
           coAuthors.push(authorLine);
@@ -386,7 +722,6 @@ export async function executeAction(
       }
     });
 
-    // Build commit body with commit titles, co-authors, and additional messages
     const bodyParts: string[] = [];
 
     if (commitTitles.length > 0) {
@@ -424,7 +759,6 @@ export async function executeAction(
     return { status: 'failed', message: `Merge failed: ${mergeResult.error}` };
   }
 
-  // Post success comment with commit SHAs (GitHub auto-links them)
   let mergeCommitInfo = '';
   if (mergeResult.mergeCommitSha) {
     mergeCommitInfo = `\n- **Merge Commit SHA:** ${mergeResult.mergeCommitSha}`;
@@ -445,17 +779,6 @@ export async function executeAction(
   };
 }
 
-/**
- * Builds a summary markdown table for the lysbot-merge operation.
- *
- * This is a pure function that can be tested without GitHub Actions environment.
- *
- * @param result - Result status emoji and message
- * @param prNumber - PR number
- * @param actor - User who triggered the action
- * @param mergeMethod - Optional merge method used
- * @returns Markdown string for the summary
- */
 export function buildSummaryMarkdown(result: string, prNumber: number, actor: string, mergeMethod?: string): string {
   let summary = `## lysbot-merge Summary\n\n`;
   summary += `| Item | Value |\n`;

@@ -1,13 +1,5 @@
-/**
- * main.test.ts - Tests for main.ts module
- *
- * Tests cover the run() function which is the main entry point for the GitHub Action.
- * This tests the GitHub Actions runtime integration code using vitest mocks.
- */
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock modules before importing
 const mockCore = {
   getInput: vi.fn(),
   setOutput: vi.fn(),
@@ -67,15 +59,13 @@ const mockBuildSummaryMarkdown = vi.fn().mockReturnValue('# Summary');
 vi.mock('@actions/core', () => mockCore);
 vi.mock('@actions/github', () => mockGithub);
 
-vi.mock('../src/action.js', () => ({
+vi.mock('../src/tmp_untitled_3.js', () => ({
   executeAction: mockExecuteAction,
   buildSummaryMarkdown: mockBuildSummaryMarkdown,
 }));
 
-// Import after mocks are set up
 const { run } = await import('../src/main.js');
 
-// Helper function to safely set mock context payload
 function setMockContextPayload(payload: Record<string, unknown>): void {
   const ctx = mockGithub.context as { payload: unknown };
   ctx.payload = payload;
@@ -83,13 +73,10 @@ function setMockContextPayload(payload: Record<string, unknown>): void {
 
 describe('main.ts', () => {
   beforeEach(() => {
-    // Reset all mocks before each test
     vi.clearAllMocks();
 
-    // Set default environment
     process.env.GITHUB_SERVER_URL = 'https://github.com';
 
-    // Default input values
     mockCore.getInput.mockImplementation((name: string) => {
       if (name === 'github-token') {
         return 'test-token';
@@ -97,7 +84,6 @@ describe('main.ts', () => {
       return '';
     });
 
-    // Reset default mock return value
     mockExecuteAction.mockResolvedValue({
       status: 'merged',
       message: 'Pull request successfully merged',
@@ -115,28 +101,21 @@ describe('main.ts', () => {
     it('should successfully execute with default configuration', async () => {
       await run();
 
-      // Verify inputs were read
       expect(mockCore.getInput).toHaveBeenCalledWith('github-token', { required: true });
 
-      // Verify octokit was created
       expect(mockGithub.getOctokit).toHaveBeenCalledWith('test-token');
 
-      // Verify executeAction was called
       expect(mockExecuteAction).toHaveBeenCalled();
 
-      // Verify outputs were set
       expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'merged');
       expect(mockCore.setOutput).toHaveBeenCalledWith('merge_method', 'squash');
 
-      // Verify summary was written
       expect(mockBuildSummaryMarkdown).toHaveBeenCalled();
       expect(mockCore.summary.addRaw).toHaveBeenCalledWith('# Test Summary');
       expect(mockCore.summary.write).toHaveBeenCalled();
 
-      // Verify info was logged
       expect(mockCore.info).toHaveBeenCalledWith('lysbot-merge result: merged - Pull request successfully merged');
 
-      // Verify no failure
       expect(mockCore.setFailed).not.toHaveBeenCalled();
     });
 
@@ -155,10 +134,9 @@ describe('main.ts', () => {
 
       await run();
 
-      // Verify executeAction was called with the custom config
       expect(mockExecuteAction).toHaveBeenCalledWith(
-        expect.any(Object), // octokit
-        expect.any(Object), // context
+        expect.any(Object),
+        expect.any(Object),
         expect.objectContaining({
           releaseBranchPrefix: 'rel/',
           developBranch: 'main',
@@ -228,9 +206,7 @@ describe('main.ts', () => {
     it('should build correct event context from GitHub context', async () => {
       await run();
 
-      // Verify executeAction was called with correct context structure
       expect(mockExecuteAction).toHaveBeenCalled();
-      // Note: We don't check exact parameters to avoid unsafe any type issues
     });
 
     it('should handle missing pull_request in payload', async () => {
@@ -273,7 +249,6 @@ describe('main.ts', () => {
 
       expect(mockExecuteAction).toHaveBeenCalled();
 
-      // Restore original environment
       process.env.GITHUB_SERVER_URL = 'https://github.com';
     });
 
