@@ -67,7 +67,11 @@ export class OctokitGitHubClient implements GitHubClient {
     const pr = response.data;
 
     // Detect fork using robust logic: check fork flag OR compare owner IDs
-    const isFork = pr.head.repo?.fork === true || pr.head.repo?.owner?.id !== pr.base.repo?.owner?.id;
+    // Handle case where head.repo might be null (e.g., deleted fork repository)
+    const isFork =
+      (pr.head.repo && pr.head.repo.fork === true) ||
+      (pr.head.repo && pr.base.repo && pr.head.repo.owner?.id !== pr.base.repo.owner?.id) ||
+      false;
 
     return {
       state: pr.state,

@@ -169,6 +169,8 @@ export class MergePullRequestUseCase {
       }
 
       // Check if review is stale (not on current HEAD)
+      // Note: commit_id can be null in some GitHub configurations
+      // We only dismiss if commit_id exists and differs from current HEAD
       if (review.commit_id !== null && review.commit_id !== pr.headSha) {
         const message = `Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${review.commit_id.slice(0, 7)}, current HEAD: ${pr.headSha.slice(0, 7)}).`;
         const dismissed = await this.githubClient.dismissReview(owner, repo, prNumber, review.id, message);
@@ -177,7 +179,8 @@ export class MergePullRequestUseCase {
             `- Failed to dismiss approval from @${review.user?.login} (insufficient permissions or branch protection settings)`,
           );
         }
-      } else if (review.commit_id !== null) {
+      } else if (review.commit_id === null || review.commit_id === pr.headSha) {
+        // Count as valid approval if commit_id is null or matches current HEAD
         validApprovals++;
       }
     }
@@ -423,7 +426,8 @@ export class MergePullRequestUseCase {
     // Build additional metadata that goes in the commit body
     let additionalMessages = `Merged-by: lysbot-merge (on behalf of @${actor})`;
     if (approvalOverridden) {
-      additionalMessages += `\n\n⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement`;
+      // Note: Warning format for exceptional merges
+      additionalMessages += `\n\nWARNING: EXCEPTIONAL MERGE - Approval requirement overridden via --override-approval-requirement`;
     }
 
     if (method === 'merge') {

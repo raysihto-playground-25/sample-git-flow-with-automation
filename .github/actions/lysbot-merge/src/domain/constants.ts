@@ -7,8 +7,13 @@
 
 /**
  * Command regex for matching `/lysbot merge` comments.
- * Captures optional flags after the merge command.
- * Uses simple regex pattern compatible with JavaScript.
+ * Pattern: /^\s*\/lysbot\s+merge(?:\s+(.*))?\s*$/
+ * - ^\s*: Optional leading whitespace
+ * - \/lysbot\s+merge: The command itself
+ * - (?:\s+(.*))?: Non-capturing group that optionally captures flags
+ *   - \s+: Required whitespace before flags
+ *   - (.*): Capture group 1 - any flags/arguments
+ * - \s*$: Optional trailing whitespace
  */
 export const COMMAND_REGEX = /^\s*\/lysbot\s+merge(?:\s+(.*))?\s*$/;
 
