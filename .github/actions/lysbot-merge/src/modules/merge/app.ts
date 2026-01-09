@@ -13,7 +13,6 @@ import type {
   ActionConfig,
   PullRequestData,
   CheckResult,
-  MergeMethodResult,
   MergeOptions,
 } from './domain.js';
 

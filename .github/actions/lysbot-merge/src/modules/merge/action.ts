@@ -11,7 +11,7 @@
 import type { IActionsCore } from '../../shared/infra-shared/index.js';
 import type { EventContext, MergeResult } from './app.js';
 import { MergeAppService, type MergeAppDependencies } from './app.js';
-import type { ActionConfig, MergeOptions } from './domain.js';
+import type { ActionConfig } from './domain.js';
 import { parseCommand } from './domain.js';
 
 /**
