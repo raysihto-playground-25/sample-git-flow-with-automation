@@ -107,6 +107,20 @@ const CONVENTIONAL_COMMIT_TYPES = [
   'test',
   'ux',
 ] as const;
+/**
+ * Regex pattern for validating Conventional Commits format.
+ * Format: <type>(<optional scope>): <description>
+ * - type: Must be one of CONVENTIONAL_COMMIT_TYPES (feat, fix, docs, etc.)
+ * - scope: Optional, alphanumeric + special chars (no closing paren or '!')
+ * - !: Optional breaking change indicator
+ * - description: Required, must contain at least one non-whitespace character
+ *
+ * Examples:
+ * - feat: add new feature
+ * - fix(auth): resolve login issue
+ * - docs(readme): update installation guide
+ * - feat!: breaking change
+ */
 const CONVENTIONAL_COMMIT_REGEX = new RegExp(`^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)!]+\\))?!?:\\s*\\S.*$`);
 
 const TWEMOJI = {
@@ -431,7 +445,8 @@ export async function executeMerge(
     }
 
     if (review.commit_id !== prData.headSha) {
-      const message = `Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${review.commit_id?.slice(0, 7)}, current HEAD: ${prData.headSha.slice(0, 7)}).`;
+      const reviewedCommit = review.commit_id?.slice(0, 7) || 'unknown';
+      const message = `Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${reviewedCommit}, current HEAD: ${prData.headSha.slice(0, 7)}).`;
       const dismissed = await githubPort.dismissReview(prNumber, review.id, message);
       if (!dismissed) {
         dismissFailures.push(
@@ -760,7 +775,18 @@ export class GitHubAdapter implements GitHubPort {
     });
     const pr = response.data;
 
-    const isFork = pr.head.repo?.fork === true || pr.head.repo?.owner?.id !== pr.base.repo?.owner?.id;
+    // Detect fork using robust logic: check fork flag OR compare owner IDs
+    // This handles cases where head.repo is null (e.g., fork repo deleted)
+    // Explicit null checks to avoid comparing undefined !== undefined (which is false)
+    const headOwnerId = pr.head.repo?.owner?.id;
+    const baseOwnerId = pr.base.repo?.owner?.id;
+    const isFork =
+      pr.head.repo?.fork === true ||
+      (headOwnerId !== null &&
+        headOwnerId !== undefined &&
+        baseOwnerId !== null &&
+        baseOwnerId !== undefined &&
+        headOwnerId !== baseOwnerId);
 
     return {
       state: pr.state,
