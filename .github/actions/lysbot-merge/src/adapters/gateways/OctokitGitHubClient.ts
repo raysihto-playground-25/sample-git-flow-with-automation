@@ -6,8 +6,9 @@
  */
 
 import type { GitHub } from '@actions/github/lib/utils.js';
-import type { GitHubClient, Review, Commit } from '../../usecases/ports/GitHubClient.js';
+
 import type { PullRequest } from '../../domain/entities/PullRequest.js';
+import type { GitHubClient, Review, Commit } from '../../usecases/ports/GitHubClient.js';
 
 export type Octokit = InstanceType<typeof GitHub>;
 

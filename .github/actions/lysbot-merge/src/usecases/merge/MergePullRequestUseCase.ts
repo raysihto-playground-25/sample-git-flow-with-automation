@@ -7,11 +7,9 @@
  * It depends only on domain layer and port interfaces (not adapters).
  */
 
-import type { GitHubClient } from '../ports/GitHubClient.js';
-import type { Logger } from '../ports/Logger.js';
-import type { MergePullRequestInput, MergePullRequestOutput } from './MergePullRequestDTO.js';
-import type { PullRequest } from '../../domain/entities/PullRequest.js';
 import type { MergeCheckResult } from '../../domain/entities/MergeCheckResult.js';
+import type { PullRequest } from '../../domain/entities/PullRequest.js';
+import { determineMergeMethod } from '../../domain/services/MergeMethodService.js';
 import {
   isBot,
   parseCommand,
@@ -22,7 +20,10 @@ import {
   isConventionalCommitTitle,
   waitBeforeRetryMs,
 } from '../../domain/services/ValidationService.js';
-import { determineMergeMethod } from '../../domain/services/MergeMethodService.js';
+import type { GitHubClient } from '../ports/GitHubClient.js';
+import type { Logger } from '../ports/Logger.js';
+
+import type { MergePullRequestInput, MergePullRequestOutput } from './MergePullRequestDTO.js';
 
 /**
  * Use case for merging a pull request
@@ -168,15 +169,15 @@ export class MergePullRequestUseCase {
       }
 
       // Check if review is stale (not on current HEAD)
-      if (review.commit_id !== pr.headSha) {
-        const message = `Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${review.commit_id?.slice(0, 7)}, current HEAD: ${pr.headSha.slice(0, 7)}).`;
+      if (review.commit_id !== null && review.commit_id !== pr.headSha) {
+        const message = `Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${review.commit_id.slice(0, 7)}, current HEAD: ${pr.headSha.slice(0, 7)}).`;
         const dismissed = await this.githubClient.dismissReview(owner, repo, prNumber, review.id, message);
         if (!dismissed) {
           dismissFailures.push(
             `- Failed to dismiss approval from @${review.user?.login} (insufficient permissions or branch protection settings)`,
           );
         }
-      } else {
+      } else if (review.commit_id !== null) {
         validApprovals++;
       }
     }

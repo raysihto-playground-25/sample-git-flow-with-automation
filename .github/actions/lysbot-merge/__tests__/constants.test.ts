@@ -1,12 +1,12 @@
 /**
- * constants.test.ts - Unit tests for constants
+ * constants.test.ts - Unit tests for domain constants
  *
- * Tests validate the constants and regex patterns used throughout the action.
+ * Tests validate the constants and regex patterns used in the domain layer.
  */
 
 import { describe, it, expect } from 'vitest';
 
-import { CONVENTIONAL_COMMIT_TYPES, CONVENTIONAL_COMMIT_REGEX, COMMAND_REGEX } from '../src/constants.js';
+import { CONVENTIONAL_COMMIT_TYPES, CONVENTIONAL_COMMIT_REGEX, COMMAND_REGEX } from '../src/domain/constants.js';
 
 // =============================================================================
 // Tests for CONVENTIONAL_COMMIT_TYPES constant

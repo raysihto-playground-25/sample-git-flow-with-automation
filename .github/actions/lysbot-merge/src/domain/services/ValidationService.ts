@@ -12,9 +12,9 @@ import {
   VALID_PERMISSIONS,
   CONVENTIONAL_COMMIT_REGEX,
 } from '../constants.js';
-import type { MergeOptions } from '../value-objects/MergeOptions.js';
-import type { PullRequest } from '../entities/PullRequest.js';
 import type { MergeCheckResult } from '../entities/MergeCheckResult.js';
+import type { PullRequest } from '../entities/PullRequest.js';
+import type { MergeOptions } from '../value-objects/MergeOptions.js';
 
 /**
  * Checks if a PR title follows the Conventional Commits format.

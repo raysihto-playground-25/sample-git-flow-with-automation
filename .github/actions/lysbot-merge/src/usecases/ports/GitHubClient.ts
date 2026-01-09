@@ -17,7 +17,7 @@ export interface Review {
     login?: string;
   } | null;
   state: string;
-  commit_id: string;
+  commit_id: string | null;
 }
 
 /**
@@ -70,13 +70,7 @@ export interface GitHubClient {
   /**
    * Dismisses a stale review.
    */
-  dismissReview(
-    owner: string,
-    repo: string,
-    prNumber: number,
-    reviewId: number,
-    message: string,
-  ): Promise<boolean>;
+  dismissReview(owner: string, repo: string, prNumber: number, reviewId: number, message: string): Promise<boolean>;
 
   /**
    * Counts unresolved review threads.

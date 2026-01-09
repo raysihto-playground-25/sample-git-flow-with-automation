@@ -1,26 +1,25 @@
 /**
- * validation.test.ts - Unit tests for validation functions
+ * validation.test.ts - Unit tests for domain validation functions
  *
- * Tests cover all pure validation and business logic functions.
+ * Tests cover all pure validation and business logic functions in the domain layer.
  */
 
 import { describe, it, expect } from 'vitest';
 
-import { TWEMOJI } from '../src/constants.js';
-import type { ActionConfig, PullRequestData, CheckResult } from '../src/types.js';
+import type { PullRequest } from '../src/domain/entities/PullRequest.js';
+import type { MergeConfig } from '../src/domain/services/MergeMethodService.js';
+import { determineMergeMethod } from '../src/domain/services/MergeMethodService.js';
 import {
   isCommand,
   parseCommand,
   isBot,
   hasValidAuthorAssociation,
   hasValidPermission,
-  determineMergeMethod,
   validatePRState,
   getMergeableStateDescription,
-  buildCheckResultsMarkdown,
   isConventionalCommitTitle,
   waitBeforeRetryMs,
-} from '../src/validation.js';
+} from '../src/domain/services/ValidationService.js';
 
 // =============================================================================
 // Test Utilities
@@ -29,13 +28,11 @@ import {
 /**
  * Creates a default config for tests.
  */
-function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
+function createConfig(overrides: Partial<MergeConfig> = {}): MergeConfig {
   return {
     releaseBranchPrefix: 'release/',
     developBranch: 'develop',
     syncBranchPrefix: 'fix/sync/',
-    mergeableRetryCount: 5,
-    mergeableRetryInterval: 10,
     ...overrides,
   };
 }
@@ -43,7 +40,7 @@ function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
 /**
  * Creates a default PR data object for tests.
  */
-function createPRData(overrides: Partial<PullRequestData> = {}): PullRequestData {
+function createPRData(overrides: Partial<PullRequest> = {}): PullRequest {
   return {
     state: 'open',
     locked: false,
@@ -417,78 +414,6 @@ describe('getMergeableStateDescription', () => {
 
   it('should return fallback for unknown states', () => {
     expect(getMergeableStateDescription('foo')).toContain('mergeable_state: foo');
-  });
-});
-
-// =============================================================================
-// Tests for buildCheckResultsMarkdown
-// =============================================================================
-
-describe('buildCheckResultsMarkdown', () => {
-  it('should include check icon for passed checks', () => {
-    const checks: CheckResult[] = [{ name: 'Test check', passed: true }];
-    const markdown = buildCheckResultsMarkdown(checks);
-
-    expect(markdown).toContain(TWEMOJI.CHECK);
-    expect(markdown).toContain('Test check');
-  });
-
-  it('should include cross icon for failed checks', () => {
-    const checks: CheckResult[] = [{ name: 'Test check', passed: false, details: 'reason' }];
-    const markdown = buildCheckResultsMarkdown(checks);
-
-    expect(markdown).toContain(TWEMOJI.CROSS);
-    expect(markdown).toContain('Test check');
-    expect(markdown).toContain('(reason)');
-  });
-
-  it('should format multiple checks correctly', () => {
-    const checks: CheckResult[] = [
-      { name: 'Check 1', passed: true },
-      { name: 'Check 2', passed: false, details: 'failed' },
-      { name: 'Check 3', passed: true },
-    ];
-    const markdown = buildCheckResultsMarkdown(checks);
-
-    expect(markdown.split('\n')).toHaveLength(3);
-    expect(markdown).toContain('Check 1');
-    expect(markdown).toContain('Check 2');
-    expect(markdown).toContain('Check 3');
-  });
-
-  it('should include warning icon for failed optional checks', () => {
-    const checks: CheckResult[] = [{ name: 'Optional check', passed: false, details: 'not required', optional: true }];
-    const markdown = buildCheckResultsMarkdown(checks);
-
-    expect(markdown).toContain(TWEMOJI.WARNING);
-    expect(markdown).toContain('Optional check');
-    expect(markdown).toContain('(not required)');
-  });
-
-  it('should include check icon for passed optional checks', () => {
-    const checks: CheckResult[] = [{ name: 'Optional check', passed: true, optional: true }];
-    const markdown = buildCheckResultsMarkdown(checks);
-
-    expect(markdown).toContain(TWEMOJI.CHECK);
-    expect(markdown).toContain('Optional check');
-  });
-
-  it('should format mixed required and optional checks correctly', () => {
-    const checks: CheckResult[] = [
-      { name: 'Required passing', passed: true },
-      { name: 'Required failing', passed: false, details: 'error' },
-      { name: 'Optional passing', passed: true, optional: true },
-      { name: 'Optional failing', passed: false, details: 'warning', optional: true },
-    ];
-    const markdown = buildCheckResultsMarkdown(checks);
-
-    expect(markdown.split('\n')).toHaveLength(4);
-    // Required passing - check mark
-    expect(markdown).toContain(TWEMOJI.CHECK);
-    // Required failing - cross
-    expect(markdown).toContain(TWEMOJI.CROSS);
-    // Optional failing - warning
-    expect(markdown).toContain(TWEMOJI.WARNING);
   });
 });
 

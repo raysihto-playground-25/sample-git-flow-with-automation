@@ -6,6 +6,7 @@
  */
 
 import * as core from '@actions/core';
+
 import type { Logger } from '../../usecases/ports/Logger.js';
 
 /**

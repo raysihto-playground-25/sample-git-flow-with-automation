@@ -21,11 +21,11 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
-import { MergePullRequestUseCase } from './usecases/merge/MergePullRequestUseCase.js';
-import type { MergePullRequestInput } from './usecases/merge/MergePullRequestDTO.js';
-import { OctokitGitHubClient } from './adapters/gateways/OctokitGitHubClient.js';
 import { ActionLogger } from './adapters/gateways/ActionLogger.js';
+import { OctokitGitHubClient } from './adapters/gateways/OctokitGitHubClient.js';
 import { SummaryPresenter } from './adapters/presenters/SummaryPresenter.js';
+import type { MergePullRequestInput } from './usecases/merge/MergePullRequestDTO.js';
+import { MergePullRequestUseCase } from './usecases/merge/MergePullRequestUseCase.js';
 
 /**
  * Main function that runs the action.
