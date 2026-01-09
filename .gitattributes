@@ -1,3 +1,4 @@
 /.gitattributes export-ignore
-/.github/actions/ -export-ignore
-/.github/ export-ignore
+/.github/copilot-instructions.md export-ignore
+/.github/dependabot.yml export-ignore
+/.github/workflows/ export-ignore
