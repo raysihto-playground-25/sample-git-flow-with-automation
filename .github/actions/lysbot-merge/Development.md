@@ -9,13 +9,13 @@ npm ci
 npm run all     # Run all fix, check, and package steps
 ```
 
-Individual commands for specific tasks:
+Individual commands for specific tasks for example:
 
 ```bash
-npm run test:coverage  # Run unit tests with coverage
-npm run format:write   # Run formatter (format:check for checking only)
-npm run lint           # Run ESLint
-npm run bundle         # Bundle with rollup
+npm run check:test  # Run unit tests with coverage
+npm run fix:format  # Run formatter (check:format for checking only)
+npm run check:lint  # Run ESLint
+npm run package     # Build package with rollup
 ```
 
 ## Code Structure
@@ -26,22 +26,22 @@ The codebase has been modularized following **hexagonal architecture** principle
 
 ```
 src/
-├── index.ts                      # Entry point (unchanged)
-├── main.ts                       # Presentation layer - GitHub Actions input/output
-├── domain/                       # Core business logic (independent of external systems)
-│   ├── types.ts                  # Type definitions and interfaces
-│   ├── constants.ts              # Constants, regex patterns, and enumerations
-│   ├── validators.ts             # Business rules validation (commands, permissions, PR state)
-│   └── merge-strategy.ts         # Merge method determination logic
-├── usecases/                     # Use cases layer - orchestration and workflows
-│   ├── action-executor.ts        # Main action execution flow and orchestration
-│   └── formatters.ts             # Output formatting (markdown, summaries)
-└── adapters/                     # Adapters layer - external system interactions
-    └── github-api.ts             # GitHub API communication
+├── adapters/                    # Adapters layer - external system interactions
+│     └── github-api.ts         # GitHub API communication
+├── domain/                      # Core business logic (independent of external systems)
+│     ├── types.ts              # Type definitions and interfaces
+│     ├── constants.ts          # Constants, regex patterns, and enumerations
+│     ├── validators.ts         # Business rules validation (commands, permissions, PR state)
+│     └── merge-strategy.ts     # Merge method determination logic
+├── index.ts                     # Entry point (unchanged)
+├── main.ts                      # Presentation layer - GitHub Actions input/output
+└── usecases/                    # Use cases layer - orchestration and workflows
+      ├── action-executor.ts     # Main action execution flow and orchestration
+      └── formatters.ts          # Output formatting (markdown, summaries)
 
 __tests__/
-├── main.test.ts                  # Tests for presentation layer (main.ts)
-└── action-executor.test.ts       # Tests for usecases and domain layers
+├── action-executor.test.ts      # Tests for usecases and domain layers
+└── main.test.ts                 # Tests for presentation layer (main.ts)
 ```
 
 ### Module Responsibilities
@@ -50,24 +50,24 @@ __tests__/
 
 Pure business logic with no external dependencies. This layer is the heart of the application.
 
-1. **`types.ts`** - Type definitions
-   - Core interfaces: `ActionConfig`, `EventContext`, `PullRequestData`, `CheckResult`, `ActionResult`
-   - GitHub type aliases: `Octokit`, `Review`, `ReviewsArray`
-
-2. **`constants.ts`** - Enumerations and constants
+1. **`constants.ts`** - Enumerations and constants
    - Command patterns: `COMMAND_REGEX`, `VALID_FLAGS`
    - Permission/association lists: `VALID_AUTHOR_ASSOCIATIONS`, `VALID_PERMISSIONS`
    - Conventional commit types and patterns: `CONVENTIONAL_COMMIT_TYPES`, `CONVENTIONAL_COMMIT_REGEX`
    - UI elements: `TWEMOJI` icons
 
-3. **`validators.ts`** - Business rules validation
+2. **`merge-strategy.ts`** - Merge strategy determination
+   - `determineMergeMethod()` - Determines merge vs squash based on branch patterns
+
+3. **`types.ts`** - Type definitions
+   - Core interfaces: `ActionConfig`, `EventContext`, `PullRequestData`, `CheckResult`, `ActionResult`
+   - GitHub type aliases: `Octokit`, `Review`, `ReviewsArray`
+
+4. **`validators.ts`** - Business rules validation
    - Command parsing: `parseCommand()`, `isCommand()`
    - User validation: `isBot()`, `hasValidAuthorAssociation()`, `hasValidPermission()`
    - PR state validation: `validatePRState()`, `isConventionalCommitTitle()`
    - Helper functions: `getMergeableStateDescription()`
-
-4. **`merge-strategy.ts`** - Merge strategy determination
-   - `determineMergeMethod()` - Determines merge vs squash based on branch patterns
 
 #### **Use Cases Layer** (`src/usecases/`)
 
@@ -171,12 +171,9 @@ This action uses **Vitest** for unit testing. The test suite focuses on testing 
 ## Running Tests
 
 ```bash
-# Run all tests
-npm run test
+# Run all tests with coverage
+npm run check:test
 
 # Run tests in watch mode
 npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
 ```
