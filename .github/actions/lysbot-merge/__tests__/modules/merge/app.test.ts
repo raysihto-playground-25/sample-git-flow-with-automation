@@ -131,7 +131,7 @@ describe('MergeAppService', () => {
         expect(result.value.status).toBe('failed');
         expect(result.value.message).toBe('Invalid author association');
         expect(githubRepo.comments.length).toBeGreaterThan(0);
-        expect(githubRepo.comments[0].body).toContain('Permission denied');
+        expect(githubRepo.comments[0]!.body).toContain('Permission denied');
       }
     });
 
@@ -269,7 +269,7 @@ describe('MergeAppService', () => {
 
       // Verify eyes reaction was added
       expect(githubRepo.reactions.length).toBeGreaterThan(0);
-      expect(githubRepo.reactions[0].reaction).toBe('eyes');
+      expect(githubRepo.reactions[0]!.reaction).toBe('eyes');
 
       // Verify success comment was posted
       const successComment = githubRepo.comments.find((c) => c.body.includes('Merged by lysbot-merge'));

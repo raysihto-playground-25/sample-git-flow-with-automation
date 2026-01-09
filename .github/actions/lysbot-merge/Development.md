@@ -68,7 +68,7 @@ __tests__/
 
 1. **Domain Layer** (`domain.ts`)
    - Pure business logic and validation functions
-   - NO dependencies on @actions/* or external I/O
+   - NO dependencies on @actions/\* or external I/O
    - Contains types used by the domain (ActionConfig, PullRequestData, etc.)
    - Easily testable with no side effects
 
@@ -76,7 +76,7 @@ __tests__/
    - Orchestration logic and workflows
    - Port definitions (interfaces for external dependencies)
    - Result<T, E> return types for explicit error handling
-   - NO dependencies on @actions/* or infra implementation details
+   - NO dependencies on @actions/\* or infra implementation details
 
 3. **Infra Layer** (`infra.ts`)
    - Adapter implementations for ports defined in app layer
@@ -96,6 +96,7 @@ __tests__/
 ### Legacy Files (Deprecated)
 
 The following files are kept for backward compatibility but will be removed:
+
 - `action.ts` (old) - replaced by `modules/merge/action.ts` and `modules/merge/app.ts`
 - `validation.ts` (old) - replaced by `modules/merge/domain.ts`
 - `github-api.ts` (old) - replaced by `modules/merge/infra.ts`

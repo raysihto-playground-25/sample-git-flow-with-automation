@@ -170,7 +170,8 @@ describe('main.ts (Composition Root)', () => {
       // Verify the context passed to action includes the correct server URL
       const callArgs = mockRunMergeAction.mock.calls[0];
       expect(callArgs).toBeDefined();
-      expect(callArgs[1].serverUrl).toBe('https://github.enterprise.com');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(callArgs![1].serverUrl).toBe('https://github.enterprise.com');
     });
   });
 });

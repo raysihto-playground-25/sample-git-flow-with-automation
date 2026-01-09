@@ -50,7 +50,7 @@ export class FakeActionsCore implements IActionsCore {
     this.errorMessages.push(msg);
   }
 
-  get summary() {
+  get summary(): IActionsCore['summary'] {
     return {
       addRaw: (text: string) => {
         this.summaryContent += text;
@@ -60,7 +60,7 @@ export class FakeActionsCore implements IActionsCore {
       write: async () => {
         return this.summary;
       },
-    };
+    } as IActionsCore['summary'];
   }
 
   // Helper methods for test setup
