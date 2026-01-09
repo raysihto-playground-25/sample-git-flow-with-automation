@@ -33,15 +33,15 @@ src/
 │   ├── constants.ts              # Constants, regex patterns, and enumerations
 │   ├── validators.ts             # Business rules validation (commands, permissions, PR state)
 │   └── merge-strategy.ts         # Merge method determination logic
-├── application/                  # Application layer - use cases and orchestration
+├── usecases/                     # Use cases layer - orchestration and workflows
 │   ├── action-executor.ts        # Main action execution flow and orchestration
 │   └── formatters.ts             # Output formatting (markdown, summaries)
-└── infrastructure/               # External interactions (adapters)
+└── adapters/                     # Adapters layer - external system interactions
     └── github-api.ts             # GitHub API communication
 
 __tests__/
 ├── main.test.ts                  # Tests for presentation layer (main.ts)
-└── action-executor.test.ts       # Tests for application and domain layers
+└── action-executor.test.ts       # Tests for usecases and domain layers
 ```
 
 ### Module Responsibilities
@@ -69,9 +69,9 @@ Pure business logic with no external dependencies. This layer is the heart of th
 4. **`merge-strategy.ts`** - Merge strategy determination
    - `determineMergeMethod()` - Determines merge vs squash based on branch patterns
 
-#### **Application Layer** (`src/application/`)
+#### **Use Cases Layer** (`src/usecases/`)
 
-Orchestrates business logic and coordinates between domain and infrastructure.
+Orchestrates business logic and coordinates workflows between domain and adapters.
 
 1. **`action-executor.ts`** - Main use case orchestration
    - `executeAction()` - Coordinates the entire merge workflow
@@ -82,9 +82,10 @@ Orchestrates business logic and coordinates between domain and infrastructure.
 
 2. **`formatters.ts`** - Output formatting
    - `buildCheckResultsMarkdown()` - Formats validation check results
+   - `getResultMessage()` - Maps action result status to user-friendly messages
    - `buildSummaryMarkdown()` - Creates GitHub Actions job summary
 
-#### **Infrastructure Layer** (`src/infrastructure/`)
+#### **Adapters Layer** (`src/adapters/`)
 
 Handles external system interactions (GitHub API).
 
@@ -102,28 +103,28 @@ GitHub Actions entry point - kept minimal for easy testing.
 
 - Reads GitHub Actions inputs
 - Constructs configuration and context
-- Delegates to application layer
+- Delegates to use cases layer
 - Writes outputs and summary
 
 ### Architectural Principles
 
 1. **Dependency Rule**: Dependencies only point inward
-   - Infrastructure → Application → Domain
+   - Adapters → Use Cases → Domain
    - Domain has no dependencies on outer layers
-   - Application may depend on Domain
-   - Infrastructure may depend on Application and Domain
+   - Use Cases may depend on Domain
+   - Adapters may depend on Use Cases and Domain
 
 2. **Testability**: Each layer can be tested independently
    - Domain: Pure functions, easy to test
-   - Application: Mock infrastructure dependencies
-   - Infrastructure: Mock external APIs
-   - Presentation: Mock application layer
+   - Use Cases: Mock adapters dependencies
+   - Adapters: Mock external APIs
+   - Presentation: Mock use cases layer
 
 3. **Separation of Concerns**
    - **Domain**: What the system does (business rules)
-   - **Application**: How the system orchestrates (use cases)
-   - **Infrastructure**: How the system talks to external systems (adapters)
-   - **Presentation**: How the system receives/returns data (I/O)
+   - **Use Cases**: How the system orchestrates (workflows)
+   - **Adapters**: How the system talks to external systems (I/O)
+   - **Presentation**: How the system receives/returns data (entry point)
 
 ### Code Quality and Naming
 
@@ -135,21 +136,21 @@ When modifying lysbot-merge specifically:
 
 - **Keep domain logic pure**: Domain layer should have no external dependencies (no `@actions/core`, no API calls)
 - **One responsibility per file**: Each file should focus on a single aspect of functionality
-- **Minimal main.ts**: Keep presentation layer thin - only input/output, no business logic
+- **Minimal main.ts**: Keep presentation layer thin - only input/output, no business logic or domain logic
 - **Test at the right layer**:
   - Test business logic at domain layer (fast, pure functions)
-  - Test orchestration at application layer (with mocked infrastructure)
-  - Test I/O at presentation layer (with mocked application)
+  - Test orchestration at use cases layer (with mocked adapters)
+  - Test I/O at presentation layer (with mocked use cases)
 - **Types in domain**: All interfaces and types belong in `domain/types.ts`
 - **Constants in domain**: All constants, enums, and regex patterns in `domain/constants.ts`
-- **API calls in infrastructure**: All external system calls in `infrastructure/github-api.ts`
+- **API calls in adapters**: All external system calls in `adapters/github-api.ts`
 
 **When adding new features**:
 
 1. Define types in `domain/types.ts`
 2. Add business logic to appropriate domain files
-3. Add orchestration to `application/action-executor.ts` if needed
-4. Add API calls to `infrastructure/github-api.ts` if needed
+3. Add orchestration to `usecases/action-executor.ts` if needed
+4. Add API calls to `adapters/github-api.ts` if needed
 5. Update `main.ts` only if new inputs/outputs are required
 6. Write tests at the appropriate layer
 

@@ -1,21 +1,31 @@
-import { TWEMOJI } from '../domain/constants.js';
-import type { CheckResult } from '../domain/types.js';
+import { CHECK_ICONS } from '../domain/constants.js';
+import type { ActionResult, CheckResult } from '../domain/types.js';
 
 export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
   return checks
     .map((check) => {
       let icon: string;
       if (check.passed) {
-        icon = TWEMOJI.CHECK;
+        icon = CHECK_ICONS.CHECK;
       } else if (check.optional) {
-        icon = TWEMOJI.WARNING;
+        icon = CHECK_ICONS.WARNING;
       } else {
-        icon = TWEMOJI.CROSS;
+        icon = CHECK_ICONS.CROSS;
       }
       const detail = check.details ? ` (${check.details})` : '';
       return `- ${icon} ${check.name}${detail}`;
     })
     .join('\n');
+}
+
+export function getResultMessage(status: ActionResult['status']): string {
+  const resultMessages = {
+    merged: '✅ Merged successfully',
+    skipped: '⏭️ Skipped',
+    failed: '❌ Failed',
+    already_merged: 'ℹ️ Already merged',
+  };
+  return resultMessages[status];
 }
 
 export function buildSummaryMarkdown(result: string, prNumber: number, actor: string, mergeMethod?: string): string {

@@ -3,7 +3,7 @@ import * as github from '@actions/github';
 
 import type { ActionConfig, EventContext } from './domain/types.js';
 import { executeAction } from './usecases/action-executor.js';
-import { buildSummaryMarkdown } from './usecases/formatters.js';
+import { buildSummaryMarkdown, getResultMessage } from './usecases/formatters.js';
 
 export async function run(): Promise<void> {
   try {
@@ -45,14 +45,8 @@ export async function run(): Promise<void> {
       core.setOutput('merge_method', result.mergeMethod);
     }
 
-    const resultEmoji = {
-      merged: '✅ Merged successfully',
-      skipped: '⏭️ Skipped',
-      failed: '❌ Failed',
-      already_merged: 'ℹ️ Already merged',
-    }[result.status];
-
-    const summaryMarkdown = buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);
+    const resultMessage = getResultMessage(result.status);
+    const summaryMarkdown = buildSummaryMarkdown(resultMessage, context.prNumber, context.actor, result.mergeMethod);
     await core.summary.addRaw(summaryMarkdown).write();
 
     core.info(`lysbot-merge result: ${result.status} - ${result.message}`);

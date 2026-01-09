@@ -241,6 +241,6 @@ The workflow must have the following permissions:
 >
 > **Authorization required**: Only organization owners, members, or collaborators with write access can use the command
 
-## Third-Party Licenses
+## License
 
-- **Twemoji graphics** ([github.com/twitter/twemoji](https://github.com/twitter/twemoji)) are used for emoji display compatibility. Licensed under CC-BY 4.0. Copyright 2020 Twitter, Inc and other contributors.
+This project is licensed under the MIT License - see the LICENSE file for details.

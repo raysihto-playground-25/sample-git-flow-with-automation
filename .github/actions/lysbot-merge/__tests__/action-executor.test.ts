@@ -12,10 +12,10 @@ import {
   waitBeforeRetryMs,
 } from '../src/adapters/github-api.js';
 import {
+  CHECK_ICONS,
   COMMAND_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
   CONVENTIONAL_COMMIT_TYPES,
-  TWEMOJI,
 } from '../src/domain/constants.js';
 import { determineMergeMethod } from '../src/domain/merge-strategy.js';
 import type { ActionConfig, CheckResult, EventContext, Octokit, PullRequestData } from '../src/domain/types.js';
@@ -410,7 +410,7 @@ describe('executeAction', () => {
       });
       expect(mergeCheckComment).toBeDefined();
       const commentBody = mergeCheckComment?.[0]?.body ?? '';
-      expect(commentBody).toContain(TWEMOJI.CROSS);
+      expect(commentBody).toContain(CHECK_ICONS.CROSS);
       expect(commentBody).toContain('At least one valid approval');
       expect(commentBody).toContain('no valid approvals found');
     });
@@ -436,7 +436,7 @@ describe('executeAction', () => {
       });
       expect(mergeCheckComment).toBeDefined();
       const commentBody = mergeCheckComment?.[0]?.body ?? '';
-      expect(commentBody).toContain(TWEMOJI.WARNING);
+      expect(commentBody).toContain(CHECK_ICONS.WARNING);
       expect(commentBody).toContain('At least one valid approval');
       expect(commentBody).toContain('approval requirement overridden');
       expect(commentBody).toContain('--override-approval-requirement');
@@ -476,7 +476,7 @@ describe('executeAction', () => {
       expect(mergeCheckComment).toBeDefined();
       const commentBody = mergeCheckComment?.[0]?.body ?? '';
       expect(commentBody).toContain('review conversations are resolved');
-      expect(commentBody).toContain(TWEMOJI.CROSS);
+      expect(commentBody).toContain(CHECK_ICONS.CROSS);
     });
 
     it('Case D: title warning behavior - non-conventional title shows warning but does not block', async () => {
@@ -533,7 +533,7 @@ describe('executeAction', () => {
       ).mock.calls;
       const hasConventionalCommitsWarning = commentCalls.some((call) => {
         const body = call[0]?.body;
-        return body?.includes('Conventional Commits') && body?.includes(TWEMOJI.WARNING);
+        return body?.includes('Conventional Commits') && body?.includes(CHECK_ICONS.WARNING);
       });
       expect(hasConventionalCommitsWarning).toBe(true);
     });
@@ -702,7 +702,7 @@ describe('executeAction', () => {
       ).mock.calls;
       const hasConventionalCommitsCheck = commentCalls.some((call) => {
         const body = call[0]?.body;
-        return body?.includes('Conventional Commits') && body?.includes(TWEMOJI.WARNING);
+        return body?.includes('Conventional Commits') && body?.includes(CHECK_ICONS.WARNING);
       });
       expect(hasConventionalCommitsCheck).toBe(true);
     });
@@ -739,7 +739,7 @@ describe('executeAction', () => {
       ).mock.calls;
       const hasConventionalCommitsCheck = commentCalls.some((call) => {
         const body = call[0]?.body;
-        return body?.includes('Conventional Commits') && body?.includes(TWEMOJI.CHECK);
+        return body?.includes('Conventional Commits') && body?.includes(CHECK_ICONS.CHECK);
       });
       expect(hasConventionalCommitsCheck).toBe(true);
     });
@@ -1970,7 +1970,7 @@ describe('buildCheckResultsMarkdown', () => {
     const checks: CheckResult[] = [{ name: 'Test check', passed: true }];
     const markdown = buildCheckResultsMarkdown(checks);
 
-    expect(markdown).toContain(TWEMOJI.CHECK);
+    expect(markdown).toContain(CHECK_ICONS.CHECK);
     expect(markdown).toContain('Test check');
   });
 
@@ -1978,7 +1978,7 @@ describe('buildCheckResultsMarkdown', () => {
     const checks: CheckResult[] = [{ name: 'Test check', passed: false, details: 'reason' }];
     const markdown = buildCheckResultsMarkdown(checks);
 
-    expect(markdown).toContain(TWEMOJI.CROSS);
+    expect(markdown).toContain(CHECK_ICONS.CROSS);
     expect(markdown).toContain('Test check');
     expect(markdown).toContain('(reason)');
   });
@@ -2001,7 +2001,7 @@ describe('buildCheckResultsMarkdown', () => {
     const checks: CheckResult[] = [{ name: 'Optional check', passed: false, details: 'not required', optional: true }];
     const markdown = buildCheckResultsMarkdown(checks);
 
-    expect(markdown).toContain(TWEMOJI.WARNING);
+    expect(markdown).toContain(CHECK_ICONS.WARNING);
     expect(markdown).toContain('Optional check');
     expect(markdown).toContain('(not required)');
   });
@@ -2010,7 +2010,7 @@ describe('buildCheckResultsMarkdown', () => {
     const checks: CheckResult[] = [{ name: 'Optional check', passed: true, optional: true }];
     const markdown = buildCheckResultsMarkdown(checks);
 
-    expect(markdown).toContain(TWEMOJI.CHECK);
+    expect(markdown).toContain(CHECK_ICONS.CHECK);
     expect(markdown).toContain('Optional check');
   });
 
@@ -2025,11 +2025,11 @@ describe('buildCheckResultsMarkdown', () => {
 
     expect(markdown.split('\n')).toHaveLength(4);
 
-    expect(markdown).toContain(TWEMOJI.CHECK);
+    expect(markdown).toContain(CHECK_ICONS.CHECK);
 
-    expect(markdown).toContain(TWEMOJI.CROSS);
+    expect(markdown).toContain(CHECK_ICONS.CROSS);
 
-    expect(markdown).toContain(TWEMOJI.WARNING);
+    expect(markdown).toContain(CHECK_ICONS.WARNING);
   });
 });
 

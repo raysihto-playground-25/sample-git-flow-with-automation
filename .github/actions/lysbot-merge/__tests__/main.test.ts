@@ -55,6 +55,15 @@ const mockExecuteAction = vi.fn().mockResolvedValue({
 });
 
 const mockBuildSummaryMarkdown = vi.fn().mockReturnValue('# Summary');
+const mockGetResultMessage = vi.fn().mockImplementation((status: string) => {
+  const messages: Record<string, string> = {
+    merged: '✅ Merged successfully',
+    skipped: '⏭️ Skipped',
+    failed: '❌ Failed',
+    already_merged: 'ℹ️ Already merged',
+  };
+  return messages[status] || status;
+});
 
 vi.mock('@actions/core', () => mockCore);
 vi.mock('@actions/github', () => mockGithub);
@@ -65,6 +74,7 @@ vi.mock('../src/usecases/action-executor.js', () => ({
 
 vi.mock('../src/usecases/formatters.js', () => ({
   buildSummaryMarkdown: mockBuildSummaryMarkdown,
+  getResultMessage: mockGetResultMessage,
 }));
 
 const { run } = await import('../src/main.js');
@@ -94,6 +104,15 @@ describe('main.ts', () => {
     });
 
     mockBuildSummaryMarkdown.mockReturnValue('# Test Summary');
+    mockGetResultMessage.mockImplementation((status: string) => {
+      const messages: Record<string, string> = {
+        merged: '✅ Merged successfully',
+        skipped: '⏭️ Skipped',
+        failed: '❌ Failed',
+        already_merged: 'ℹ️ Already merged',
+      };
+      return messages[status] || status;
+    });
   });
 
   afterEach(() => {
