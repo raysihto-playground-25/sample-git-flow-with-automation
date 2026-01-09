@@ -20,74 +20,69 @@ npm run bundle         # Bundle with rollup
 
 ## Code Structure
 
-The codebase has been modularized for better maintainability and testability, following the **Single Responsibility Principle**. Each module focuses on a specific concern:
+This action follows **Clean Architecture** principles to achieve separation of concerns and testability. For detailed architectural guidelines and design principles, see **[Architecture.md](./Architecture.md)**.
 
 ### Current File Structure
 
+The codebase is organized into three layers:
+
 ```
 src/
-├── action.ts         # Core business logic (executeAction, buildSummaryMarkdown)
-├── constants.ts      # Configuration constants and regex patterns
-├── github-api.ts     # GitHub API interaction wrappers
-├── index.ts          # Action entry point for bundler
-├── main.ts           # GitHub Actions runtime integration (tested with mocks)
-├── types.ts          # Type definitions and interfaces
-└── validation.ts     # Pure validation and business logic functions
+├── domain/              # Pure business logic and rules
+│   ├── entities/        # Business data structures (PullRequest entity)
+│   ├── value-objects/   # Value objects (MergeMethod, etc.)
+│   └── services/        # Domain services (validation logic)
+├── usecases/            # Application workflows and ports
+│   ├── merge/           # Merge use case orchestration
+│   └── ports/           # Interface definitions (GitHubClient, Logger)
+├── adapters/            # External integrations
+│   ├── gateways/        # API implementations (GitHub API client)
+│   └── presenters/      # Output formatting (Markdown presenter)
+└── main.ts              # Composition root (DI setup)
 ```
 
-**Module Responsibilities:**
+**Layer Responsibilities:**
 
-1. **`action.ts`** (testable business logic)
-   - Main `executeAction()` function that orchestrates the merge flow
-   - Pure `buildSummaryMarkdown()` function for generating summaries
-   - All business logic that can be tested without GitHub Actions runtime
-   - Depends on: types, validation, github-api
+1. **`domain/`** (Enterprise Business Rules)
+   - Pure domain logic with no external dependencies
+   - Contains entities, value objects, and domain services
+   - Independent of GitHub Actions runtime or external libraries
+   - Examples: PR title validation, merge method determination
 
-2. **`constants.ts`**
-   - Configuration constants (regex patterns, valid flags, emoji)
-   - Immutable reference data
-   - No dependencies on other modules except types
+2. **`usecases/`** (Application Business Rules)
+   - Orchestrates domain objects to achieve specific goals
+   - Defines ports (interfaces) for external interactions
+   - Contains application-specific workflows
+   - Examples: Merge PR use case, check approval use case
 
-3. **`github-api.ts`**
-   - All functions that interact with GitHub API
-   - API calls, data fetching, mutations (reactions, comments, merges)
-   - Depends on: types
+3. **`adapters/`** (Interface Adapters)
+   - Implements ports using actual external libraries
+   - Handles GitHub API calls, input parsing, output formatting
+   - Converts between external data formats and domain models
+   - Examples: Octokit GitHub client, Action logger, Markdown presenter
 
-4. **`main.ts`** (GitHub Actions runtime integration - tested with mocks)
-   - Integration layer with GitHub Actions runtime
-   - Reads inputs from GitHub Actions environment (`core.getInput`)
-   - Handles deprecated input parameters with warnings
-   - Constructs context from GitHub runtime (`github.context`, `process.env`)
-   - Delegates to `action.ts` for merge business logic
-   - Writes outputs and summaries to GitHub Actions (`core.setOutput`, `core.summary`)
-   - Tested using vitest mocks to verify input handling, options parsing, and error handling
-   - Contains conditional logic for backward compatibility with deprecated inputs
-
-5. **`types.ts`**
-   - All TypeScript type definitions and interfaces
-   - No runtime logic, purely type declarations
-   - Imported by all other modules as needed
-
-6. **`validation.ts`**
-   - Pure functions for validation and business logic
-   - Command parsing, permission checks, merge method determination
-   - Easily testable with no side effects
-   - Depends on: types, constants
+4. **`main.ts`** (Composition Root)
+   - Only place where all layers are coupled together
+   - Sets up dependency injection
+   - Reads inputs and creates adapter instances
+   - Wires up use cases with their dependencies
 
 ### Code Quality and Naming
 
 For general refactoring principles, naming conventions, and module organization guidelines, see the **[Code Quality Guidelines](../../../CONTRIBUTING.md#code-quality-guidelines)** section in CONTRIBUTING.md.
 
+For architectural patterns and dependency rules, see **[Architecture.md](./Architecture.md)**.
+
 ### Maintaining the lysbot-merge Structure
 
 When modifying lysbot-merge specifically:
 
-- Keep types centralized in `types.ts`
-- Keep constants centralized in `constants.ts`
-- Add new pure functions to `validation.ts` or create domain-specific validation modules
-- Add new API calls to `github-api.ts` or create endpoint-specific modules
-- Keep testable orchestration in `action.ts` focused on business logic
-- Keep main.ts focused on GitHub Actions runtime integration with tested backward compatibility logic
+- **Domain logic** goes in `domain/` - must have no external dependencies
+- **Ports (interfaces)** go in `usecases/ports/` - define what the use case needs
+- **Port implementations** go in `adapters/gateways/` - use external libraries
+- **Use case orchestration** goes in `usecases/` - coordinates domain objects
+- **Dependency injection** happens only in `main.ts` - the composition root
+- Follow the **Dependency Rule**: `Adapters -> Usecases -> Domain`
 
 ## Input Handling
 

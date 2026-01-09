@@ -1,72 +1,66 @@
 /**
- * main.ts - Entry point for the lysbot-merge GitHub Action
+ * main.ts - Composition Root for the lysbot-merge GitHub Action
  *
- * This file is the main entry point that runs in the GitHub Actions environment.
- * It is responsible for:
+ * This file is the **ONLY** place where all layers are coupled together.
+ * It acts as the Composition Root for Dependency Injection.
+ *
+ * Responsibilities:
  * 1. Reading inputs from the GitHub Actions environment
- * 2. Handling deprecated input parameters with warnings
- * 3. Parsing options YAML and constructing configuration
- * 4. Constructing the event context from github.context
- * 5. Calling the main action logic from action.ts
- * 6. Setting outputs and writing summaries
+ * 2. Instantiating adapters (OctokitGitHubClient, ActionLogger)
+ * 3. Instantiating use cases with their dependencies
+ * 4. Executing the use case
+ * 5. Setting outputs and writing summaries
  *
- * TESTING APPROACH:
- * =================
- * This file contains GitHub Actions runtime integration code and has been tested
- * using vitest mocks to verify:
- * - Deprecated input handling and warning messages
- * - Options parsing with deprecated input fallbacks
- * - Integer parsing for numeric inputs
- * - Error handling and reporting
- *
- * The core business logic remains in action.ts (executeAction, buildSummaryMarkdown)
- * which has comprehensive test coverage independent of GitHub Actions runtime.
+ * Following Clean Architecture:
+ * - Domain layer: Pure business logic (no dependencies)
+ * - Usecases layer: Application workflows (depends on domain only)
+ * - Adapters layer: External integrations (implements use case ports)
+ * - Main.ts: Wires everything together (the only place with cross-layer knowledge)
  */
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
-import { executeAction, buildSummaryMarkdown } from './action.js';
-import type { ActionConfig, EventContext } from './types.js';
+import { MergePullRequestUseCase } from './usecases/merge/MergePullRequestUseCase.js';
+import type { MergePullRequestInput } from './usecases/merge/MergePullRequestDTO.js';
+import { OctokitGitHubClient } from './adapters/gateways/OctokitGitHubClient.js';
+import { ActionLogger } from './adapters/gateways/ActionLogger.js';
+import { SummaryPresenter } from './adapters/presenters/SummaryPresenter.js';
 
 /**
  * Main function that runs the action.
  *
- * This function:
- * 1. Reads inputs from GitHub Actions environment (core.getInput)
- * 2. Reads context from GitHub Actions runtime (github.context, process.env)
- * 3. Delegates all merge business logic to executeAction() in action.ts
- * 4. Writes outputs to GitHub Actions environment (core.setOutput, core.summary)
- *
- * This function is tested using vitest mocks to verify the deprecated input
- * handling, options parsing, and error handling logic.
+ * This is the Composition Root where Dependency Injection happens.
+ * Following Clean Architecture principles:
+ * 1. Setup Adapters (Infrastructure) - instantiate gateways and presenters
+ * 2. Setup UseCase (Application Logic) - inject dependencies
+ * 3. Execute - run the use case with input data
+ * 4. Output - write results to GitHub Actions environment
  */
 export async function run(): Promise<void> {
   try {
-    // Get inputs
+    // -------------------------------------------------------------------------
+    // Step 1: Read inputs from GitHub Actions environment
+    // -------------------------------------------------------------------------
     const token = core.getInput('github-token', { required: true });
-    const config: ActionConfig = {
+
+    const mergeConfig = {
       releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
       developBranch: core.getInput('develop_branch') || 'develop',
       syncBranchPrefix: core.getInput('sync_branch_prefix') || 'fix/sync/',
+    };
+
+    const retryConfig = {
       mergeableRetryCount: parseInt(core.getInput('mergeable_retry_count') || '5', 10),
       mergeableRetryInterval: parseInt(core.getInput('mergeable_retry_interval') || '10', 10),
     };
 
     // Get event context
-    //
-    // Note:
-    //   - github.context.payload is intentionally typed as unknown, so some property accesses
-    //     cannot be made fully type-safe. In those cases, we selectively disable ESLint on specific
-    //     lines rather than adding noisy type assertions.
     const payload = github.context.payload;
 
-    // Build event context
-    const context: EventContext = {
+    const input: MergePullRequestInput = {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
-      // prNumber will be 0 if this is not a PR comment, but that's acceptable
-      // because executeAction() will skip early when isPullRequest is false
       prNumber: payload.issue?.number ?? 0,
       commentId: payload.comment?.id ?? 0,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -76,25 +70,39 @@ export async function run(): Promise<void> {
       userType: payload.comment?.user?.type ?? 'User',
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       authorAssociation: payload.comment?.author_association ?? 'NONE',
-      serverUrl: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
-      runId: github.context.runId,
       eventName: github.context.eventName,
       isPullRequest: !!payload.issue?.pull_request,
+      mergeConfig,
+      retryConfig,
     };
 
-    // Create Octokit instance
+    // -------------------------------------------------------------------------
+    // Step 2: Setup Adapters (Infrastructure Layer)
+    // -------------------------------------------------------------------------
     const octokit = github.getOctokit(token);
+    const githubClient = new OctokitGitHubClient(octokit);
+    const logger = new ActionLogger();
+    const summaryPresenter = new SummaryPresenter();
 
-    // Run the main logic
-    const result = await executeAction(octokit, context, config);
+    // -------------------------------------------------------------------------
+    // Step 3: Setup UseCase (Application Layer) with Dependency Injection
+    // -------------------------------------------------------------------------
+    const mergePRUseCase = new MergePullRequestUseCase(githubClient, logger);
 
-    // Set outputs
+    // -------------------------------------------------------------------------
+    // Step 4: Execute the UseCase
+    // -------------------------------------------------------------------------
+    const result = await mergePRUseCase.execute(input);
+
+    // -------------------------------------------------------------------------
+    // Step 5: Write outputs to GitHub Actions environment
+    // -------------------------------------------------------------------------
     core.setOutput('result', result.status);
     if (result.mergeMethod) {
       core.setOutput('merge_method', result.mergeMethod);
     }
 
-    // Write summary
+    // Build and write summary using presenter
     const resultEmoji = {
       merged: '✅ Merged successfully',
       skipped: '⏭️ Skipped',
@@ -102,16 +110,15 @@ export async function run(): Promise<void> {
       already_merged: 'ℹ️ Already merged',
     }[result.status];
 
-    const summaryMarkdown = buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);
+    const summaryMarkdown = summaryPresenter.buildSummary(resultEmoji, input.prNumber, input.actor, result.mergeMethod);
     await core.summary.addRaw(summaryMarkdown).write();
 
     // Log result
-    core.info(`lysbot-merge result: ${result.status} - ${result.message}`);
+    logger.info(`lysbot-merge result: ${result.status} - ${result.message}`);
 
-    // Mark as failed if the result status is failed
+    // Don't fail the workflow - failures are communicated via PR comments
     if (result.status === 'failed') {
-      // Don't fail the workflow - failures are communicated via PR comments
-      core.info('Merge checks or operation failed. See PR comments for details.');
+      logger.info('Merge checks or operation failed. See PR comments for details.');
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
