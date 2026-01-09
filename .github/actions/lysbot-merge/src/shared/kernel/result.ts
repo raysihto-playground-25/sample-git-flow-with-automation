@@ -8,9 +8,7 @@
  * Result type for operations that can succeed or fail.
  * This is a universal type that can be used across all modules.
  */
-export type Result<T, E = Error> =
-  | { success: true; value: T }
-  | { success: false; error: E };
+export type Result<T, E = Error> = { success: true; value: T } | { success: false; error: E };
 
 /**
  * Creates a successful Result.

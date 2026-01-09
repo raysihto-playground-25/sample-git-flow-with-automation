@@ -12,6 +12,7 @@
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+
 import type { Octokit } from '../../shared/infra-shared/index.js';
 
 // ============================================================================
@@ -106,9 +107,7 @@ const CONVENTIONAL_COMMIT_TYPES = [
   'test',
   'ux',
 ] as const;
-const CONVENTIONAL_COMMIT_REGEX = new RegExp(
-  `^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)!]+\\))?!?:\\s*\\S.*$`,
-);
+const CONVENTIONAL_COMMIT_REGEX = new RegExp(`^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)!]+\\))?!?:\\s*\\S.*$`);
 
 const TWEMOJI = {
   CHECK:
@@ -165,11 +164,7 @@ export function hasValidPermission(permission: string): boolean {
 /**
  * Determines merge method based on branch patterns.
  */
-export function determineMergeMethod(
-  headRef: string,
-  baseRef: string,
-  config: MergeConfig,
-): MergeMethodResult {
+export function determineMergeMethod(headRef: string, baseRef: string, config: MergeConfig): MergeMethodResult {
   if (headRef.startsWith(config.releaseBranchPrefix)) {
     return {
       method: 'merge',
@@ -210,9 +205,15 @@ export function validatePRState(prData: PullRequestData): CheckResult[] {
   const allPassed = isOpen && isUnlocked && isNotDraft;
 
   const failureReasons: string[] = [];
-  if (!isOpen) failureReasons.push('currently closed');
-  if (!isUnlocked) failureReasons.push('currently locked');
-  if (!isNotDraft) failureReasons.push('currently a draft');
+  if (!isOpen) {
+    failureReasons.push('currently closed');
+  }
+  if (!isUnlocked) {
+    failureReasons.push('currently locked');
+  }
+  if (!isNotDraft) {
+    failureReasons.push('currently a draft');
+  }
 
   return [
     {
@@ -269,12 +270,7 @@ export function isConventionalCommitTitle(title: string): boolean {
 /**
  * Builds summary markdown for action.
  */
-export function buildSummaryMarkdown(
-  result: string,
-  prNumber: number,
-  actor: string,
-  mergeMethod?: string,
-): string {
+export function buildSummaryMarkdown(result: string, prNumber: number, actor: string, mergeMethod?: string): string {
   let summary = `## lysbot-merge Summary\n\n`;
   summary += `| Item | Value |\n`;
   summary += `|------|-------|\n`;
@@ -328,11 +324,13 @@ export interface GitHubPort {
   postComment(prNumber: number, body: string): Promise<void>;
   getCollaboratorPermission(username: string): Promise<string>;
   fetchPullRequestData(prNumber: number): Promise<PullRequestData>;
-  fetchApprovedReviews(prNumber: number): Promise<Array<{
-    id: number;
-    user: { login: string } | null;
-    commit_id: string | null;
-  }>>;
+  fetchApprovedReviews(prNumber: number): Promise<
+    Array<{
+      id: number;
+      user: { login: string } | null;
+      commit_id: string | null;
+    }>
+  >;
   dismissReview(prNumber: number, reviewId: number, message: string): Promise<boolean>;
   countUnresolvedThreads(prNumber: number): Promise<number>;
   fetchPullRequestCommits(prNumber: number): Promise<
@@ -461,8 +459,7 @@ export async function executeMerge(
   if (approvalCheckPassed) {
     approvalDetails = undefined;
   } else if (approvalOverridden) {
-    approvalDetails =
-      'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
+    approvalDetails = 'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
   } else {
     approvalDetails = 'no valid approvals found';
   }
@@ -692,11 +689,7 @@ export function writeActionOutputs(result: ActionResult): void {
 /**
  * Writes summary to GitHub Actions environment.
  */
-export async function writeActionSummary(
-  result: ActionResult,
-  prNumber: number,
-  actor: string,
-): Promise<void> {
+export async function writeActionSummary(result: ActionResult, prNumber: number, actor: string): Promise<void> {
   const resultEmoji = {
     merged: '✅ Merged successfully',
     skipped: '⏭️ Skipped',
