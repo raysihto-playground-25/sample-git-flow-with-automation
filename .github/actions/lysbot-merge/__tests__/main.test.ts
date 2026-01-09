@@ -1,8 +1,8 @@
 /**
  * main.test.ts - Tests for main.ts module
  *
- * Tests cover the run() function which is the main entry point for the GitHub Action.
- * This tests the GitHub Actions runtime integration code using vitest mocks.
+ * Tests cover the run() function which is the Composition Root.
+ * This tests DI assembly and integration.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -53,35 +53,66 @@ const mockGithub = {
         createForIssueComment: vi.fn(),
       },
     },
+    paginate: vi.fn().mockResolvedValue([]),
+    graphql: vi.fn().mockResolvedValue({}),
   }),
 };
 
-const mockExecuteAction = vi.fn().mockResolvedValue({
+const mockExecuteMerge = vi.fn().mockResolvedValue({
   status: 'skipped',
   message: 'Not a merge command',
-  mergeMethod: null,
 });
 
-const mockBuildSummaryMarkdown = vi.fn().mockReturnValue('# Summary');
+const mockReadActionInputs = vi.fn().mockReturnValue({
+  releaseBranchPrefix: 'release/',
+  developBranch: 'develop',
+  syncBranchPrefix: 'fix/sync/',
+  mergeableRetryCount: 5,
+  mergeableRetryInterval: 10,
+});
+
+const mockBuildEventContext = vi.fn().mockReturnValue({
+  owner: 'test-owner',
+  repo: 'test-repo',
+  prNumber: 123,
+  commentId: 999,
+  commentBody: '/lysbot merge',
+  actor: 'test-actor',
+  userType: 'User',
+  authorAssociation: 'MEMBER',
+  serverUrl: 'https://github.com',
+  runId: 12345,
+  eventName: 'issue_comment',
+  isPullRequest: true,
+});
+
+const mockWriteActionOutputs = vi.fn();
+const mockWriteActionSummary = vi.fn().mockResolvedValue(undefined);
+
+class MockGitHubAdapter {
+  constructor(
+    public octokit: unknown,
+    public owner: string,
+    public repo: string,
+  ) {}
+}
 
 vi.mock('@actions/core', () => mockCore);
 vi.mock('@actions/github', () => mockGithub);
 
-vi.mock('../src/action.js', () => ({
-  executeAction: mockExecuteAction,
-  buildSummaryMarkdown: mockBuildSummaryMarkdown,
+vi.mock('../src/modules/lysbot-merge/index.js', () => ({
+  readActionInputs: mockReadActionInputs,
+  buildEventContext: mockBuildEventContext,
+  writeActionOutputs: mockWriteActionOutputs,
+  writeActionSummary: mockWriteActionSummary,
+  executeMerge: mockExecuteMerge,
+  GitHubAdapter: MockGitHubAdapter,
 }));
 
 // Import after mocks are set up
 const { run } = await import('../src/main.js');
 
-// Helper function to safely set mock context payload
-function setMockContextPayload(payload: Record<string, unknown>): void {
-  const ctx = mockGithub.context as { payload: unknown };
-  ctx.payload = payload;
-}
-
-describe('main.ts', () => {
+describe('main.ts - Composition Root', () => {
   beforeEach(() => {
     // Reset all mocks before each test
     vi.clearAllMocks();
@@ -98,40 +129,37 @@ describe('main.ts', () => {
     });
 
     // Reset default mock return value
-    mockExecuteAction.mockResolvedValue({
+    mockExecuteMerge.mockResolvedValue({
       status: 'merged',
       message: 'Pull request successfully merged',
       mergeMethod: 'squash',
     });
-
-    mockBuildSummaryMarkdown.mockReturnValue('# Test Summary');
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('run()', () => {
-    it('should successfully execute with default configuration', async () => {
+  describe('run() - DI assembly', () => {
+    it('should successfully perform DI and execute merge', async () => {
       await run();
 
-      // Verify inputs were read
+      // Verify token was read
       expect(mockCore.getInput).toHaveBeenCalledWith('github-token', { required: true });
 
-      // Verify octokit was created
+      // Verify Octokit was created
       expect(mockGithub.getOctokit).toHaveBeenCalledWith('test-token');
 
-      // Verify executeAction was called
-      expect(mockExecuteAction).toHaveBeenCalled();
+      // Verify ACTION layer functions were called
+      expect(mockReadActionInputs).toHaveBeenCalled();
+      expect(mockBuildEventContext).toHaveBeenCalled();
 
-      // Verify outputs were set
-      expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'merged');
-      expect(mockCore.setOutput).toHaveBeenCalledWith('merge_method', 'squash');
+      // Verify APP layer function was called
+      expect(mockExecuteMerge).toHaveBeenCalled();
 
-      // Verify summary was written
-      expect(mockBuildSummaryMarkdown).toHaveBeenCalled();
-      expect(mockCore.summary.addRaw).toHaveBeenCalledWith('# Test Summary');
-      expect(mockCore.summary.write).toHaveBeenCalled();
+      // Verify ACTION layer output functions were called
+      expect(mockWriteActionOutputs).toHaveBeenCalled();
+      expect(mockWriteActionSummary).toHaveBeenCalled();
 
       // Verify info was logged
       expect(mockCore.info).toHaveBeenCalledWith('lysbot-merge result: merged - Pull request successfully merged');
@@ -140,207 +168,36 @@ describe('main.ts', () => {
       expect(mockCore.setFailed).not.toHaveBeenCalled();
     });
 
-    it('should handle custom configuration inputs', async () => {
-      mockCore.getInput.mockImplementation((name: string) => {
-        const customConfig: Record<string, string> = {
-          'github-token': 'custom-token',
-          release_branch_prefix: 'rel/',
-          develop_branch: 'main',
-          sync_branch_prefix: 'sync/',
-          mergeable_retry_count: '3',
-          mergeable_retry_interval: '5',
-        };
-        return customConfig[name] || '';
-      });
-
-      await run();
-
-      // Verify executeAction was called with the custom config
-      expect(mockExecuteAction).toHaveBeenCalledWith(
-        expect.any(Object), // octokit
-        expect.any(Object), // context
-        expect.objectContaining({
-          releaseBranchPrefix: 'rel/',
-          developBranch: 'main',
-          syncBranchPrefix: 'sync/',
-          mergeableRetryCount: 3,
-          mergeableRetryInterval: 5,
-        }),
-      );
-    });
-
-    it('should use default values when optional inputs are empty', async () => {
-      mockCore.getInput.mockImplementation((name: string) => {
-        if (name === 'github-token') {
-          return 'test-token';
-        }
-        return '';
-      });
-
-      await run();
-
-      expect(mockExecuteAction).toHaveBeenCalled();
-    });
-
-    it('should handle skipped merge result', async () => {
-      mockExecuteAction.mockResolvedValue({
-        status: 'skipped',
-        message: 'Merge was skipped',
-        mergeMethod: undefined,
-      });
-
-      await run();
-
-      expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'skipped');
-      expect(mockCore.setOutput).not.toHaveBeenCalledWith('merge_method', expect.anything());
-      expect(mockCore.info).toHaveBeenCalledWith('lysbot-merge result: skipped - Merge was skipped');
-      expect(mockCore.setFailed).not.toHaveBeenCalled();
-    });
-
     it('should handle failed merge result', async () => {
-      mockExecuteAction.mockResolvedValue({
+      mockExecuteMerge.mockResolvedValue({
         status: 'failed',
         message: 'Merge checks failed',
-        mergeMethod: undefined,
       });
 
       await run();
 
-      expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'failed');
+      expect(mockWriteActionOutputs).toHaveBeenCalled();
       expect(mockCore.info).toHaveBeenCalledWith('lysbot-merge result: failed - Merge checks failed');
       expect(mockCore.info).toHaveBeenCalledWith('Merge checks or operation failed. See PR comments for details.');
       expect(mockCore.setFailed).not.toHaveBeenCalled();
     });
 
-    it('should handle already_merged result', async () => {
-      mockExecuteAction.mockResolvedValue({
-        status: 'already_merged',
-        message: 'Pull request is already merged',
-        mergeMethod: undefined,
-      });
-
-      await run();
-
-      expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'already_merged');
-      expect(mockCore.setFailed).not.toHaveBeenCalled();
-    });
-
-    it('should build correct event context from GitHub context', async () => {
-      await run();
-
-      // Verify executeAction was called with correct context structure
-      expect(mockExecuteAction).toHaveBeenCalled();
-      // Note: We don't check exact parameters to avoid unsafe any type issues
-    });
-
-    it('should handle missing pull_request in payload', async () => {
-      setMockContextPayload({
-        issue: {
-          number: 123,
-        },
-        comment: {
-          id: 456,
-          body: '/lysbot merge',
-          user: {
-            type: 'User',
-          },
-          author_association: 'MEMBER',
-        },
-      });
-
-      await run();
-
-      expect(mockExecuteAction).toHaveBeenCalled();
-    });
-
-    it('should handle missing comment in payload', async () => {
-      setMockContextPayload({
-        issue: {
-          number: 123,
-          pull_request: {},
-        },
-      });
-
-      await run();
-
-      expect(mockExecuteAction).toHaveBeenCalled();
-    });
-
-    it('should use GITHUB_SERVER_URL from environment if available', async () => {
-      process.env.GITHUB_SERVER_URL = 'https://github.enterprise.com';
-
-      await run();
-
-      expect(mockExecuteAction).toHaveBeenCalled();
-
-      // Restore original environment
-      process.env.GITHUB_SERVER_URL = 'https://github.com';
-    });
-
-    it('should handle errors from executeAction', async () => {
-      mockExecuteAction.mockRejectedValue(new Error('API error'));
+    it('should handle errors from executeMerge', async () => {
+      mockExecuteMerge.mockRejectedValue(new Error('API error'));
 
       await run();
 
       expect(mockCore.setFailed).toHaveBeenCalledWith('lysbot-merge action failed: API error');
-      expect(mockCore.setOutput).not.toHaveBeenCalled();
-      expect(mockCore.summary.write).not.toHaveBeenCalled();
+      expect(mockWriteActionOutputs).not.toHaveBeenCalled();
+      expect(mockWriteActionSummary).not.toHaveBeenCalled();
     });
 
     it('should handle non-Error exceptions', async () => {
-      mockExecuteAction.mockRejectedValue('string error');
+      mockExecuteMerge.mockRejectedValue('string error');
 
       await run();
 
       expect(mockCore.setFailed).toHaveBeenCalledWith('lysbot-merge action failed: Unknown error');
-    });
-
-    it('should build correct summary markdown', async () => {
-      await run();
-
-      expect(mockBuildSummaryMarkdown).toHaveBeenCalledWith('✅ Merged successfully', 123, 'test-actor', 'squash');
-    });
-
-    it('should handle different merge methods in summary', async () => {
-      mockExecuteAction.mockResolvedValue({
-        status: 'merged',
-        message: 'Pull request successfully merged',
-        mergeMethod: 'merge',
-      });
-
-      await run();
-
-      expect(mockBuildSummaryMarkdown).toHaveBeenCalledWith('✅ Merged successfully', 123, 'test-actor', 'merge');
-    });
-
-    it('should parse integer inputs correctly', async () => {
-      mockCore.getInput.mockImplementation((name: string) => {
-        const config: Record<string, string> = {
-          'github-token': 'test-token',
-          mergeable_retry_count: '10',
-          mergeable_retry_interval: '20',
-        };
-        return config[name] || '';
-      });
-
-      await run();
-
-      expect(mockExecuteAction).toHaveBeenCalled();
-    });
-
-    it('should handle invalid integer inputs gracefully', async () => {
-      mockCore.getInput.mockImplementation((name: string) => {
-        const config: Record<string, string> = {
-          'github-token': 'test-token',
-          mergeable_retry_count: 'not-a-number',
-          mergeable_retry_interval: 'also-not-a-number',
-        };
-        return config[name] || '';
-      });
-
-      await run();
-
-      expect(mockExecuteAction).toHaveBeenCalled();
     });
   });
 });
