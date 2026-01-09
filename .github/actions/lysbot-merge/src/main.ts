@@ -1,9 +1,9 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
-import { executeAction } from './application/action-executor.js';
-import { buildSummaryMarkdown } from './application/formatters.js';
 import type { ActionConfig, EventContext } from './domain/types.js';
+import { executeAction } from './usecases/action-executor.js';
+import { buildSummaryMarkdown } from './usecases/formatters.js';
 
 export async function run(): Promise<void> {
   try {
@@ -18,22 +18,23 @@ export async function run(): Promise<void> {
 
     const payload = github.context.payload;
 
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
     const context: EventContext = {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
       prNumber: payload.issue?.number ?? 0,
       commentId: payload.comment?.id ?? 0,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       commentBody: payload.comment?.body ?? '',
       actor: github.context.actor,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       userType: payload.comment?.user?.type ?? 'User',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       authorAssociation: payload.comment?.author_association ?? 'NONE',
       serverUrl: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
       runId: github.context.runId,
       eventName: github.context.eventName,
       isPullRequest: !!payload.issue?.pull_request,
     };
-    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 
     const octokit = github.getOctokit(token);
 

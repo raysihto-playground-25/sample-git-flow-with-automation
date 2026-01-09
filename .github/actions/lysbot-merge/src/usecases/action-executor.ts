@@ -1,16 +1,5 @@
 import * as core from '@actions/core';
 
-import { determineMergeMethod } from '../domain/merge-strategy.js';
-import type { ActionConfig, ActionResult, CheckResult, EventContext, Octokit } from '../domain/types.js';
-import {
-  getMergeableStateDescription,
-  hasValidAuthorAssociation,
-  hasValidPermission,
-  isBot,
-  isConventionalCommitTitle,
-  parseCommand,
-  validatePRState,
-} from '../domain/validators.js';
 import {
   addReaction,
   countUnresolvedThreads,
@@ -22,7 +11,18 @@ import {
   mergePullRequest,
   postComment,
   waitBeforeRetryMs,
-} from '../infrastructure/github-api.js';
+} from '../adapters/github-api.js';
+import { determineMergeMethod } from '../domain/merge-strategy.js';
+import type { ActionConfig, ActionResult, CheckResult, EventContext, Octokit } from '../domain/types.js';
+import {
+  getMergeableStateDescription,
+  hasValidAuthorAssociation,
+  hasValidPermission,
+  isBot,
+  isConventionalCommitTitle,
+  parseCommand,
+  validatePRState,
+} from '../domain/validators.js';
 
 import { buildCheckResultsMarkdown } from './formatters.js';
 

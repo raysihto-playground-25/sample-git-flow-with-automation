@@ -1,7 +1,16 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
-import { executeAction } from '../src/application/action-executor.js';
-import { buildCheckResultsMarkdown, buildSummaryMarkdown } from '../src/application/formatters.js';
+import {
+  addReaction,
+  countUnresolvedThreads,
+  dismissReview,
+  fetchPullRequestCommits,
+  fetchPullRequestData,
+  getCollaboratorPermission,
+  mergePullRequest,
+  postComment,
+  waitBeforeRetryMs,
+} from '../src/adapters/github-api.js';
 import {
   COMMAND_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
@@ -20,17 +29,8 @@ import {
   parseCommand,
   validatePRState,
 } from '../src/domain/validators.js';
-import {
-  addReaction,
-  countUnresolvedThreads,
-  dismissReview,
-  fetchPullRequestCommits,
-  fetchPullRequestData,
-  getCollaboratorPermission,
-  mergePullRequest,
-  postComment,
-  waitBeforeRetryMs,
-} from '../src/infrastructure/github-api.js';
+import { executeAction } from '../src/usecases/action-executor.js';
+import { buildCheckResultsMarkdown, buildSummaryMarkdown } from '../src/usecases/formatters.js';
 
 describe('CONVENTIONAL_COMMIT_TYPES', () => {
   it('should contain exactly 12 types', () => {

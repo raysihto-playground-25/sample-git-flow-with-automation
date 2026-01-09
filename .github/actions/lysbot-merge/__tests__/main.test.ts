@@ -59,11 +59,11 @@ const mockBuildSummaryMarkdown = vi.fn().mockReturnValue('# Summary');
 vi.mock('@actions/core', () => mockCore);
 vi.mock('@actions/github', () => mockGithub);
 
-vi.mock('../src/application/action-executor.js', () => ({
+vi.mock('../src/usecases/action-executor.js', () => ({
   executeAction: mockExecuteAction,
 }));
 
-vi.mock('../src/application/formatters.js', () => ({
+vi.mock('../src/usecases/formatters.js', () => ({
   buildSummaryMarkdown: mockBuildSummaryMarkdown,
 }));
 
