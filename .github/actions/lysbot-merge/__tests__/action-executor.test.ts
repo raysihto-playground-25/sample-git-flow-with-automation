@@ -30,7 +30,7 @@ import {
   validatePRState,
 } from '../src/domain/validators.js';
 import { executeAction } from '../src/usecases/action-executor.js';
-import { buildCheckResultsMarkdown, buildSummaryMarkdown } from '../src/usecases/formatters.js';
+import { buildCheckResultsMarkdown, buildSummaryMarkdown, getResultMessage } from '../src/usecases/formatters.js';
 
 describe('CONVENTIONAL_COMMIT_TYPES', () => {
   it('should contain exactly 12 types', () => {
@@ -2146,5 +2146,23 @@ describe('waitBeforeRetryMs', () => {
     await waitBeforeRetryMs(0);
     const elapsed = Date.now() - start;
     expect(elapsed).toBeLessThan(50);
+  });
+});
+
+describe('getResultMessage', () => {
+  it('should return correct message for merged status', () => {
+    expect(getResultMessage('merged')).toBe('✅ Merged successfully');
+  });
+
+  it('should return correct message for skipped status', () => {
+    expect(getResultMessage('skipped')).toBe('⏭️ Skipped');
+  });
+
+  it('should return correct message for failed status', () => {
+    expect(getResultMessage('failed')).toBe('❌ Failed');
+  });
+
+  it('should return correct message for already_merged status', () => {
+    expect(getResultMessage('already_merged')).toBe('ℹ️ Already merged');
   });
 });
