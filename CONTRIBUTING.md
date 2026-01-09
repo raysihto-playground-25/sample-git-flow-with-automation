@@ -127,6 +127,16 @@ When addressing individual review comments in a PR conversation, **always refere
 
 ## Code Quality Guidelines
 
+### Architecture
+
+This project follows **Clean Architecture** principles for the lysbot-merge action. For detailed architectural guidelines, see [ARCHITECTURE.md](.github/actions/lysbot-merge/ARCHITECTURE.md).
+
+**Key principles:**
+- **Separation of Concerns:** Domain logic is isolated from infrastructure
+- **Dependency Rule:** Dependencies point inward (Adapters → Usecases → Domain)
+- **Testability:** Business logic can be tested without GitHub Actions runtime
+- **Pure DI:** Dependency injection is done manually in the composition root (`main.ts`)
+
 ### Refactoring Principles
 
 When refactoring code in this repository, follow these principles to maintain code quality:
@@ -142,9 +152,9 @@ When refactoring code in this repository, follow these principles to maintain co
    - This separation maximizes maintainability and test coverage
 
 3. **Dependency Direction**
-   - Dependencies flow inward: infrastructure → orchestration → logic → types
+   - Dependencies flow inward: `Adapters -> Usecases -> Domain`
    - No circular dependencies
-   - Pure modules (validation) don't depend on I/O modules (github-api)
+   - Domain layer must NOT depend on infrastructure libraries (like `@actions/core`)
 
 4. **Testability**
    - Pure functions are in separate modules for easy unit testing

@@ -1,51 +1,44 @@
 /**
- * main.ts - Entry point for the lysbot-merge GitHub Action
+ * main-new.ts - Entry point and composition root for the lysbot-merge GitHub Action
  *
- * This file is the main entry point that runs in the GitHub Actions environment.
+ * This file is the main entry point and serves as the composition root for dependency injection.
  * It is responsible for:
  * 1. Reading inputs from the GitHub Actions environment
- * 2. Handling deprecated input parameters with warnings
- * 3. Parsing options YAML and constructing configuration
- * 4. Constructing the event context from github.context
- * 5. Calling the main action logic from action.ts
- * 6. Setting outputs and writing summaries
+ * 2. Constructing all dependencies (adapters, services, use cases)
+ * 3. Wiring dependencies using Pure DI
+ * 4. Calling the use case
+ * 5. Setting outputs and writing summaries
  *
- * TESTING APPROACH:
- * =================
- * This file contains GitHub Actions runtime integration code and has been tested
- * using vitest mocks to verify:
- * - Deprecated input handling and warning messages
- * - Options parsing with deprecated input fallbacks
- * - Integer parsing for numeric inputs
- * - Error handling and reporting
- *
- * The core business logic remains in action.ts (executeAction, buildSummaryMarkdown)
- * which has comprehensive test coverage independent of GitHub Actions runtime.
+ * This is the ONLY file where concrete adapters are instantiated.
  */
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
-import { executeAction, buildSummaryMarkdown } from './action.js';
-import type { ActionConfig, EventContext } from './types.js';
+import { MergeUseCase } from './usecases/merge/MergeUseCase.js';
+import type { MergeConfig, EventContext } from './usecases/merge/MergeUseCaseInput.js';
+import { GitHubClient } from './adapters/gateways/GitHubClient.js';
+import { ActionLogger } from './adapters/gateways/ActionLogger.js';
+import { SummaryPresenter } from './adapters/presenters/SummaryPresenter.js';
 
 /**
  * Main function that runs the action.
  *
- * This function:
- * 1. Reads inputs from GitHub Actions environment (core.getInput)
- * 2. Reads context from GitHub Actions runtime (github.context, process.env)
- * 3. Delegates all merge business logic to executeAction() in action.ts
- * 4. Writes outputs to GitHub Actions environment (core.setOutput, core.summary)
- *
- * This function is tested using vitest mocks to verify the deprecated input
- * handling, options parsing, and error handling logic.
+ * This function acts as the composition root:
+ * 1. Reads inputs from GitHub Actions environment
+ * 2. Constructs all adapters and use cases
+ * 3. Delegates business logic to the use case
+ * 4. Writes outputs to GitHub Actions environment
  */
 export async function run(): Promise<void> {
   try {
-    // Get inputs
+    // =========================================================================
+    // Step 1: Read inputs from GitHub Actions environment
+    // =========================================================================
+
     const token = core.getInput('github-token', { required: true });
-    const config: ActionConfig = {
+    
+    const config: MergeConfig = {
       releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
       developBranch: core.getInput('develop_branch') || 'develop',
       syncBranchPrefix: core.getInput('sync_branch_prefix') || 'fix/sync/',
@@ -53,20 +46,10 @@ export async function run(): Promise<void> {
       mergeableRetryInterval: parseInt(core.getInput('mergeable_retry_interval') || '10', 10),
     };
 
-    // Get event context
-    //
-    // Note:
-    //   - github.context.payload is intentionally typed as unknown, so some property accesses
-    //     cannot be made fully type-safe. In those cases, we selectively disable ESLint on specific
-    //     lines rather than adding noisy type assertions.
+    // Get event context from GitHub Actions runtime
     const payload = github.context.payload;
 
-    // Build event context
     const context: EventContext = {
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
-      // prNumber will be 0 if this is not a PR comment, but that's acceptable
-      // because executeAction() will skip early when isPullRequest is false
       prNumber: payload.issue?.number ?? 0,
       commentId: payload.comment?.id ?? 0,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -76,25 +59,48 @@ export async function run(): Promise<void> {
       userType: payload.comment?.user?.type ?? 'User',
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       authorAssociation: payload.comment?.author_association ?? 'NONE',
-      serverUrl: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
-      runId: github.context.runId,
       eventName: github.context.eventName,
       isPullRequest: !!payload.issue?.pull_request,
     };
 
-    // Create Octokit instance
+    // =========================================================================
+    // Step 2: Construct adapters (Infrastructure Layer)
+    // =========================================================================
+
     const octokit = github.getOctokit(token);
+    const gitHubClient = new GitHubClient(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      octokit as any,
+      github.context.repo.owner,
+      github.context.repo.repo,
+    );
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const logger = new ActionLogger(core as any);
 
-    // Run the main logic
-    const result = await executeAction(octokit, context, config);
+    // =========================================================================
+    // Step 3: Construct use case (Application Layer)
+    // =========================================================================
 
-    // Set outputs
+    const mergeUseCase = new MergeUseCase(gitHubClient, logger, config);
+
+    // =========================================================================
+    // Step 4: Execute the use case
+    // =========================================================================
+
+    const result = await mergeUseCase.execute(context, config);
+
+    // =========================================================================
+    // Step 5: Write outputs to GitHub Actions environment
+    // =========================================================================
+
     core.setOutput('result', result.status);
     if (result.mergeMethod) {
       core.setOutput('merge_method', result.mergeMethod);
     }
 
     // Write summary
+    const presenter = new SummaryPresenter();
     const resultEmoji = {
       merged: '✅ Merged successfully',
       skipped: '⏭️ Skipped',
@@ -102,7 +108,7 @@ export async function run(): Promise<void> {
       already_merged: 'ℹ️ Already merged',
     }[result.status];
 
-    const summaryMarkdown = buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);
+    const summaryMarkdown = presenter.buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);
     await core.summary.addRaw(summaryMarkdown).write();
 
     // Log result

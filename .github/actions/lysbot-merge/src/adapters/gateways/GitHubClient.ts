@@ -175,12 +175,15 @@ export class GitHubClient implements IGitHubClient {
   }
 
   async fetchApprovedReviews(prNumber: number): Promise<Review[]> {
-    const reviews = await this.octokit.paginate(this.octokit.rest.pulls.listReviews, {
-      owner: this.owner,
-      repo: this.repo,
-      pull_number: prNumber,
-      per_page: 100,
-    });
+    const reviews = await this.octokit.paginate(
+      this.octokit.rest.pulls.listReviews as (params: unknown) => Promise<{ data: Review[] }>,
+      {
+        owner: this.owner,
+        repo: this.repo,
+        pull_number: prNumber,
+        per_page: 100,
+      },
+    );
     return reviews.filter((review) => review.state === 'APPROVED');
   }
 
@@ -249,12 +252,15 @@ export class GitHubClient implements IGitHubClient {
   }
 
   async fetchPullRequestCommits(prNumber: number): Promise<Commit[]> {
-    const commits = await this.octokit.paginate(this.octokit.rest.pulls.listCommits, {
-      owner: this.owner,
-      repo: this.repo,
-      pull_number: prNumber,
-      per_page: 100,
-    });
+    const commits = await this.octokit.paginate(
+      this.octokit.rest.pulls.listCommits as (params: unknown) => Promise<{ data: Commit[] }>,
+      {
+        owner: this.owner,
+        repo: this.repo,
+        pull_number: prNumber,
+        per_page: 100,
+      },
+    );
     return commits;
   }
 
