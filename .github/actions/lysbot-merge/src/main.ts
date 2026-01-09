@@ -18,6 +18,7 @@ export async function run(): Promise<void> {
 
     const payload = github.context.payload;
 
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
     const context: EventContext = {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
@@ -32,6 +33,7 @@ export async function run(): Promise<void> {
       eventName: github.context.eventName,
       isPullRequest: !!payload.issue?.pull_request,
     };
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 
     const octokit = github.getOctokit(token);
 

@@ -15,6 +15,7 @@ export async function addReaction(
       content: reaction,
     });
   } catch {
+    // Ignore errors when adding reactions (e.g., already reacted)
   }
 }
 

@@ -23,6 +23,7 @@ import {
   postComment,
   waitBeforeRetryMs,
 } from '../infrastructure/github-api.js';
+
 import { buildCheckResultsMarkdown } from './formatters.js';
 
 export async function executeAction(
@@ -42,7 +43,6 @@ export async function executeAction(
     eventName,
     isPullRequest,
   } = context;
-
 
   if (eventName !== 'issue_comment') {
     return { status: 'skipped', message: 'This action only runs on issue_comment events' };
@@ -86,7 +86,6 @@ export async function executeAction(
     return { status: 'failed', message: 'Insufficient permissions' };
   }
 
-
   let prData = await fetchPullRequestData(octokit, owner, repo, prNumber);
 
   if (prData.isFork) {
@@ -104,7 +103,6 @@ export async function executeAction(
     await postComment(octokit, owner, repo, prNumber, '## Already merged\n\nThis PR has already been merged.');
     return { status: 'already_merged', message: 'PR already merged' };
   }
-
 
   const prStateChecks = validatePRState(prData);
 
@@ -193,7 +191,6 @@ export async function executeAction(
   const checksMarkdown = buildCheckResultsMarkdown(checks);
   const allPassed = checks.filter((c) => !c.optional).every((c) => c.passed);
 
-
   if (!allPassed) {
     await postComment(
       octokit,
@@ -212,7 +209,6 @@ export async function executeAction(
     prNumber,
     `## Merge checks passed\n\nAll checks passed. Proceeding to merge...\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`,
   );
-
 
   const originalHeadSha = prData.headSha;
 
