@@ -54,7 +54,7 @@ Pure business logic with no external dependencies. This layer is the heart of th
    - Command patterns: `COMMAND_REGEX`, `VALID_FLAGS`
    - Permission/association lists: `VALID_AUTHOR_ASSOCIATIONS`, `VALID_PERMISSIONS`
    - Conventional commit types and patterns: `CONVENTIONAL_COMMIT_TYPES`, `CONVENTIONAL_COMMIT_REGEX`
-   - UI elements: `TWEMOJI` icons
+   - UI elements: `CHECK_ICONS` icons
 
 2. **`merge-strategy.ts`** - Merge strategy determination
    - `determineMergeMethod()` - Determines merge vs squash based on branch patterns
