@@ -18,6 +18,10 @@ npm run lint           # Run ESLint
 npm run bundle         # Bundle with rollup
 ```
 
+## Architecture
+
+This action follows a **Lightweight Modular Monolith** architecture optimized for GitHub Actions. See [Architecture.md](./Architecture.md) for detailed policy and guidelines.
+
 ## Code Structure
 
 The codebase has been modularized for better maintainability and testability, following the **Single Responsibility Principle**. Each module focuses on a specific concern:
