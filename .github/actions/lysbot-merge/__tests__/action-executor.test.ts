@@ -1,33 +1,36 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
+import { executeAction } from '../src/application/action-executor.js';
+import { buildCheckResultsMarkdown, buildSummaryMarkdown } from '../src/application/formatters.js';
 import {
   COMMAND_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
   CONVENTIONAL_COMMIT_TYPES,
   TWEMOJI,
-  addReaction,
-  buildCheckResultsMarkdown,
-  buildSummaryMarkdown,
-  countUnresolvedThreads,
-  determineMergeMethod,
-  dismissReview,
-  executeAction,
-  fetchPullRequestCommits,
-  fetchPullRequestData,
-  getCollaboratorPermission,
+} from '../src/domain/constants.js';
+import { determineMergeMethod } from '../src/domain/merge-strategy.js';
+import type { ActionConfig, CheckResult, EventContext, Octokit, PullRequestData } from '../src/domain/types.js';
+import {
   getMergeableStateDescription,
   hasValidAuthorAssociation,
   hasValidPermission,
   isBot,
   isCommand,
   isConventionalCommitTitle,
-  mergePullRequest,
   parseCommand,
-  postComment,
   validatePRState,
+} from '../src/domain/validators.js';
+import {
+  addReaction,
+  countUnresolvedThreads,
+  dismissReview,
+  fetchPullRequestCommits,
+  fetchPullRequestData,
+  getCollaboratorPermission,
+  mergePullRequest,
+  postComment,
   waitBeforeRetryMs,
-} from '../src/tmp_untitled_3.js';
-import type { ActionConfig, EventContext, Octokit, PullRequestData, CheckResult } from '../src/tmp_untitled_3.js';
+} from '../src/infrastructure/github-api.js';
 
 describe('CONVENTIONAL_COMMIT_TYPES', () => {
   it('should contain exactly 12 types', () => {
