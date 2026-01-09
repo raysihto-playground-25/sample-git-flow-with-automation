@@ -47,6 +47,7 @@ __tests__/
 ### Module Responsibilities
 
 #### **Domain Layer** (`src/domain/`)
+
 Pure business logic with no external dependencies. This layer is the heart of the application.
 
 1. **`types.ts`** - Type definitions
@@ -69,6 +70,7 @@ Pure business logic with no external dependencies. This layer is the heart of th
    - `determineMergeMethod()` - Determines merge vs squash based on branch patterns
 
 #### **Application Layer** (`src/application/`)
+
 Orchestrates business logic and coordinates between domain and infrastructure.
 
 1. **`action-executor.ts`** - Main use case orchestration
@@ -83,6 +85,7 @@ Orchestrates business logic and coordinates between domain and infrastructure.
    - `buildSummaryMarkdown()` - Creates GitHub Actions job summary
 
 #### **Infrastructure Layer** (`src/infrastructure/`)
+
 Handles external system interactions (GitHub API).
 
 1. **`github-api.ts`** - GitHub API communication
@@ -94,7 +97,9 @@ Handles external system interactions (GitHub API).
    - Utilities: `waitBeforeRetryMs()`
 
 #### **Presentation Layer** (`src/main.ts`)
+
 GitHub Actions entry point - kept minimal for easy testing.
+
 - Reads GitHub Actions inputs
 - Constructs configuration and context
 - Delegates to application layer
@@ -131,7 +136,7 @@ When modifying lysbot-merge specifically:
 - **Keep domain logic pure**: Domain layer should have no external dependencies (no `@actions/core`, no API calls)
 - **One responsibility per file**: Each file should focus on a single aspect of functionality
 - **Minimal main.ts**: Keep presentation layer thin - only input/output, no business logic
-- **Test at the right layer**: 
+- **Test at the right layer**:
   - Test business logic at domain layer (fast, pure functions)
   - Test orchestration at application layer (with mocked infrastructure)
   - Test I/O at presentation layer (with mocked application)
@@ -140,6 +145,7 @@ When modifying lysbot-merge specifically:
 - **API calls in infrastructure**: All external system calls in `infrastructure/github-api.ts`
 
 **When adding new features**:
+
 1. Define types in `domain/types.ts`
 2. Add business logic to appropriate domain files
 3. Add orchestration to `application/action-executor.ts` if needed
