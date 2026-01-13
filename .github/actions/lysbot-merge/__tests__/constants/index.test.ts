@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import {
-  COMMAND_REGEX,
-  CONVENTIONAL_COMMIT_REGEX,
-  CONVENTIONAL_COMMIT_TYPES,
-} from '../../src/constants/index.js';
+import { COMMAND_REGEX, CONVENTIONAL_COMMIT_REGEX, CONVENTIONAL_COMMIT_TYPES } from '../../src/constants/index.js';
 
 describe('CONVENTIONAL_COMMIT_TYPES', () => {
   it('should contain exactly 12 types', () => {

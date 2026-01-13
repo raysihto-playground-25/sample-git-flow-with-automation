@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
-import { validatePRState, getMergeableStateDescription } from '../../src/validation/pr-state.js';
 import type { PullRequestData } from '../../src/types/index.js';
+import { validatePRState, getMergeableStateDescription } from '../../src/validation/pr-state.js';
 
 function createPRData(overrides: Partial<PullRequestData> = {}): PullRequestData {
   return {

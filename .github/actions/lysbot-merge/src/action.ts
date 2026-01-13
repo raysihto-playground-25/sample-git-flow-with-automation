@@ -1,20 +1,21 @@
 import * as core from '@actions/core';
-import type { ActionConfig, ActionResult, CheckResult, EventContext, Octokit } from './types/index.js';
-import { addReaction } from './github-api/reactions.js';
+
+import { buildCheckResultsMarkdown } from './formatting/markdown.js';
 import { postComment } from './github-api/comments.js';
+import { fetchPullRequestCommits } from './github-api/commits.js';
+import { mergePullRequest } from './github-api/merge.js';
 import { getCollaboratorPermission } from './github-api/permissions.js';
 import { fetchPullRequestData } from './github-api/pull-requests.js';
+import { addReaction } from './github-api/reactions.js';
 import { fetchApprovedReviews, dismissReview } from './github-api/reviews.js';
-import { fetchPullRequestCommits } from './github-api/commits.js';
 import { countUnresolvedThreads } from './github-api/threads.js';
-import { mergePullRequest } from './github-api/merge.js';
-import { parseCommand, isCommand } from './validation/command-parser.js';
-import { isBot, hasValidAuthorAssociation, hasValidPermission } from './validation/user-checks.js';
-import { validatePRState, getMergeableStateDescription } from './validation/pr-state.js';
-import { isConventionalCommitTitle } from './validation/merge-checks.js';
-import { determineMergeMethod } from './merge-logic/merge-method.js';
 import { buildCommitTitle, buildCommitMessage } from './merge-logic/commit-builder.js';
-import { buildCheckResultsMarkdown } from './formatting/markdown.js';
+import { determineMergeMethod } from './merge-logic/merge-method.js';
+import type { ActionConfig, ActionResult, CheckResult, EventContext, Octokit } from './types/index.js';
+import { parseCommand } from './validation/command-parser.js';
+import { isConventionalCommitTitle } from './validation/merge-checks.js';
+import { validatePRState, getMergeableStateDescription } from './validation/pr-state.js';
+import { isBot, hasValidAuthorAssociation, hasValidPermission } from './validation/user-checks.js';
 
 export function waitBeforeRetryMs(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

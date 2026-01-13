@@ -18,7 +18,10 @@ export async function run(): Promise<void> {
     };
 
     // Gather event context from GitHub context
-    const payload = github.context.payload;
+    const payload = github.context.payload as {
+      issue?: { number?: number; pull_request?: unknown };
+      comment?: { id?: number; body?: string; user?: { type?: string }; author_association?: string };
+    };
     const context: EventContext = {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,

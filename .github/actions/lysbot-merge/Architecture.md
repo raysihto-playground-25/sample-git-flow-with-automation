@@ -15,6 +15,7 @@ The lysbot-merge action follows a **Modular Monolith** architecture pattern, whi
 - **Future flexibility** to extract modules if needed
 
 References:
+
 - [Martin Fowler - MonolithFirst](https://martinfowler.com/bliki/MonolithFirst.html)
 - [Modular Monolith Architecture](https://zenn.dev/loglass/articles/d2ea268a7522be)
 
@@ -29,6 +30,7 @@ The architecture enforces **Pure DI (Dependency Injection)** at the top level:
 - **No direct I/O in business logic** - all I/O handled at the boundary
 
 This design ensures:
+
 - **Testability**: Business logic can be tested without mocking `@actions/core`
 - **Clarity**: Dependencies are explicit and visible
 - **Flexibility**: Easy to swap implementations for testing
@@ -70,13 +72,15 @@ src/
 ### Module Responsibilities
 
 #### **1. `index.ts`** (Entry Point - Unchanged)
+
 - **Responsibility**: Minimal entry point that loads and executes `main.js`
 - **Dependencies**: None
 - **Imports**: `./main.js`
 - **Status**: Must remain unchanged per requirements
 
 #### **2. `main.ts`** (Composition Root)
-- **Responsibility**: 
+
+- **Responsibility**:
   - Read configuration from GitHub Actions inputs (`core.getInput`)
   - Construct dependencies (Octokit, config objects, context)
   - Invoke the main action function
@@ -92,6 +96,7 @@ src/
   - Write action summary
 
 #### **3. `types/index.ts`** (Type Definitions)
+
 - **Exports**: All shared TypeScript interfaces and types
   - `ActionConfig`: Configuration from inputs
   - `EventContext`: GitHub event context data
@@ -104,6 +109,7 @@ src/
   - `Review`, `ReviewsArray`: Review types
 
 #### **4. `constants/index.ts`** (Constants and Rules)
+
 - **Exports**: Constants, regex patterns, validation rules
   - `COMMAND_REGEX`: Command matching pattern
   - `VALID_FLAGS`: Allowed command flags
@@ -114,27 +120,29 @@ src/
   - `CONVENTIONAL_COMMIT_REGEX`: Conventional commit validation pattern
 
 #### **5. `github-api/` modules** (GitHub API Interactions)
+
 All functions in this module accept `Octokit` as the first parameter and return promises.
 
-- **`reactions.ts`**: 
+- **`reactions.ts`**:
   - `addReaction()`: Add reaction to comment
-- **`comments.ts`**: 
+- **`comments.ts`**:
   - `postComment()`: Post comment to PR
-- **`pull-requests.ts`**: 
+- **`pull-requests.ts`**:
   - `fetchPullRequestData()`: Get and normalize PR data
-- **`reviews.ts`**: 
+- **`reviews.ts`**:
   - `fetchApprovedReviews()`: Get approved reviews
   - `dismissReview()`: Dismiss a review
-- **`commits.ts`**: 
+- **`commits.ts`**:
   - `fetchPullRequestCommits()`: Get PR commits
-- **`threads.ts`**: 
+- **`threads.ts`**:
   - `countUnresolvedThreads()`: Count unresolved review threads via GraphQL
-- **`permissions.ts`**: 
+- **`permissions.ts`**:
   - `getCollaboratorPermission()`: Get user's permission level
-- **`merge.ts`**: 
+- **`merge.ts`**:
   - `mergePullRequest()`: Execute merge operation
 
 #### **6. `validation/` modules** (Validation and Checking)
+
 Pure functions that validate data and return check results.
 
 - **`command-parser.ts`**:
@@ -151,6 +159,7 @@ Pure functions that validate data and return check results.
   - `isConventionalCommitTitle()`: Validate conventional commit format
 
 #### **7. `merge-logic/` modules** (Merge Decision Logic)
+
 Pure functions that determine merge strategy and construct commit messages.
 
 - **`merge-method.ts`**:
@@ -160,6 +169,7 @@ Pure functions that determine merge strategy and construct commit messages.
   - `buildCommitMessage()`: Build commit message with co-authors
 
 #### **8. `formatting/` modules** (Markdown Formatting)
+
 Pure functions for formatting markdown output.
 
 - **`markdown.ts`**:
@@ -167,8 +177,9 @@ Pure functions for formatting markdown output.
   - `buildSummaryMarkdown()`: Build action summary markdown table
 
 #### **9. `action.ts`** (Main Action Orchestration)
+
 - **Exports**: `executeAction()` function
-- **Responsibility**: 
+- **Responsibility**:
   - Orchestrate the entire merge workflow
   - Call validation functions
   - Call GitHub API functions
@@ -184,7 +195,9 @@ Pure functions for formatting markdown output.
 ## Design Principles
 
 ### 1. Separation of Concerns
+
 Each module has a single, well-defined responsibility:
+
 - **API modules**: GitHub API interactions only
 - **Validation modules**: Data validation and checking only
 - **Merge logic modules**: Merge decision logic only
@@ -192,6 +205,7 @@ Each module has a single, well-defined responsibility:
 - **Main/Action**: Orchestration only
 
 ### 2. Dependency Flow
+
 ```
 index.ts → main.ts → action.ts → [validation, github-api, merge-logic, formatting]
                                        ↓
@@ -203,16 +217,19 @@ index.ts → main.ts → action.ts → [validation, github-api, merge-logic, for
 - Low-level modules are pure functions with explicit dependencies
 
 ### 3. Pure Functions Where Possible
+
 - Most functions are pure: given the same inputs, they return the same outputs
 - Side effects (API calls, I/O) are isolated in specific modules
 - Exceptions: `github-api/` modules (API calls), `main.ts` (I/O)
 
 ### 4. Explicit Dependencies
+
 - No hidden dependencies or global state
 - All dependencies passed as function parameters
 - Makes testing and reasoning easier
 
 ### 5. Type Safety
+
 - All modules export and use TypeScript types
 - Strict type checking enabled
 - Interfaces over implementations
@@ -220,7 +237,9 @@ index.ts → main.ts → action.ts → [validation, github-api, merge-logic, for
 ## Testing Strategy
 
 ### Test Structure
+
 Tests mirror the `src/` directory structure:
+
 ```
 __tests__/
 ├── main.test.ts                    # Tests for main.ts
@@ -251,6 +270,7 @@ __tests__/
 ```
 
 ### Testing Approach
+
 - **Unit tests**: Test individual functions with mocked dependencies
 - **Integration tests**: Test `action.ts` with mocked GitHub API
 - **Main tests**: Test `main.ts` orchestration with mocked action function
@@ -258,6 +278,7 @@ __tests__/
 ## Migration from Old Structure
 
 ### Old Structure
+
 ```
 src/
 ├── index.ts
@@ -266,6 +287,7 @@ src/
 ```
 
 ### Changes Made
+
 1. **Split `tmp_untitled_3.ts`** into logical modules
 2. **Refactored `main.ts`** to be thin (only DI and I/O)
 3. **Preserved `index.ts`** unchanged (requirement)
@@ -277,6 +299,7 @@ src/
 When modifying lysbot-merge, follow these principles:
 
 ### Adding New Features
+
 1. Identify which module the feature belongs to:
    - GitHub API interaction? → `github-api/`
    - Validation logic? → `validation/`
@@ -288,18 +311,21 @@ When modifying lysbot-merge, follow these principles:
 5. Update `action.ts` to orchestrate new feature
 
 ### Modifying Existing Features
+
 1. Locate the appropriate module
 2. Modify the pure function
 3. Update tests in corresponding test file
 4. Ensure `main.ts` remains thin (no logic added)
 
 ### Adding New Dependencies
+
 1. Add to appropriate module
 2. Pass as parameter from `main.ts`
 3. Update type definitions in `types/index.ts`
 4. Mock in tests
 
 ### Rules to Follow
+
 - **Never add business logic to `main.ts`** - only DI and I/O
 - **Never add I/O to business logic modules** - receive data as parameters
 - **Always use explicit dependencies** - no hidden globals
