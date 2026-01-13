@@ -1,11 +1,13 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
-import { executeAction, buildSummaryMarkdown } from './tmp_untitled_3.js';
-import type { ActionConfig, EventContext } from './tmp_untitled_3.js';
+import { executeAction } from './action.js';
+import { buildSummaryMarkdown } from './formatting/markdown.js';
+import type { ActionConfig, EventContext } from './types/index.js';
 
 export async function run(): Promise<void> {
   try {
+    // Gather configuration from GitHub Actions inputs
     const token = core.getInput('github-token', { required: true });
     const config: ActionConfig = {
       releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
@@ -15,8 +17,8 @@ export async function run(): Promise<void> {
       mergeableRetryInterval: parseInt(core.getInput('mergeable_retry_interval') || '10', 10),
     };
 
+    // Gather event context from GitHub context
     const payload = github.context.payload;
-
     const context: EventContext = {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
@@ -32,15 +34,19 @@ export async function run(): Promise<void> {
       isPullRequest: !!payload.issue?.pull_request,
     };
 
+    // Construct Octokit client
     const octokit = github.getOctokit(token);
 
+    // Execute the main action logic
     const result = await executeAction(octokit, context, config);
 
+    // Set action outputs
     core.setOutput('result', result.status);
     if (result.mergeMethod) {
       core.setOutput('merge_method', result.mergeMethod);
     }
 
+    // Build and write summary
     const resultEmoji = {
       merged: '✅ Merged successfully',
       skipped: '⏭️ Skipped',
@@ -51,6 +57,7 @@ export async function run(): Promise<void> {
     const summaryMarkdown = buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);
     await core.summary.addRaw(summaryMarkdown).write();
 
+    // Log results
     core.info(`lysbot-merge result: ${result.status} - ${result.message}`);
 
     if (result.status === 'failed') {

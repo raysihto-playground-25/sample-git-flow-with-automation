@@ -18,31 +18,21 @@ npm run lint           # Run ESLint
 npm run bundle         # Bundle with rollup
 ```
 
-## Code Structure
+## Architecture and Code Structure
 
-The codebase has been modularized for better maintainability and testability, following the **Single Responsibility Principle**. Each module focuses on a specific concern:
+For detailed information about the architectural design, module structure, and design principles, please refer to **[Architecture.md](./Architecture.md)**.
 
-### Current File Structure
+### Quick Reference
 
-```
-src/
-└── ([TBD])    # TBD
-```
-
-**Module Responsibilities:**
-
-1. **`xxx.ts`** (TBD)
-   - TBD
+- **Architecture Pattern**: Modular Monolith with Pure DI
+- **Entry Point**: `src/index.ts` (loads `main.ts`)
+- **Composition Root**: `src/main.ts` (DI + orchestration only)
+- **Module Structure**: See [Architecture.md](./Architecture.md#module-structure)
+- **Design Principles**: See [Architecture.md](./Architecture.md#design-principles)
 
 ### Code Quality and Naming
 
 For general refactoring principles, naming conventions, and module organization guidelines, see the **[Code Quality Guidelines](../../../CONTRIBUTING.md#code-quality-guidelines)** section in CONTRIBUTING.md.
-
-### Maintaining the lysbot-merge Structure
-
-When modifying lysbot-merge specifically:
-
-- TBD
 
 ## Input Handling
 
