@@ -1,33 +1,40 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
+// Constants
 import {
   COMMAND_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
   CONVENTIONAL_COMMIT_TYPES,
   TWEMOJI,
-  addReaction,
-  buildCheckResultsMarkdown,
-  buildSummaryMarkdown,
-  countUnresolvedThreads,
-  determineMergeMethod,
-  dismissReview,
-  executeAction,
-  fetchPullRequestCommits,
-  fetchPullRequestData,
-  getCollaboratorPermission,
-  getMergeableStateDescription,
-  hasValidAuthorAssociation,
-  hasValidPermission,
-  isBot,
-  isCommand,
-  isConventionalCommitTitle,
-  mergePullRequest,
-  parseCommand,
-  postComment,
-  validatePRState,
-  waitBeforeRetryMs,
-} from '../src/tmp_untitled_3.js';
-import type { ActionConfig, EventContext, Octokit, PullRequestData, CheckResult } from '../src/tmp_untitled_3.js';
+} from '../src/constants/index.js';
+
+// Types
+import type { ActionConfig, EventContext, Octokit, PullRequestData, CheckResult } from '../src/types/index.js';
+
+// GitHub API
+import { addReaction } from '../src/github-api/reactions.js';
+import { postComment } from '../src/github-api/comments.js';
+import { getCollaboratorPermission } from '../src/github-api/permissions.js';
+import { fetchPullRequestData } from '../src/github-api/pull-requests.js';
+import { dismissReview } from '../src/github-api/reviews.js';
+import { fetchPullRequestCommits } from '../src/github-api/commits.js';
+import { countUnresolvedThreads } from '../src/github-api/threads.js';
+import { mergePullRequest } from '../src/github-api/merge.js';
+
+// Validation
+import { isCommand, parseCommand } from '../src/validation/command-parser.js';
+import { isBot, hasValidAuthorAssociation, hasValidPermission } from '../src/validation/user-checks.js';
+import { validatePRState, getMergeableStateDescription } from '../src/validation/pr-state.js';
+import { isConventionalCommitTitle } from '../src/validation/merge-checks.js';
+
+// Merge Logic
+import { determineMergeMethod } from '../src/merge-logic/merge-method.js';
+
+// Formatting
+import { buildCheckResultsMarkdown, buildSummaryMarkdown } from '../src/formatting/markdown.js';
+
+// Action
+import { executeAction, waitBeforeRetryMs } from '../src/action.js';
 
 describe('CONVENTIONAL_COMMIT_TYPES', () => {
   it('should contain exactly 12 types', () => {
