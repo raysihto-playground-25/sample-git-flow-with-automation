@@ -342,10 +342,6 @@ export function parseCommand(commentBody: string): MergeOptions | null {
   };
 }
 
-export function isCommand(commentBody: string): boolean {
-  return parseCommand(commentBody) !== null;
-}
-
 export function isBot(userType: string): boolean {
   return userType === 'Bot';
 }
