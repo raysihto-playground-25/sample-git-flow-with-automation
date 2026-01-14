@@ -159,21 +159,32 @@ export class MergeAction {
     // Perform the merge
     const approvalOverridden =
       mergeOptions.overrideApprovalRequirement && checks.some((c) => c.name.includes('approval') && !c.passed);
-    const { commitTitle, commitMessage } = this.buildCommitMessage(
-      mergeMethodResult.method,
-      prNumber,
-      prData,
-      actor,
-      approvalOverridden,
-    );
 
-    const commits =
-      mergeMethodResult.method === 'squash' ? await this.repository.fetchPullRequestCommits(owner, repo, prNumber) : [];
-    const finalMessage =
-      mergeMethodResult.method === 'squash'
-        ? this.commitService.buildSquashCommitMessage(prNumber, prData.title, commits, actor, approvalOverridden)
-            .commitMessage
-        : commitMessage;
+    let commitTitle: string;
+    let commitMessage: string;
+
+    if (mergeMethodResult.method === 'merge') {
+      const result = this.commitService.buildMergeCommitMessage(
+        prNumber,
+        prData.title,
+        prData.headRef,
+        actor,
+        approvalOverridden,
+      );
+      commitTitle = result.commitTitle;
+      commitMessage = result.commitMessage;
+    } else {
+      const commits = await this.repository.fetchPullRequestCommits(owner, repo, prNumber);
+      const result = this.commitService.buildSquashCommitMessage(
+        prNumber,
+        prData.title,
+        commits,
+        actor,
+        approvalOverridden,
+      );
+      commitTitle = result.commitTitle;
+      commitMessage = result.commitMessage;
+    }
 
     const mergeResult = await this.repository.mergePullRequest(
       owner,
@@ -182,7 +193,7 @@ export class MergeAction {
       mergeMethodResult.method,
       originalHeadSha,
       commitTitle,
-      finalMessage,
+      commitMessage,
     );
 
     if (!mergeResult.success) {
@@ -348,26 +359,5 @@ export class MergeAction {
     }
 
     return { prData: currentPrData };
-  }
-
-  private buildCommitMessage(
-    method: 'squash' | 'merge',
-    prNumber: number,
-    prData: PullRequestData,
-    actor: string,
-    approvalOverridden: boolean,
-  ): { commitTitle: string; commitMessage: string } {
-    if (method === 'merge') {
-      return this.commitService.buildMergeCommitMessage(
-        prNumber,
-        prData.title,
-        prData.headRef,
-        actor,
-        approvalOverridden,
-      );
-    } else {
-      // For squash, we'll return a placeholder here and fetch commits later
-      return { commitTitle: `${prData.title} (#${prNumber})`, commitMessage: '' };
-    }
   }
 }
