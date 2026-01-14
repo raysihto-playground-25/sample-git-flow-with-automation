@@ -3,8 +3,8 @@ import * as github from '@actions/github';
 
 import type { ActionConfig, EventContext, Octokit } from './common/types.js';
 import { buildSummaryMarkdown } from './common/utils.js';
-import { MergeAction } from './modules/merge/merge.action.js';
 import { OctokitGitHubRepository } from './modules/merge/infra/github.infra.js';
+import { MergeAction } from './modules/merge/merge.action.js';
 
 /**
  * Main entry point for the action logic.

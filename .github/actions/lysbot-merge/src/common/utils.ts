@@ -1,4 +1,3 @@
-import type { ActionConfig, CheckResult, MergeMethodResult, MergeOptions, PullRequestData } from './types.js';
 import {
   COMMAND_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
@@ -7,6 +6,7 @@ import {
   VALID_FLAGS,
   VALID_PERMISSIONS,
 } from './constants.js';
+import type { ActionConfig, CheckResult, MergeMethodResult, MergeOptions, PullRequestData } from './types.js';
 
 export function parseCommand(commentBody: string): MergeOptions | null {
   const match = COMMAND_REGEX.exec(commentBody);

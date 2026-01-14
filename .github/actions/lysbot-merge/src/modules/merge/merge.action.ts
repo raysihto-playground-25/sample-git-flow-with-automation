@@ -20,6 +20,7 @@ import {
   validatePRState,
   waitBeforeRetryMs,
 } from '../../common/utils.js';
+
 import type { GitHubRepository } from './merge.repository.js';
 import { MergeCommitService } from './merge.service.js';
 
@@ -105,12 +106,7 @@ export class MergeAction {
 
     // Already merged check
     if (prData.merged) {
-      await this.repository.postComment(
-        owner,
-        repo,
-        prNumber,
-        '## Already merged\n\nThis PR has already been merged.',
-      );
+      await this.repository.postComment(owner, repo, prNumber, '## Already merged\n\nThis PR has already been merged.');
       return { status: 'already_merged', message: 'PR already merged' };
     }
 
@@ -161,7 +157,8 @@ export class MergeAction {
     prData = mergeabilityResult.prData;
 
     // Perform the merge
-    const approvalOverridden = mergeOptions.overrideApprovalRequirement && checks.some((c) => c.name.includes('approval') && !c.passed);
+    const approvalOverridden =
+      mergeOptions.overrideApprovalRequirement && checks.some((c) => c.name.includes('approval') && !c.passed);
     const { commitTitle, commitMessage } = this.buildCommitMessage(
       mergeMethodResult.method,
       prNumber,
@@ -171,9 +168,7 @@ export class MergeAction {
     );
 
     const commits =
-      mergeMethodResult.method === 'squash'
-        ? await this.repository.fetchPullRequestCommits(owner, repo, prNumber)
-        : [];
+      mergeMethodResult.method === 'squash' ? await this.repository.fetchPullRequestCommits(owner, repo, prNumber) : [];
     const finalMessage =
       mergeMethodResult.method === 'squash'
         ? this.commitService.buildSquashCommitMessage(prNumber, prData.title, commits, actor, approvalOverridden)
@@ -278,7 +273,8 @@ export class MergeAction {
     if (approvalCheckPassed) {
       approvalDetails = undefined;
     } else if (approvalOverridden) {
-      approvalDetails = 'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
+      approvalDetails =
+        'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
     } else {
       approvalDetails = 'no valid approvals found';
     }
@@ -362,7 +358,13 @@ export class MergeAction {
     approvalOverridden: boolean,
   ): { commitTitle: string; commitMessage: string } {
     if (method === 'merge') {
-      return this.commitService.buildMergeCommitMessage(prNumber, prData.title, prData.headRef, actor, approvalOverridden);
+      return this.commitService.buildMergeCommitMessage(
+        prNumber,
+        prData.title,
+        prData.headRef,
+        actor,
+        approvalOverridden,
+      );
     } else {
       // For squash, we'll return a placeholder here and fetch commits later
       return { commitTitle: `${prData.title} (#${prNumber})`, commitMessage: '' };

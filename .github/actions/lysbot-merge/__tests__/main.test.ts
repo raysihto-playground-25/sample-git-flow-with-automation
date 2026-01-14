@@ -79,7 +79,9 @@ describe('main()', () => {
       return '';
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const mockOctokit = mockGithub.getOctokit('test-token');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (mockOctokit.rest.pulls.get as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: {
         state: 'open',
@@ -102,29 +104,31 @@ describe('main()', () => {
       },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (mockOctokit.rest.repos.getCollaboratorPermissionLevel as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { permission: 'write' },
     });
 
     let paginateCalls = 0;
-    (mockOctokit.paginate as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-misused-promises
+    (mockOctokit.paginate as ReturnType<typeof vi.fn>).mockImplementation(() => {
       paginateCalls++;
       if (paginateCalls === 1) {
         // First call: fetchApprovedReviews
-        return [
+        return Promise.resolve([
           {
             id: 1,
             state: 'APPROVED',
             commit_id: 'abc1234567890',
             user: { login: 'reviewer' },
           },
-        ];
-      } else {
-        // Second call: fetchPullRequestCommits
-        return [{ commit: { message: 'feat: add feature' } }];
+        ]);
       }
+      // Second call: fetchPullRequestCommits
+      return Promise.resolve([{ commit: { message: 'feat: add feature' } }]);
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (mockOctokit.graphql as ReturnType<typeof vi.fn>).mockResolvedValue({
       repository: {
         pullRequest: {
@@ -136,6 +140,7 @@ describe('main()', () => {
       },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (mockOctokit.rest.pulls.merge as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' },
     });
