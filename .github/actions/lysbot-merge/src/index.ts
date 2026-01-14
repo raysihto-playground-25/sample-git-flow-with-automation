@@ -1,1 +1,1 @@
-await (await import('./main.js')).run();
+await (await import('./tmp_something.js')).run();
