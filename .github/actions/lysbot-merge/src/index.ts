@@ -1,1 +1,4 @@
-await (await import('./tmp_something.js')).run();
+import { main } from './main.js';
+
+// Entry point: Environment setup and calling main
+await main();
