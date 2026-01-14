@@ -73,11 +73,9 @@ export interface ActionDependencies {
  * With require(), these modules are only loaded when this function is called,
  * which only happens in production (tests inject mock dependencies directly).
  */
-export function createProductionDependencies(): ActionDependencies {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const coreModule = require('@actions/core') as typeof core;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const githubModule = require('@actions/github') as typeof github;
+export async function createProductionDependencies(): Promise<ActionDependencies> {
+  const coreModule = (await import('@actions/core')) as typeof core;
+  const githubModule = (await import('@actions/github')) as typeof github;
 
   return {
     core: {

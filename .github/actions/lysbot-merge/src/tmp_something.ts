@@ -3,54 +3,62 @@ import { createProductionDependencies } from './dependencies.js';
 import { buildSummaryMarkdown, executeAction } from './tmp_anything.js';
 import type { ActionConfig, EventContext } from './tmp_anything.js';
 
-export async function run(deps: ActionDependencies = createProductionDependencies()): Promise<void> {
+export async function run(deps?: ActionDependencies): Promise<void> {
+  const resolvedDeps = deps ?? (await createProductionDependencies());
+
   try {
-    const token = deps.core.getInput('github-token', { required: true });
+    const token = resolvedDeps.core.getInput('github-token', { required: true });
     const config: ActionConfig = {
-      releaseBranchPrefix: deps.core.getInput('release_branch_prefix') || 'release/',
-      developBranch: deps.core.getInput('develop_branch') || 'develop',
-      syncBranchPrefix: deps.core.getInput('sync_branch_prefix') || 'fix/sync/',
-      mergeableRetryCount: parseInt(deps.core.getInput('mergeable_retry_count') || '5', 10),
-      mergeableRetryInterval: parseInt(deps.core.getInput('mergeable_retry_interval') || '10', 10),
+      releaseBranchPrefix: resolvedDeps.core.getInput('release_branch_prefix') || 'release/',
+      developBranch: resolvedDeps.core.getInput('develop_branch') || 'develop',
+      syncBranchPrefix: resolvedDeps.core.getInput('sync_branch_prefix') || 'fix/sync/',
+      mergeableRetryCount: parseInt(resolvedDeps.core.getInput('mergeable_retry_count') || '5', 10),
+      mergeableRetryInterval: parseInt(resolvedDeps.core.getInput('mergeable_retry_interval') || '10', 10),
     };
-    const payload = deps.github.context.payload;
+
+    const payload = resolvedDeps.github.context.payload;
     const context: EventContext = {
-      owner: deps.github.context.repo.owner,
-      repo: deps.github.context.repo.repo,
+      owner: resolvedDeps.github.context.repo.owner,
+      repo: resolvedDeps.github.context.repo.repo,
       prNumber: payload.issue?.number ?? 0,
       commentId: payload.comment?.id ?? 0,
 
       commentBody: payload.comment?.body ?? '',
-      actor: deps.github.context.actor,
+      actor: resolvedDeps.github.context.actor,
 
       userType: payload.comment?.user?.type ?? 'User',
 
       authorAssociation: payload.comment?.author_association ?? 'NONE',
       serverUrl: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
-      runId: deps.github.context.runId,
-      eventName: deps.github.context.eventName,
+      runId: resolvedDeps.github.context.runId,
+      eventName: resolvedDeps.github.context.eventName,
       isPullRequest: !!payload.issue?.pull_request,
     };
-    const octokit = deps.github.getOctokit(token);
+
+    const octokit = resolvedDeps.github.getOctokit(token);
     const result = await executeAction(octokit, context, config);
-    deps.core.setOutput('result', result.status);
+
+    resolvedDeps.core.setOutput('result', result.status);
     if (result.mergeMethod) {
-      deps.core.setOutput('merge_method', result.mergeMethod);
+      resolvedDeps.core.setOutput('merge_method', result.mergeMethod);
     }
+
     const resultEmoji = {
       merged: '✅ Merged successfully',
       skipped: '⏭️ Skipped',
       failed: '❌ Failed',
       already_merged: 'ℹ️ Already merged',
     }[result.status];
+
     const summaryMarkdown = buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);
-    await deps.core.summary.addRaw(summaryMarkdown).write();
-    deps.core.info(`lysbot-merge result: ${result.status} - ${result.message}`);
+    await resolvedDeps.core.summary.addRaw(summaryMarkdown).write();
+
+    resolvedDeps.core.info(`lysbot-merge result: ${result.status} - ${result.message}`);
     if (result.status === 'failed') {
-      deps.core.info('Merge checks or operation failed. See PR comments for details.');
+      resolvedDeps.core.info('Merge checks or operation failed. See PR comments for details.');
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    deps.core.setFailed(`lysbot-merge action failed: ${message}`);
+    resolvedDeps.core.setFailed(`lysbot-merge action failed: ${message}`);
   }
 }
