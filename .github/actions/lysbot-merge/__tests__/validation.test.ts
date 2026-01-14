@@ -1,9 +1,3 @@
-/**
- * validation.test.ts - Unit tests for validation functions
- *
- * Tests cover all pure validation and business logic functions.
- */
-
 import { describe, it, expect } from 'vitest';
 
 import { TWEMOJI } from '../src/constants.js';
@@ -22,13 +16,6 @@ import {
   waitBeforeRetryMs,
 } from '../src/validation.js';
 
-// =============================================================================
-// Test Utilities
-// =============================================================================
-
-/**
- * Creates a default config for tests.
- */
 function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
   return {
     releaseBranchPrefix: 'release/',
@@ -40,9 +27,6 @@ function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
   };
 }
 
-/**
- * Creates a default PR data object for tests.
- */
 function createPRData(overrides: Partial<PullRequestData> = {}): PullRequestData {
   return {
     state: 'open',
@@ -60,10 +44,6 @@ function createPRData(overrides: Partial<PullRequestData> = {}): PullRequestData
     ...overrides,
   };
 }
-
-// =============================================================================
-// Tests for isCommand
-// =============================================================================
 
 describe('isCommand', () => {
   describe('valid command patterns', () => {
@@ -120,10 +100,6 @@ describe('isCommand', () => {
   });
 });
 
-// =============================================================================
-// Tests for parseCommand
-// =============================================================================
-
 describe('parseCommand', () => {
   describe('valid commands', () => {
     it('parses basic command without flags', () => {
@@ -161,10 +137,6 @@ describe('parseCommand', () => {
   });
 });
 
-// =============================================================================
-// Tests for isBot
-// =============================================================================
-
 describe('isBot', () => {
   it('should return true for Bot user type', () => {
     expect(isBot('Bot')).toBe(true);
@@ -180,10 +152,6 @@ describe('isBot', () => {
     expect(isBot('')).toBe(false);
   });
 });
-
-// =============================================================================
-// Tests for hasValidAuthorAssociation
-// =============================================================================
 
 describe('hasValidAuthorAssociation', () => {
   describe('allowed associations (can use /lysbot merge)', () => {
@@ -219,10 +187,6 @@ describe('hasValidAuthorAssociation', () => {
   });
 });
 
-// =============================================================================
-// Tests for hasValidPermission
-// =============================================================================
-
 describe('hasValidPermission', () => {
   describe('allowed permissions (can use /lysbot merge)', () => {
     it('allows admin permission', () => {
@@ -248,10 +212,6 @@ describe('hasValidPermission', () => {
     });
   });
 });
-
-// =============================================================================
-// Tests for determineMergeMethod
-// =============================================================================
 
 describe('determineMergeMethod', () => {
   const config = createConfig();
@@ -301,10 +261,6 @@ describe('determineMergeMethod', () => {
     });
   });
 });
-
-// =============================================================================
-// Tests for validatePRState
-// =============================================================================
 
 describe('validatePRState', () => {
   describe('valid PR state', () => {
@@ -382,10 +338,6 @@ describe('validatePRState', () => {
   });
 });
 
-// =============================================================================
-// Tests for getMergeableStateDescription
-// =============================================================================
-
 describe('getMergeableStateDescription', () => {
   it('should return correct description for dirty state', () => {
     expect(getMergeableStateDescription('dirty')).toBe('has unresolved conflicts');
@@ -419,10 +371,6 @@ describe('getMergeableStateDescription', () => {
     expect(getMergeableStateDescription('foo')).toContain('mergeable_state: foo');
   });
 });
-
-// =============================================================================
-// Tests for buildCheckResultsMarkdown
-// =============================================================================
 
 describe('buildCheckResultsMarkdown', () => {
   it('should include check icon for passed checks', () => {
@@ -483,18 +431,11 @@ describe('buildCheckResultsMarkdown', () => {
     const markdown = buildCheckResultsMarkdown(checks);
 
     expect(markdown.split('\n')).toHaveLength(4);
-    // Required passing - check mark
     expect(markdown).toContain(TWEMOJI.CHECK);
-    // Required failing - cross
     expect(markdown).toContain(TWEMOJI.CROSS);
-    // Optional failing - warning
     expect(markdown).toContain(TWEMOJI.WARNING);
   });
 });
-
-// =============================================================================
-// Tests for isConventionalCommitTitle
-// =============================================================================
 
 describe('isConventionalCommitTitle', () => {
   describe('valid Conventional Commits titles', () => {
@@ -594,16 +535,11 @@ describe('isConventionalCommitTitle', () => {
   });
 });
 
-// =============================================================================
-// Tests for waitBeforeRetryMs function
-// =============================================================================
-
 describe('waitBeforeRetryMs', () => {
   it('should resolve after specified milliseconds', async () => {
     const start = Date.now();
     await waitBeforeRetryMs(50);
     const elapsed = Date.now() - start;
-    // Allow some tolerance for timing
     expect(elapsed).toBeGreaterThanOrEqual(40);
     expect(elapsed).toBeLessThan(200);
   });

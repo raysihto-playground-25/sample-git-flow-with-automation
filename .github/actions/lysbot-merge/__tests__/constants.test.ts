@@ -1,16 +1,6 @@
-/**
- * constants.test.ts - Unit tests for constants
- *
- * Tests validate the constants and regex patterns used throughout the action.
- */
-
 import { describe, it, expect } from 'vitest';
 
 import { CONVENTIONAL_COMMIT_TYPES, CONVENTIONAL_COMMIT_REGEX, COMMAND_REGEX } from '../src/constants.js';
-
-// =============================================================================
-// Tests for CONVENTIONAL_COMMIT_TYPES constant
-// =============================================================================
 
 describe('CONVENTIONAL_COMMIT_TYPES', () => {
   it('should contain exactly 12 types', () => {
@@ -37,10 +27,6 @@ describe('CONVENTIONAL_COMMIT_TYPES', () => {
     }
   });
 });
-
-// =============================================================================
-// Tests for CONVENTIONAL_COMMIT_REGEX constant
-// =============================================================================
 
 describe('CONVENTIONAL_COMMIT_REGEX', () => {
   it('should be a valid regex pattern', () => {
@@ -70,26 +56,20 @@ describe('CONVENTIONAL_COMMIT_REGEX', () => {
   });
 });
 
-// =============================================================================
-// Tests for COMMAND_REGEX constant
-// =============================================================================
-
 describe('COMMAND_REGEX', () => {
   it('should be a valid regex pattern', () => {
     expect(COMMAND_REGEX).toBeInstanceOf(RegExp);
   });
 
   it('should match basic command patterns and capture optional flags', () => {
-    // Note: COMMAND_REGEX now captures optional flags after "merge"
-    // The actual flag validation is done in isCommand
     const testCases = [
       { input: '/lysbot merge', expected: true },
       { input: '  /lysbot merge', expected: true },
       { input: '/lysbot merge  ', expected: true },
       { input: '/lysbot  merge', expected: true },
       { input: '/lysbot merge --override-approval-requirement', expected: true },
-      { input: '/lysbot merge now', expected: true }, // Regex matches, but isCommand rejects
-      { input: 'run /lysbot merge', expected: false }, // Text before command
+      { input: '/lysbot merge now', expected: true },
+      { input: 'run /lysbot merge', expected: false },
     ];
 
     for (const { input, expected } of testCases) {
