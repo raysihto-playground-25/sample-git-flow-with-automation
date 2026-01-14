@@ -1,21 +1,8 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
-import { executeAction, buildSummaryMarkdown } from '../src/action.js';
-import { TWEMOJI } from '../src/constants.js';
-import { CONVENTIONAL_COMMIT_TYPES, CONVENTIONAL_COMMIT_REGEX, COMMAND_REGEX } from '../src/constants.js';
 import {
-  addReaction,
-  postComment,
-  getCollaboratorPermission,
-  fetchPullRequestData,
-  dismissReview,
-  countUnresolvedThreads,
-  mergePullRequest,
-  fetchPullRequestCommits,
-} from '../src/github-api.js';
-import type { ActionConfig, EventContext, Octokit } from '../src/types.js';
-import type { PullRequestData, CheckResult } from '../src/types.js';
-import {
+  executeAction,
+  buildSummaryMarkdown,
   isCommand,
   parseCommand,
   isBot,
@@ -27,7 +14,20 @@ import {
   buildCheckResultsMarkdown,
   isConventionalCommitTitle,
   waitBeforeRetryMs,
-} from '../src/validation.js';
+  addReaction,
+  postComment,
+  getCollaboratorPermission,
+  fetchPullRequestData,
+  dismissReview,
+  countUnresolvedThreads,
+  mergePullRequest,
+  fetchPullRequestCommits,
+  TWEMOJI,
+  CONVENTIONAL_COMMIT_TYPES,
+  CONVENTIONAL_COMMIT_REGEX,
+  COMMAND_REGEX,
+} from '../src/tmp_anything.js';
+import type { ActionConfig, EventContext, Octokit, PullRequestData, CheckResult } from '../src/tmp_anything.js';
 
 function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
   return {

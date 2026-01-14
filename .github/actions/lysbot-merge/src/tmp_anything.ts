@@ -1,29 +1,457 @@
 import * as core from '@actions/core';
+import type { GitHub } from '@actions/github/lib/utils.js';
+import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 
-import {
-  addReaction,
-  postComment,
-  getCollaboratorPermission,
-  fetchPullRequestData,
-  fetchApprovedReviews,
-  dismissReview,
-  countUnresolvedThreads,
-  mergePullRequest,
-  fetchPullRequestCommits,
-} from './github-api.js';
-import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types.js';
-import {
-  isBot,
-  parseCommand,
-  hasValidAuthorAssociation,
-  hasValidPermission,
-  validatePRState,
-  determineMergeMethod,
-  getMergeableStateDescription,
-  buildCheckResultsMarkdown,
-  isConventionalCommitTitle,
-  waitBeforeRetryMs,
-} from './validation.js';
+export interface ActionConfig {
+  releaseBranchPrefix: string;
+  developBranch: string;
+  syncBranchPrefix: string;
+  mergeableRetryCount: number;
+  mergeableRetryInterval: number;
+}
+
+export interface EventContext {
+  owner: string;
+  repo: string;
+  prNumber: number;
+  commentId: number;
+  commentBody: string;
+  actor: string;
+  userType: string;
+  authorAssociation: string;
+  serverUrl: string;
+  runId: number;
+  eventName: string;
+  isPullRequest: boolean;
+}
+
+export interface PullRequestData {
+  state: string;
+  locked: boolean;
+  draft: boolean;
+  merged: boolean;
+  mergeable: boolean | null;
+  mergeableState: string;
+  headSha: string;
+  headRef: string;
+  baseRef: string;
+  author: string;
+  isFork: boolean;
+  title: string;
+}
+
+export interface CheckResult {
+  name: string;
+  passed: boolean;
+  details?: string;
+  optional?: boolean;
+}
+
+export interface MergeMethodResult {
+  method: 'squash' | 'merge';
+  reason: string;
+}
+
+export interface ActionResult {
+  status: 'merged' | 'skipped' | 'failed' | 'already_merged';
+  message: string;
+  mergeMethod?: 'squash' | 'merge';
+}
+
+export interface MergeOptions {
+  overrideApprovalRequirement: boolean;
+}
+
+export type Octokit = InstanceType<typeof GitHub>;
+
+export type Review = RestEndpointMethodTypes['pulls']['listReviews']['response']['data'][number];
+export type ReviewsArray = RestEndpointMethodTypes['pulls']['listReviews']['response']['data'];
+
+export const COMMAND_REGEX = /^\s*\/lysbot\s+merge(?:\s+(.*))?\s*$/;
+
+export const VALID_FLAGS = ['--override-approval-requirement'] as const;
+
+export const TWEMOJI = {
+  CHECK:
+    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg" width="20" height="20" alt="OK">',
+  CROSS:
+    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg" width="20" height="20" alt="NG">',
+  WARNING:
+    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/26a0.svg" width="20" height="20" alt="Warning">',
+} as const;
+
+export const VALID_AUTHOR_ASSOCIATIONS = ['OWNER', 'MEMBER', 'COLLABORATOR'] as const;
+
+export const VALID_PERMISSIONS = ['admin', 'maintain', 'write'] as const;
+
+export const CONVENTIONAL_COMMIT_TYPES = [
+  'build',
+  'chore',
+  'ci',
+  'docs',
+  'feat',
+  'fix',
+  'perf',
+  'refactor',
+  'revert',
+  'style',
+  'test',
+  'ux',
+] as const;
+
+export const CONVENTIONAL_COMMIT_REGEX = new RegExp(
+  `^(${CONVENTIONAL_COMMIT_TYPES.join('|')})(\\([^)!]+\\))?!?:\\s*\\S.*$`,
+);
+
+export async function addReaction(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  commentId: number,
+  reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes',
+): Promise<void> {
+  try {
+    await octokit.rest.reactions.createForIssueComment({
+      owner,
+      repo,
+      comment_id: commentId,
+      content: reaction,
+    });
+  } catch {
+    /* */
+  }
+}
+
+export async function postComment(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+  body: string,
+): Promise<void> {
+  await octokit.rest.issues.createComment({
+    owner,
+    repo,
+    issue_number: prNumber,
+    body,
+  });
+}
+
+export async function getCollaboratorPermission(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  username: string,
+): Promise<string> {
+  try {
+    const response = await octokit.rest.repos.getCollaboratorPermissionLevel({
+      owner,
+      repo,
+      username,
+    });
+    return response.data.permission;
+  } catch {
+    return 'none';
+  }
+}
+
+export async function fetchPullRequestData(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<PullRequestData> {
+  const response = await octokit.rest.pulls.get({
+    owner,
+    repo,
+    pull_number: prNumber,
+  });
+  const pr = response.data;
+
+  const isFork = pr.head.repo?.fork === true || pr.head.repo?.owner?.id !== pr.base.repo?.owner?.id;
+
+  return {
+    state: pr.state,
+    locked: pr.locked,
+    draft: pr.draft ?? false,
+    merged: pr.merged,
+    mergeable: pr.mergeable,
+    mergeableState: pr.mergeable_state,
+    headSha: pr.head.sha,
+    headRef: pr.head.ref,
+    baseRef: pr.base.ref,
+    author: pr.user?.login ?? 'unknown',
+    isFork,
+    title: pr.title,
+  };
+}
+
+export async function fetchApprovedReviews(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<ReviewsArray> {
+  const reviews = await octokit.paginate(octokit.rest.pulls.listReviews, {
+    owner,
+    repo,
+    pull_number: prNumber,
+    per_page: 100,
+  });
+  return reviews.filter((review) => review.state === 'APPROVED');
+}
+
+export async function dismissReview(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+  reviewId: number,
+  message: string,
+): Promise<boolean> {
+  try {
+    await octokit.rest.pulls.dismissReview({
+      owner,
+      repo,
+      pull_number: prNumber,
+      review_id: reviewId,
+      message,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function countUnresolvedThreads(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<number> {
+  let unresolvedCount = 0;
+  let hasNextPage = true;
+  let cursor: string | null = null;
+
+  const query = `
+    query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
+      repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+          reviewThreads(first: 100, after: $cursor) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            nodes {
+              isResolved
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  while (hasNextPage) {
+    const response: {
+      repository: {
+        pullRequest: {
+          reviewThreads: {
+            pageInfo: { hasNextPage: boolean; endCursor: string | null };
+            nodes: Array<{ isResolved: boolean }>;
+          };
+        };
+      };
+    } = await octokit.graphql(query, {
+      owner,
+      name: repo,
+      number: prNumber,
+      cursor,
+    });
+
+    const threads = response.repository.pullRequest.reviewThreads;
+    unresolvedCount += threads.nodes.filter((n) => !n.isResolved).length;
+    hasNextPage = threads.pageInfo.hasNextPage;
+    cursor = threads.pageInfo.endCursor;
+  }
+
+  return unresolvedCount;
+}
+
+export async function fetchPullRequestCommits(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+): Promise<Array<{ commit: { message: string; author?: { name?: string; email?: string } | null } }>> {
+  const commits = await octokit.paginate(octokit.rest.pulls.listCommits, {
+    owner,
+    repo,
+    pull_number: prNumber,
+    per_page: 100,
+  });
+  return commits;
+}
+
+export async function mergePullRequest(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+  method: 'squash' | 'merge',
+  sha: string,
+  commitTitle: string,
+  commitMessage: string,
+): Promise<{ success: boolean; error?: string; mergeCommitSha?: string }> {
+  try {
+    const response = await octokit.rest.pulls.merge({
+      owner,
+      repo,
+      pull_number: prNumber,
+      merge_method: method,
+      sha,
+      commit_title: commitTitle,
+      commit_message: commitMessage,
+    });
+    return { success: true, mergeCommitSha: response.data.sha };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: message };
+  }
+}
+
+export function isConventionalCommitTitle(title: string): boolean {
+  return CONVENTIONAL_COMMIT_REGEX.test(title);
+}
+
+export function parseCommand(commentBody: string): MergeOptions | null {
+  const match = COMMAND_REGEX.exec(commentBody);
+  if (!match) {
+    return null;
+  }
+
+  const flagsStr = match[1]?.trim() ?? '';
+  const flags = flagsStr ? flagsStr.split(/\s+/) : [];
+
+  const validFlagsArray: readonly string[] = VALID_FLAGS;
+  if (!flags.every((flag) => validFlagsArray.includes(flag))) {
+    return null;
+  }
+
+  return {
+    overrideApprovalRequirement: flags.includes('--override-approval-requirement'),
+  };
+}
+
+export function isCommand(commentBody: string): boolean {
+  return parseCommand(commentBody) !== null;
+}
+
+export function isBot(userType: string): boolean {
+  return userType === 'Bot';
+}
+
+export function hasValidAuthorAssociation(association: string): boolean {
+  return (VALID_AUTHOR_ASSOCIATIONS as readonly string[]).includes(association);
+}
+
+export function hasValidPermission(permission: string): boolean {
+  return (VALID_PERMISSIONS as readonly string[]).includes(permission);
+}
+
+export function determineMergeMethod(headRef: string, baseRef: string, config: ActionConfig): MergeMethodResult {
+  if (headRef.startsWith(config.releaseBranchPrefix)) {
+    return {
+      method: 'merge',
+      reason: `Head branch \`${headRef}\` is a release branch (merge commit to preserve release history)`,
+    };
+  }
+  if (headRef.startsWith(config.syncBranchPrefix)) {
+    return {
+      method: 'merge',
+      reason: `Head branch \`${headRef}\` is a sync branch (merge commit to preserve back-merge history)`,
+    };
+  }
+
+  if (baseRef.startsWith(config.releaseBranchPrefix)) {
+    return {
+      method: 'squash',
+      reason: `Base branch \`${baseRef}\` is a release branch`,
+    };
+  }
+  if (baseRef === config.developBranch) {
+    return {
+      method: 'squash',
+      reason: `Base branch is \`${baseRef}\``,
+    };
+  }
+
+  return {
+    method: 'merge',
+    reason: `Default merge commit for \`${headRef}\` into \`${baseRef}\``,
+  };
+}
+
+export function validatePRState(prData: PullRequestData): CheckResult[] {
+  const checks: CheckResult[] = [];
+
+  const isOpen = prData.state === 'open';
+  const isUnlocked = !prData.locked;
+  const isNotDraft = !prData.draft;
+  const allPassed = isOpen && isUnlocked && isNotDraft;
+
+  const failureReasons: string[] = [];
+  if (!isOpen) {
+    failureReasons.push('currently closed');
+  }
+  if (!isUnlocked) {
+    failureReasons.push('currently locked');
+  }
+  if (!isNotDraft) {
+    failureReasons.push('currently a draft');
+  }
+
+  checks.push({
+    name: 'PR is ready for review',
+    passed: allPassed,
+    ...(failureReasons.length > 0 && { details: failureReasons.join(', ') }),
+  });
+
+  return checks;
+}
+
+export function getMergeableStateDescription(state: string): string {
+  const descriptions: Record<string, string> = {
+    dirty: 'has unresolved conflicts',
+    blocked: 'blocked by status checks or branch protection',
+    unstable: 'has failing status checks',
+    behind: 'branch is behind base branch',
+    unknown: 'mergeability not yet computed, please retry',
+    has_hooks: 'blocked by external hooks',
+    clean: 'ready to merge',
+  };
+  return descriptions[state] ?? `mergeable_state: ${state}`;
+}
+
+export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
+  return checks
+    .map((check) => {
+      let icon: string;
+      if (check.passed) {
+        icon = TWEMOJI.CHECK;
+      } else if (check.optional) {
+        icon = TWEMOJI.WARNING;
+      } else {
+        icon = TWEMOJI.CROSS;
+      }
+      const detail = check.details ? ` (${check.details})` : '';
+      return `- ${icon} ${check.name}${detail}`;
+    })
+    .join('\n');
+}
+
+export function waitBeforeRetryMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export async function executeAction(
   octokit: Octokit,

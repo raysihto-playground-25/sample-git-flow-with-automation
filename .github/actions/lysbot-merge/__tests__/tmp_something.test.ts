@@ -59,19 +59,19 @@ const mockBuildSummaryMarkdown = vi.fn().mockReturnValue('# Summary');
 vi.mock('@actions/core', () => mockCore);
 vi.mock('@actions/github', () => mockGithub);
 
-vi.mock('../src/action.js', () => ({
+vi.mock('../src/tmp_anything.js', () => ({
   executeAction: mockExecuteAction,
   buildSummaryMarkdown: mockBuildSummaryMarkdown,
 }));
 
-const { run } = await import('../src/main.js');
+const { run } = await import('../src/tmp_something.js');
 
 function setMockContextPayload(payload: Record<string, unknown>): void {
   const ctx = mockGithub.context as { payload: unknown };
   ctx.payload = payload;
 }
 
-describe('main.ts', () => {
+describe('tmp_something.ts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 

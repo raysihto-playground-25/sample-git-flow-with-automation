@@ -33,6 +33,8 @@ const config = tseslint.config(
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
+      'import_/no-deprecated': 'error',
+      'import_/no-duplicates': 'error',
       'import_/no-unresolved': 'error',
       'import_/order': ['error', { alphabetize: { order: 'asc' }, 'newlines-between': 'always' }],
       'no-console': 'error',
