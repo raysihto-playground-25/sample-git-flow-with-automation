@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
-import { executeAction, buildSummaryMarkdown } from './tmp_anything.js';
+import { buildSummaryMarkdown, executeAction } from './tmp_anything.js';
 import type { ActionConfig, EventContext } from './tmp_anything.js';
 
 export async function run(): Promise<void> {

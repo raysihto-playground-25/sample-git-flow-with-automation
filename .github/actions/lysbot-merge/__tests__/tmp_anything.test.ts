@@ -1,33 +1,32 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
+import type { ActionConfig, CheckResult, EventContext, Octokit, PullRequestData } from '../src/tmp_anything.js';
 import {
-  executeAction,
+  COMMAND_REGEX,
+  CONVENTIONAL_COMMIT_REGEX,
+  CONVENTIONAL_COMMIT_TYPES,
+  TWEMOJI,
+  addReaction,
+  buildCheckResultsMarkdown,
   buildSummaryMarkdown,
-  isCommand,
-  parseCommand,
-  isBot,
+  countUnresolvedThreads,
+  determineMergeMethod,
+  dismissReview,
+  executeAction,
+  fetchPullRequestCommits,
+  fetchPullRequestData,
+  getCollaboratorPermission,
+  getMergeableStateDescription,
   hasValidAuthorAssociation,
   hasValidPermission,
-  determineMergeMethod,
-  validatePRState,
-  getMergeableStateDescription,
-  buildCheckResultsMarkdown,
+  isBot,
   isConventionalCommitTitle,
-  waitBeforeRetryMs,
-  addReaction,
-  postComment,
-  getCollaboratorPermission,
-  fetchPullRequestData,
-  dismissReview,
-  countUnresolvedThreads,
   mergePullRequest,
-  fetchPullRequestCommits,
-  TWEMOJI,
-  CONVENTIONAL_COMMIT_TYPES,
-  CONVENTIONAL_COMMIT_REGEX,
-  COMMAND_REGEX,
+  parseCommand,
+  postComment,
+  validatePRState,
+  waitBeforeRetryMs,
 } from '../src/tmp_anything.js';
-import type { ActionConfig, EventContext, Octokit, PullRequestData, CheckResult } from '../src/tmp_anything.js';
 
 function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
   return {
@@ -1630,61 +1629,6 @@ function createPRData(overrides: Partial<PullRequestData> = {}): PullRequestData
     ...overrides,
   };
 }
-
-describe('isCommand', () => {
-  describe('valid command patterns', () => {
-    it('matches exact "/lysbot merge" command', () => {
-      expect(isCommand('/lysbot merge')).toBe(true);
-    });
-
-    it('matches with leading whitespace (space/tab/newline)', () => {
-      expect(isCommand('  /lysbot merge')).toBe(true);
-      expect(isCommand('\t/lysbot merge')).toBe(true);
-      expect(isCommand('\n/lysbot merge')).toBe(true);
-    });
-
-    it('matches with trailing whitespace (space/tab/newline)', () => {
-      expect(isCommand('/lysbot merge  ')).toBe(true);
-      expect(isCommand('/lysbot merge\t')).toBe(true);
-      expect(isCommand('/lysbot merge\n')).toBe(true);
-    });
-
-    it('matches with multiple spaces between words', () => {
-      expect(isCommand('/lysbot  merge')).toBe(true);
-      expect(isCommand('/lysbot   merge')).toBe(true);
-      expect(isCommand('/lysbot\tmerge')).toBe(true);
-    });
-
-    it('matches with --override-approval-requirement flag', () => {
-      expect(isCommand('/lysbot merge --override-approval-requirement')).toBe(true);
-      expect(isCommand('  /lysbot merge --override-approval-requirement  ')).toBe(true);
-    });
-  });
-
-  describe('invalid command patterns', () => {
-    it('rejects command with unknown arguments or flags', () => {
-      expect(isCommand('/lysbot merge now')).toBe(false);
-      expect(isCommand('/lysbot merge --force')).toBe(false);
-      expect(isCommand('/lysbot merge --unknown-flag')).toBe(false);
-    });
-
-    it('rejects partial or malformed commands', () => {
-      expect(isCommand('/lysbot')).toBe(false);
-      expect(isCommand('/lysbot merg')).toBe(false);
-      expect(isCommand('lysbot merge')).toBe(false);
-    });
-
-    it('rejects when command is embedded in other text', () => {
-      expect(isCommand('Please /lysbot merge this')).toBe(false);
-      expect(isCommand('Run /lysbot merge')).toBe(false);
-    });
-
-    it('is case-sensitive (uppercase rejected)', () => {
-      expect(isCommand('/LYSBOT MERGE')).toBe(false);
-      expect(isCommand('/Lysbot Merge')).toBe(false);
-    });
-  });
-});
 
 describe('parseCommand', () => {
   describe('valid commands', () => {
