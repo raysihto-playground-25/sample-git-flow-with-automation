@@ -1,8 +1,10 @@
 import eslint from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
+/* @ts-expect-error --- eslint-plugin-promise has no typings here */
+import eslintComments from 'eslint-plugin-eslint-comments';
 import import_ from 'eslint-plugin-import';
 import prettier from 'eslint-plugin-prettier';
-// @ts-expect-error --- eslint-plugin-promise has no typings here
+/* @ts-expect-error --- eslint-plugin-promise has no typings here */
 import promise from 'eslint-plugin-promise';
 import tseslint from 'typescript-eslint';
 
@@ -16,11 +18,14 @@ const config = tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+
     plugins: {
       // keep this list sorted alphabetically
+      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
+      eslintComments,
       import_,
       prettier,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
       promise,
       stylistic,
     },
@@ -33,6 +38,10 @@ const config = tseslint.config(
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
+      'eslintComments/disable-enable-pair': ['error', { allowWholeFile: true }],
+      'eslintComments/no-unlimited-disable': 'error',
+      'eslintComments/no-unused-disable': 'error',
+      'eslintComments/no-use': ['error', { allow: ['eslint-disable-next-line'] }],
       'import_/no-deprecated': 'error',
       'import_/no-duplicates': 'error',
       'import_/no-unresolved': 'error',

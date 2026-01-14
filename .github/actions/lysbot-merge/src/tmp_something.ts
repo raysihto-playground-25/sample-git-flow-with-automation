@@ -20,12 +20,12 @@ export async function run(): Promise<void> {
       repo: github.context.repo.repo,
       prNumber: payload.issue?.number ?? 0,
       commentId: payload.comment?.id ?? 0,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
       commentBody: payload.comment?.body ?? '',
       actor: github.context.actor,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
       userType: payload.comment?.user?.type ?? 'User',
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
       authorAssociation: payload.comment?.author_association ?? 'NONE',
       serverUrl: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
       runId: github.context.runId,
