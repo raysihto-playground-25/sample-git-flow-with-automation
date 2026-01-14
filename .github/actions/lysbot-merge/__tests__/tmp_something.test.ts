@@ -164,6 +164,7 @@ describe('tmp_something.ts', () => {
     });
 
     it('should handle skipped merge result', async () => {
+      // mergeMethod is intentionally omitted - skipped actions don't have a merge method
       const mockResult: ActionResult = {
         status: 'skipped',
         message: 'Merge was skipped',
@@ -179,6 +180,7 @@ describe('tmp_something.ts', () => {
     });
 
     it('should handle failed merge result', async () => {
+      // mergeMethod is intentionally omitted - failed merges don't have a merge method
       const mockResult: ActionResult = {
         status: 'failed',
         message: 'Merge checks failed',
@@ -194,6 +196,7 @@ describe('tmp_something.ts', () => {
     });
 
     it('should handle already_merged result', async () => {
+      // mergeMethod is intentionally omitted - already merged PRs don't need a new merge method
       const mockResult: ActionResult = {
         status: 'already_merged',
         message: 'Pull request is already merged',

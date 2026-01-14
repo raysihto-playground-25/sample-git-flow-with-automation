@@ -66,11 +66,14 @@ export interface ActionDependencies {
 
 /**
  * Create production dependencies using real @actions/core and @actions/github
+ *
+ * Note: We use dynamic require() instead of ES6 imports to avoid importing
+ * these modules at test time. ES6 imports are evaluated at module load time,
+ * which would cause the actual modules to be loaded even in test contexts.
+ * With require(), these modules are only loaded when this function is called,
+ * which only happens in production (tests inject mock dependencies directly).
  */
 export function createProductionDependencies(): ActionDependencies {
-  // Import actual modules - these imports are only evaluated in production
-  // In tests, we inject mock dependencies directly
-  // Dynamic require is acceptable here for conditional loading in production vs test
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const coreModule = require('@actions/core') as typeof core;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
