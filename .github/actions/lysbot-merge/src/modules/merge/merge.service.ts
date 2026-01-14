@@ -6,6 +6,17 @@ import type { CommitInfo } from '../../common/types.js';
  */
 export class MergeCommitService {
   /**
+   * Builds the base additional messages for commit message.
+   */
+  private buildAdditionalMessages(actor: string, approvalOverridden: boolean): string {
+    let message = `Merged-by: lysbot-merge (on behalf of @${actor})`;
+    if (approvalOverridden) {
+      message += `\n\n⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement`;
+    }
+    return message;
+  }
+
+  /**
    * Builds commit title and message for a merge commit.
    */
   buildMergeCommitMessage(
@@ -16,10 +27,7 @@ export class MergeCommitService {
     approvalOverridden: boolean,
   ): { commitTitle: string; commitMessage: string } {
     const commitTitle = `Merge pull request #${prNumber} from ${headRef}`;
-    let additionalMessages = `Merged-by: lysbot-merge (on behalf of @${actor})`;
-    if (approvalOverridden) {
-      additionalMessages += `\n\n⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement`;
-    }
+    const additionalMessages = this.buildAdditionalMessages(actor, approvalOverridden);
     const commitMessage = `${prTitle}\n\n${additionalMessages}`;
     return { commitTitle, commitMessage };
   }
@@ -65,10 +73,7 @@ export class MergeCommitService {
       bodyParts.push(coAuthors.join('\n'));
     }
 
-    let additionalMessages = `Merged-by: lysbot-merge (on behalf of @${actor})`;
-    if (approvalOverridden) {
-      additionalMessages += `\n\n⚠️ EXCEPTIONAL MERGE: Approval requirement overridden via --override-approval-requirement`;
-    }
+    const additionalMessages = this.buildAdditionalMessages(actor, approvalOverridden);
     bodyParts.push(additionalMessages);
 
     const commitMessage = bodyParts.join('\n\n');
