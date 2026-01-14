@@ -171,7 +171,7 @@ The codebase follows these naming conventions:
 
 4. **Files and Modules**
    - `kebab-case` for file names
-   - Examples: `options-parser.ts`, `github-api.ts`, `action.test.ts`
+   - Examples: `aaa-bbb.ts`, `xxx-yyy.ts`, `zzz.test.ts`
 
 ### Module Organization Guidelines
 
