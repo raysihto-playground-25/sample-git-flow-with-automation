@@ -1,9 +1,3 @@
-/**
- * github-api.test.ts - Unit tests for GitHub API functions
- *
- * Tests cover GitHub API interaction functions with mocked responses.
- */
-
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
 import {
@@ -18,13 +12,6 @@ import {
 } from '../src/github-api.js';
 import type { Octokit } from '../src/types.js';
 
-// =============================================================================
-// Test Utilities
-// =============================================================================
-
-/**
- * Creates a mock Octokit instance for tests.
- */
 function createMockOctokit(): Octokit {
   return {
     rest: {
@@ -82,10 +69,6 @@ function createMockOctokit(): Octokit {
   } as unknown as Octokit;
 }
 
-// =============================================================================
-// Tests for GitHub API Functions (with mocks)
-// =============================================================================
-
 describe('addReaction', () => {
   it('should call createForIssueComment with correct parameters', async () => {
     const octokit = createMockOctokit();
@@ -107,7 +90,6 @@ describe('addReaction', () => {
       >
     ).mockRejectedValue(new Error('Already exists'));
 
-    // Should not throw
     await expect(addReaction(octokit, 'owner', 'repo', 123, 'eyes')).resolves.toBeUndefined();
   });
 });

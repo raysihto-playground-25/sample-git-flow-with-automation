@@ -1,24 +1,9 @@
-/**
- * action.test.ts - Tests for action.ts module
- *
- * Tests cover all functions exported from action.ts:
- * - executeAction: Main orchestration logic for merge operations
- * - buildSummaryMarkdown: Pure function for building markdown summaries
- */
-
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
 import { executeAction, buildSummaryMarkdown } from '../src/action.js';
 import { TWEMOJI } from '../src/constants.js';
 import type { ActionConfig, EventContext, Octokit } from '../src/types.js';
 
-// =============================================================================
-// Test Utilities
-// =============================================================================
-
-/**
- * Creates a default config for tests.
- */
 function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
   return {
     releaseBranchPrefix: 'release/',
@@ -30,9 +15,6 @@ function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
   };
 }
 
-/**
- * Creates a mock Octokit instance for tests.
- */
 function createMockOctokit(): Octokit {
   return {
     rest: {
@@ -91,9 +73,6 @@ function createMockOctokit(): Octokit {
   } as unknown as Octokit;
 }
 
-/**
- * Creates a default event context for tests.
- */
 function createEventContext(overrides: Partial<EventContext> = {}): EventContext {
   return {
     owner: 'testowner',
@@ -259,12 +238,10 @@ describe('executeAction', () => {
     it('successfully merges PR with valid approval (uses squash for develop base)', async () => {
       const octokit = createMockOctokit();
 
-      // Mock approved review from another user and commits
       let paginateCalls = 0;
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
-          // First call: approved reviews
           return [
             {
               id: 1,
@@ -274,7 +251,6 @@ describe('executeAction', () => {
             },
           ];
         } else {
-          // Second call: commits for squash merge
           return [{ commit: { message: 'feat: add feature' } }];
         }
       });
@@ -285,13 +261,12 @@ describe('executeAction', () => {
       const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('merged');
-      expect(result.mergeMethod).toBe('squash'); // base is develop
+      expect(result.mergeMethod).toBe('squash');
     });
 
     it('fails when no valid approvals exist', async () => {
       const octokit = createMockOctokit();
 
-      // No approved reviews
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
 
       const context = createEventContext();
@@ -306,7 +281,6 @@ describe('executeAction', () => {
     it('Case A: fails when no approvals and no override flag, shows cross icon', async () => {
       const octokit = createMockOctokit();
 
-      // No approved reviews
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
 
       const context = createEventContext({ commentBody: '/lysbot merge' });
@@ -317,7 +291,6 @@ describe('executeAction', () => {
       expect(result.status).toBe('failed');
       expect(result.message).toContain('checks failed');
 
-      // Verify the cross icon is used for approval check
       const commentCalls = (
         octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
       ).mock.calls;
@@ -335,7 +308,6 @@ describe('executeAction', () => {
     it('Case B: succeeds with override flag when no approvals, shows warning icon', async () => {
       const octokit = createMockOctokit();
 
-      // No approved reviews
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
 
       const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
@@ -345,7 +317,6 @@ describe('executeAction', () => {
 
       expect(result.status).toBe('merged');
 
-      // Verify the warning icon is used for approval check
       const commentCalls = (
         octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
       ).mock.calls;
@@ -364,16 +335,14 @@ describe('executeAction', () => {
     it('Case C: fails with override flag when other checks fail (e.g., unresolved threads)', async () => {
       const octokit = createMockOctokit();
 
-      // No approved reviews
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
 
-      // Mock unresolved threads
       (octokit.graphql as unknown as MockedFunction<typeof octokit.graphql>).mockResolvedValue({
         repository: {
           pullRequest: {
             reviewThreads: {
               pageInfo: { hasNextPage: false, endCursor: null },
-              nodes: [{ isResolved: false }], // 1 unresolved thread
+              nodes: [{ isResolved: false }],
             },
           },
         },
@@ -387,7 +356,6 @@ describe('executeAction', () => {
       expect(result.status).toBe('failed');
       expect(result.message).toContain('checks failed');
 
-      // Verify the threads check failed with cross icon
       const commentCalls = (
         octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
       ).mock.calls;
@@ -404,7 +372,6 @@ describe('executeAction', () => {
     it('Case D: title warning behavior - non-conventional title shows warning but does not block', async () => {
       const octokit = createMockOctokit();
 
-      // Mock PR with non-conventional title
       (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
         data: {
           state: 'open',
@@ -423,11 +390,10 @@ describe('executeAction', () => {
             repo: { owner: { id: 1 } },
           },
           user: { login: 'testuser' },
-          title: 'Update README', // Non-conventional title
+          title: 'Update README',
         },
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
-      // Mock approved review from another user and commits
       let paginateCalls = 0;
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
@@ -450,10 +416,8 @@ describe('executeAction', () => {
 
       const result = await executeAction(octokit, context, config);
 
-      // Should still merge successfully (conventional commits is optional)
       expect(result.status).toBe('merged');
 
-      // Verify the warning icon was used for conventional commits check
       const commentCalls = (
         octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
       ).mock.calls;
@@ -467,7 +431,6 @@ describe('executeAction', () => {
     it('dismisses stale approvals without posting success notification', async () => {
       const octokit = createMockOctokit();
 
-      // Mock PR with current HEAD
       (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
         data: {
           state: 'open',
@@ -490,66 +453,6 @@ describe('executeAction', () => {
         },
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
-      // Mock approved review on OLD commit (stale)
-      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
-        {
-          id: 1,
-          state: 'APPROVED',
-          commit_id: 'oldcommit456', // Different from currenthead123
-          user: { login: 'reviewer' },
-        },
-      ]);
-
-      const context = createEventContext();
-      const config = createConfig();
-
-      const result = await executeAction(octokit, context, config);
-
-      // Should dismiss the stale review
-      expect(octokit.rest.pulls.dismissReview).toHaveBeenCalled();
-
-      // Should NOT post "Stale approvals dismissed" comment (redundant with GitHub's native notification)
-      // But SHOULD post "Merge checks failed" comment
-      const commentCalls = (
-        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
-      ).mock.calls;
-      const hasStaleSuccessComment = commentCalls.some((call) => {
-        const body = call[0]?.body;
-        return body?.includes('Stale approvals dismissed');
-      });
-      expect(hasStaleSuccessComment).toBe(false);
-
-      // Should fail because no valid approvals remain
-      expect(result.status).toBe('failed');
-    });
-
-    it('handles dismiss failure and posts notification', async () => {
-      const octokit = createMockOctokit();
-
-      // Mock PR with current HEAD
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
-        data: {
-          state: 'open',
-          locked: false,
-          draft: false,
-          merged: false,
-          mergeable: true,
-          mergeable_state: 'clean',
-          head: {
-            sha: 'currenthead123',
-            ref: 'feature/test',
-            repo: { fork: false, owner: { id: 1 } },
-          },
-          base: {
-            ref: 'develop',
-            repo: { owner: { id: 1 } },
-          },
-          user: { login: 'testuser' },
-          title: 'feat: test pull request',
-        },
-      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
-
-      // Mock approved review on OLD commit (stale)
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -559,7 +462,59 @@ describe('executeAction', () => {
         },
       ]);
 
-      // Mock dismissReview to fail
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(octokit.rest.pulls.dismissReview).toHaveBeenCalled();
+
+      const commentCalls = (
+        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
+      ).mock.calls;
+      const hasStaleSuccessComment = commentCalls.some((call) => {
+        const body = call[0]?.body;
+        return body?.includes('Stale approvals dismissed');
+      });
+      expect(hasStaleSuccessComment).toBe(false);
+
+      expect(result.status).toBe('failed');
+    });
+
+    it('handles dismiss failure and posts notification', async () => {
+      const octokit = createMockOctokit();
+
+      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+        data: {
+          state: 'open',
+          locked: false,
+          draft: false,
+          merged: false,
+          mergeable: true,
+          mergeable_state: 'clean',
+          head: {
+            sha: 'currenthead123',
+            ref: 'feature/test',
+            repo: { fork: false, owner: { id: 1 } },
+          },
+          base: {
+            ref: 'develop',
+            repo: { owner: { id: 1 } },
+          },
+          user: { login: 'testuser' },
+          title: 'feat: test pull request',
+        },
+      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
+
+      (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'oldcommit456',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
       (octokit.rest.pulls.dismissReview as MockedFunction<typeof octokit.rest.pulls.dismissReview>).mockRejectedValue(
         new Error('Forbidden'),
       );
@@ -569,7 +524,6 @@ describe('executeAction', () => {
 
       const result = await executeAction(octokit, context, config);
 
-      // Should post comment about dismiss failure
       expect(octokit.rest.issues.createComment).toHaveBeenCalled();
       const commentCalls = (
         octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
@@ -580,14 +534,12 @@ describe('executeAction', () => {
       });
       expect(hasFailureComment).toBe(true);
 
-      // Should fail because no valid approvals
       expect(result.status).toBe('failed');
     });
 
     it('merges PR with non-conventional title but shows warning', async () => {
       const octokit = createMockOctokit();
 
-      // Mock PR with non-conventional title
       (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
         data: {
           state: 'open',
@@ -606,11 +558,10 @@ describe('executeAction', () => {
             repo: { owner: { id: 1 } },
           },
           user: { login: 'testuser' },
-          title: 'Update README', // Non-conventional title
+          title: 'Update README',
         },
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
-      // Mock approved review from another user and commits
       let paginateCalls = 0;
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
@@ -633,11 +584,9 @@ describe('executeAction', () => {
 
       const result = await executeAction(octokit, context, config);
 
-      // Should still merge successfully (conventional commits is optional)
       expect(result.status).toBe('merged');
       expect(result.mergeMethod).toBe('squash');
 
-      // Verify the warning icon was used in the comment
       const commentCalls = (
         octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
       ).mock.calls;
@@ -651,7 +600,6 @@ describe('executeAction', () => {
     it('merges PR with conventional title and shows check mark', async () => {
       const octokit = createMockOctokit();
 
-      // Mock approved review from another user and commits
       let paginateCalls = 0;
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
@@ -674,10 +622,8 @@ describe('executeAction', () => {
 
       const result = await executeAction(octokit, context, config);
 
-      // Should merge successfully
       expect(result.status).toBe('merged');
 
-      // Verify the check icon was used for conventional commits
       const commentCalls = (
         octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
       ).mock.calls;
@@ -694,7 +640,6 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
       let callCount = 0;
 
-      // First call returns original HEAD, second call returns different HEAD
       (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockImplementation(async () => {
         callCount++;
         return {
@@ -706,7 +651,7 @@ describe('executeAction', () => {
             mergeable: true,
             mergeable_state: 'clean',
             head: {
-              sha: callCount === 1 ? 'original123' : 'newhead456', // SHA changes on second call
+              sha: callCount === 1 ? 'original123' : 'newhead456',
               ref: 'feature/test',
               repo: { fork: false, owner: { id: 1 } },
             },
@@ -720,7 +665,6 @@ describe('executeAction', () => {
         } as Awaited<ReturnType<typeof octokit.rest.pulls.get>>;
       });
 
-      // Mock valid approval
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -743,12 +687,8 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
       let callCount = 0;
 
-      // First call returns clean state to pass initial checks
-      // Subsequent calls during TOCTOU/retry phase simulate null -> true transition
       (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockImplementation(async () => {
         callCount++;
-        // First call: pass initial checks with clean state
-        // Later calls (for TOCTOU + retry): transition from null to true
         const isInitialCheck = callCount === 1;
         const isPostRetry = callCount >= 4;
         return {
@@ -774,7 +714,6 @@ describe('executeAction', () => {
         } as Awaited<ReturnType<typeof octokit.rest.pulls.get>>;
       });
 
-      // Mock valid approval and commits
       let paginateCalls = 0;
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
@@ -795,7 +734,7 @@ describe('executeAction', () => {
       const context = createEventContext();
       const config = createConfig({
         mergeableRetryCount: 5,
-        mergeableRetryInterval: 0, // No delay in tests
+        mergeableRetryInterval: 0,
       });
 
       const result = await executeAction(octokit, context, config);
@@ -807,8 +746,6 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
       let callCount = 0;
 
-      // First call returns clean to pass initial checks
-      // Subsequent calls return null to test retry failure
       (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockImplementation(async () => {
         callCount++;
         const isInitialCheck = callCount === 1;
@@ -835,7 +772,6 @@ describe('executeAction', () => {
         } as Awaited<ReturnType<typeof octokit.rest.pulls.get>>;
       });
 
-      // Mock valid approval
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -847,7 +783,7 @@ describe('executeAction', () => {
 
       const context = createEventContext();
       const config = createConfig({
-        mergeableRetryCount: 2, // Low retry count
+        mergeableRetryCount: 2,
         mergeableRetryInterval: 0,
       });
 
@@ -882,7 +818,6 @@ describe('executeAction', () => {
         },
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
-      // Mock valid approval
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -903,7 +838,6 @@ describe('executeAction', () => {
     it('handles merge API failure', async () => {
       const octokit = createMockOctokit();
 
-      // Mock valid approval and commits
       let paginateCalls = 0;
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
@@ -921,7 +855,6 @@ describe('executeAction', () => {
         }
       });
 
-      // Mock merge to fail
       (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mockRejectedValue(
         new Error('Merge conflict'),
       );
@@ -938,14 +871,13 @@ describe('executeAction', () => {
     it('includes exceptional merge marker when override flag is used and takes effect', async () => {
       const octokit = createMockOctokit();
 
-      // No approved reviews (override will take effect) but with commits for squash
       let paginateCalls = 0;
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
-          return []; // No reviews
+          return [];
         } else {
-          return [{ commit: { message: 'feat: test pull request' } }]; // Commits for squash
+          return [{ commit: { message: 'feat: test pull request' } }];
         }
       });
 
@@ -956,12 +888,10 @@ describe('executeAction', () => {
 
       expect(result.status).toBe('merged');
 
-      // Verify the merge was called with the exceptional merge marker
       const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
       expect(mergeCalls.length).toBe(1);
       const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
-      // For squash merge (base is develop)
       expect(commitTitle).toContain('feat: test pull request (#1)');
       expect(commitMessage).toContain('Merged-by: lysbot-merge');
       expect(commitMessage).toContain('EXCEPTIONAL MERGE');
@@ -971,7 +901,6 @@ describe('executeAction', () => {
     it('does NOT include exceptional merge marker when override flag is used but does not take effect', async () => {
       const octokit = createMockOctokit();
 
-      // Mock valid approval (override will NOT take effect) and commits
       let paginateCalls = 0;
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
@@ -996,7 +925,6 @@ describe('executeAction', () => {
 
       expect(result.status).toBe('merged');
 
-      // Verify the merge was called WITHOUT the exceptional merge marker
       const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
       expect(mergeCalls.length).toBe(1);
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
@@ -1007,7 +935,6 @@ describe('executeAction', () => {
     it('creates proper commit message for merge commits', async () => {
       const octokit = createMockOctokit();
 
-      // Mock for release branch (uses merge commit)
       (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
         data: {
           state: 'open',
@@ -1030,7 +957,6 @@ describe('executeAction', () => {
         },
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
-      // Mock approved review
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -1046,19 +972,16 @@ describe('executeAction', () => {
       const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('merged');
-      expect(result.mergeMethod).toBe('merge'); // release branch uses merge
+      expect(result.mergeMethod).toBe('merge');
 
-      // Verify commit message format for merge commits
       const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
       expect(mergeCalls.length).toBe(1);
 
       const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
-      // Title: Merge pull request #{PR_NUMBER} from {PR_MERGE_HEAD}
       expect(commitTitle).toBe('Merge pull request #1 from release/v1.0.0');
 
-      // Body: {PR_TITLE}\n\n{ADDITIONAL_MESSAGES}
       expect(commitMessage).toContain('Release v1.0.0');
       expect(commitMessage).toContain('Merged-by: lysbot-merge');
     });
@@ -1066,7 +989,6 @@ describe('executeAction', () => {
     it('creates proper commit message for squash commits with commit list', async () => {
       const octokit = createMockOctokit();
 
-      // Mock commits in the PR with author information
       const mockCommits = [
         {
           commit: {
@@ -1091,7 +1013,6 @@ describe('executeAction', () => {
       let paginateCalls = 0;
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
-        // First call is for approved reviews, second is for commits
         if (paginateCalls === 1) {
           return [
             {
@@ -1112,25 +1033,21 @@ describe('executeAction', () => {
       const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('merged');
-      expect(result.mergeMethod).toBe('squash'); // develop base uses squash
+      expect(result.mergeMethod).toBe('squash');
 
-      // Verify commit message format for squash commits
       const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
       expect(mergeCalls.length).toBe(1);
 
       const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
-      // Title: {PR_TITLE} (#{PR_NUMBER})
       expect(commitTitle).toBe('feat: test pull request (#1)');
 
-      // Body: * {COMMIT_TITLE_01}\n* {COMMIT_TITLE_02}\n...\n\nCo-authored-by: ...\n\n{ADDITIONAL_MESSAGES}
       expect(commitMessage).toContain('* feat: add new feature');
       expect(commitMessage).toContain('* fix: fix bug');
       expect(commitMessage).toContain('* docs: update readme');
-      expect(commitMessage).not.toContain('Detailed description of the fix'); // Only titles, not full messages
+      expect(commitMessage).not.toContain('Detailed description of the fix');
 
-      // Verify Co-authored-by entries (should be alphabetically sorted)
       expect(commitMessage).toContain('Co-authored-by: Bob Developer <bob@example.com>');
       expect(commitMessage).toContain('Co-authored-by: Alice Contributor <alice@example.com>');
 
@@ -1153,7 +1070,7 @@ describe('executeAction', () => {
             },
           ];
         } else {
-          return []; // No commits
+          return [];
         }
       });
 
@@ -1166,7 +1083,6 @@ describe('executeAction', () => {
       const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
-      // Should only contain additional messages, no commit list
       expect(commitMessage).toBe('Merged-by: lysbot-merge (on behalf of @testactor)');
       expect(commitMessage).not.toContain('*');
     });
@@ -1176,8 +1092,8 @@ describe('executeAction', () => {
 
       const mockCommits = [
         { commit: { message: 'feat: valid commit' } },
-        { commit: { message: '' } }, // Empty message
-        { commit: { message: '\n\nOnly has body' } }, // Empty first line
+        { commit: { message: '' } },
+        { commit: { message: '\n\nOnly has body' } },
         { commit: { message: 'fix: another valid commit' } },
       ];
 
@@ -1208,12 +1124,10 @@ describe('executeAction', () => {
       const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
-      // Verify only valid commit titles are included
       expect(commitMessage).toContain('* feat: valid commit');
       expect(commitMessage).toContain('* fix: another valid commit');
-      // Verify empty messages are filtered out (shouldn't have extra bullets)
       const bulletCount = (commitMessage.match(/^\*/gm) || []).length;
-      expect(bulletCount).toBe(2); // Only 2 valid commits
+      expect(bulletCount).toBe(2);
     });
 
     it('includes Co-authored-by entries in squash merge and deduplicates authors', async () => {
@@ -1241,7 +1155,6 @@ describe('executeAction', () => {
         {
           commit: {
             message: 'docs: commit without author info',
-            // No author info
           },
         },
       ];
@@ -1273,26 +1186,22 @@ describe('executeAction', () => {
       const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
-      // Verify Co-authored-by entries are present and deduplicated
       expect(commitMessage).toContain('Co-authored-by: Bob Developer <bob@example.com>');
       expect(commitMessage).toContain('Co-authored-by: Alice Contributor <alice@example.com>');
 
-      // Verify Bob appears only once (deduplicated - first occurrence only)
       const bobMatches = commitMessage.match(/Co-authored-by: Bob Developer/g) || [];
       expect(bobMatches.length).toBe(1);
 
-      // Verify Co-authored-by appears in the correct position (after commit list, before additional messages)
       const parts = commitMessage.split('\n\n');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts.at(1)).toContain('Co-authored-by:');
 
-      // Verify order is by commit order (Bob first, then Alice), not alphabetical
       const coAuthorSection = parts.at(1);
       expect(coAuthorSection).toBeDefined();
       if (coAuthorSection) {
         const bobIndex = coAuthorSection.indexOf('Co-authored-by: Bob Developer');
         const aliceIndex = coAuthorSection.indexOf('Co-authored-by: Alice Contributor');
-        expect(bobIndex).toBeLessThan(aliceIndex); // Bob should appear before Alice (commit order)
+        expect(bobIndex).toBeLessThan(aliceIndex);
       }
       expect(parts.at(-1)).toContain('Merged-by: lysbot-merge');
     });
@@ -1329,15 +1238,12 @@ describe('buildSummaryMarkdown', () => {
   it('creates valid markdown table structure', () => {
     const result = buildSummaryMarkdown('✅ Test', 1, 'user');
 
-    // Check for markdown table headers
     expect(result).toContain('| Item | Value |');
     expect(result).toContain('|------|-------|');
 
-    // Should have proper line breaks
     const lines = result.split('\n');
     expect(lines.length).toBeGreaterThan(3);
 
-    // Each data row should have pipe delimiters
     const dataLines = lines.filter((line) => line.includes('**'));
     dataLines.forEach((line) => {
       expect(line).toMatch(/^\|.*\|$/);
