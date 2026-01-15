@@ -225,8 +225,9 @@ describe('action-runner', () => {
 
       await runner.run();
 
-      expect(capturedConfig?.mergeableRetryCount).toBe(10);
-      expect(capturedConfig?.mergeableRetryInterval).toBe(20);
+      expect(capturedConfig).toBeDefined();
+      expect(capturedConfig!.mergeableRetryCount).toBe(10);
+      expect(capturedConfig!.mergeableRetryInterval).toBe(20);
     });
 
     it('should handle invalid integer inputs gracefully', async () => {
@@ -246,8 +247,9 @@ describe('action-runner', () => {
       await runner.run();
 
       // parseInt('not-a-number') returns NaN, which is what we expect
-      expect(capturedConfig?.mergeableRetryCount).toBeNaN();
-      expect(capturedConfig?.mergeableRetryInterval).toBeNaN();
+      expect(capturedConfig).toBeDefined();
+      expect(capturedConfig!.mergeableRetryCount).toBeNaN();
+      expect(capturedConfig!.mergeableRetryInterval).toBeNaN();
     });
   });
 });

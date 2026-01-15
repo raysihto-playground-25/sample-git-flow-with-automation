@@ -137,28 +137,28 @@ describe('validators', () => {
       const prData = createMockPullRequestData();
       const checks = validatePRState(prData);
       expect(checks).toHaveLength(1);
-      expect(checks[0].passed).toBe(true);
+      expect(checks[0]!.passed).toBe(true);
     });
 
     it('should fail for closed PR', () => {
       const prData = createMockPullRequestData({ state: 'closed' });
       const checks = validatePRState(prData);
-      expect(checks[0].passed).toBe(false);
-      expect(checks[0].details).toContain('closed');
+      expect(checks[0]!.passed).toBe(false);
+      expect(checks[0]!.details).toContain('closed');
     });
 
     it('should fail for locked PR', () => {
       const prData = createMockPullRequestData({ locked: true });
       const checks = validatePRState(prData);
-      expect(checks[0].passed).toBe(false);
-      expect(checks[0].details).toContain('locked');
+      expect(checks[0]!.passed).toBe(false);
+      expect(checks[0]!.details).toContain('locked');
     });
 
     it('should fail for draft PR', () => {
       const prData = createMockPullRequestData({ draft: true });
       const checks = validatePRState(prData);
-      expect(checks[0].passed).toBe(false);
-      expect(checks[0].details).toContain('draft');
+      expect(checks[0]!.passed).toBe(false);
+      expect(checks[0]!.details).toContain('draft');
     });
 
     it('should provide multiple failure reasons', () => {
@@ -168,10 +168,10 @@ describe('validators', () => {
         draft: true,
       });
       const checks = validatePRState(prData);
-      expect(checks[0].passed).toBe(false);
-      expect(checks[0].details).toContain('closed');
-      expect(checks[0].details).toContain('locked');
-      expect(checks[0].details).toContain('draft');
+      expect(checks[0]!.passed).toBe(false);
+      expect(checks[0]!.details).toContain('closed');
+      expect(checks[0]!.details).toContain('locked');
+      expect(checks[0]!.details).toContain('draft');
     });
   });
 

@@ -183,8 +183,8 @@ describe('github-client', () => {
 
       const result = await fetchApprovedReviews(octokit, 'test-owner', 'test-repo', 123);
       expect(result).toHaveLength(2);
-      expect(result[0].state).toBe('APPROVED');
-      expect(result[1].state).toBe('APPROVED');
+      expect(result[0]!.state).toBe('APPROVED');
+      expect(result[1]!.state).toBe('APPROVED');
     });
   });
 
@@ -289,8 +289,8 @@ describe('github-client', () => {
 
       const result = await fetchPullRequestCommits(octokit, 'test-owner', 'test-repo', 123);
       expect(result).toHaveLength(2);
-      expect(result[0].commit.message).toBe('Commit 1');
-      expect(result[1].commit.message).toBe('Commit 2');
+      expect(result[0]!.commit.message).toBe('Commit 1');
+      expect(result[1]!.commit.message).toBe('Commit 2');
     });
   });
 
