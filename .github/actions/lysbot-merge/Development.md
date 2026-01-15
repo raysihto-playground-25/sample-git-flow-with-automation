@@ -9,13 +9,13 @@ npm ci
 npm run all     # Run all fix, check, and package steps
 ```
 
-Individual commands for specific tasks:
+Individual commands for specific tasks for example:
 
 ```bash
-npm run test:coverage  # Run unit tests with coverage
-npm run format:write   # Run formatter (format:check for checking only)
-npm run lint           # Run ESLint
-npm run bundle         # Bundle with rollup
+npm run check:test  # Run unit tests with coverage
+npm run fix:format  # Run formatter (check:format for checking only)
+npm run check:lint  # Run ESLint
+npm run package     # Build package with rollup
 ```
 
 ## Code Structure
@@ -106,12 +106,9 @@ This action uses **Vitest** for unit testing. The test suite focuses on testing 
 ## Running Tests
 
 ```bash
-# Run all tests
-npm run test
+# Run all tests with coverage
+npm run check:test
 
 # Run tests in watch mode
 npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
 ```
