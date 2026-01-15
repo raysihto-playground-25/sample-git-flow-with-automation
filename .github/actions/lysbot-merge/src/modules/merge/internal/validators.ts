@@ -1,10 +1,4 @@
-import type {
-  ActionConfig,
-  CheckResult,
-  MergeMethodResult,
-  MergeOptions,
-  PullRequestData,
-} from './types.js';
+import type { ActionConfig, CheckResult, MergeMethodResult, MergeOptions, PullRequestData } from './types.js';
 import {
   COMMAND_REGEX,
   CONVENTIONAL_COMMIT_REGEX,

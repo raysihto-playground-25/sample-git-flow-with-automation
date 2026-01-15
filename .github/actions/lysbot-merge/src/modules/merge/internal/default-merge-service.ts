@@ -1,9 +1,10 @@
 import * as core from '@actions/core';
+
+import * as formatters from './formatters.js';
+import * as githubClient from './github-client.js';
 import type { MergeService } from './merge-service.js';
 import type { ActionConfig, ActionResult, CheckResult, EventContext, Octokit } from './types.js';
-import * as githubClient from './github-client.js';
 import * as validators from './validators.js';
-import * as formatters from './formatters.js';
 
 export class DefaultMergeService implements MergeService {
   async executeAction(octokit: Octokit, context: EventContext, config: ActionConfig): Promise<ActionResult> {
@@ -133,7 +134,8 @@ export class DefaultMergeService implements MergeService {
     if (approvalCheckPassed) {
       approvalDetails = undefined;
     } else if (approvalOverridden) {
-      approvalDetails = 'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
+      approvalDetails =
+        'approval requirement overridden by `--override-approval-requirement`; no valid approvals found';
     } else {
       approvalDetails = 'no valid approvals found';
     }
