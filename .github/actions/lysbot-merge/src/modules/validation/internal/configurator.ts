@@ -1,6 +1,6 @@
 import { DefaultCommandParser, type CommandParser } from './command-parser.js';
-import { DefaultPrValidator, type PrValidator } from './pr-validator.js';
 import { DefaultMarkdownBuilder, type MarkdownBuilder } from './markdown-builder.js';
+import { DefaultPrValidator, type PrValidator } from './pr-validator.js';
 
 export interface ValidationModuleDeps {
   commandParser: CommandParser;

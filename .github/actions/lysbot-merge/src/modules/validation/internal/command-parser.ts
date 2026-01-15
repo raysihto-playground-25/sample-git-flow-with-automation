@@ -1,7 +1,5 @@
-import type { PullRequestData } from '../../github/index.js';
-import type { ActionConfig, MergeOptions } from '../../config/index.js';
+import type { MergeOptions } from '../../config/index.js';
 import { COMMAND_REGEX, VALID_FLAGS, VALID_AUTHOR_ASSOCIATIONS, VALID_PERMISSIONS } from '../../config/index.js';
-import type { CheckResult } from './types.js';
 
 export interface CommandParser {
   parseCommand(commentBody: string): MergeOptions | null;

@@ -1,4 +1,5 @@
 import { TWEMOJI } from '../../config/index.js';
+
 import type { CheckResult } from './types.js';
 
 export interface MarkdownBuilder {

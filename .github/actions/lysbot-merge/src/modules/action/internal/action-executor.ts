@@ -1,9 +1,9 @@
 import * as core from '@actions/core';
-import type { ActionConfig, EventContext, MergeOptions } from '../../config/index.js';
-import type { GithubClient, PullRequestService, PullRequestData } from '../../github/index.js';
+
+import type { ActionConfig, EventContext } from '../../config/index.js';
+import type { GithubClient, PullRequestService } from '../../github/index.js';
+import type { WaitService, ActionResult } from '../../merge/index.js';
 import type { CommandParser, PrValidator, MarkdownBuilder, CheckResult } from '../../validation/index.js';
-import type { WaitService } from '../../merge/index.js';
-import type { ActionResult } from '../../merge/index.js';
 
 export interface ActionExecutor {
   executeAction(context: EventContext, config: ActionConfig): Promise<ActionResult>;

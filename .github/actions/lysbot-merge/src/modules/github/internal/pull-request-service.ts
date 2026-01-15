@@ -1,4 +1,4 @@
-import type { Octokit, PullRequestData, Review, ReviewsArray } from './types.js';
+import type { Octokit, PullRequestData, ReviewsArray } from './types.js';
 
 export interface PullRequestService {
   fetchPullRequestData(owner: string, repo: string, prNumber: number): Promise<PullRequestData>;

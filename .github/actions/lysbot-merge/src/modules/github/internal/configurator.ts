@@ -1,6 +1,6 @@
-import type { Octokit } from './types.js';
 import { DefaultGithubClient, type GithubClient } from './github-client.js';
 import { DefaultPullRequestService, type PullRequestService } from './pull-request-service.js';
+import type { Octokit } from './types.js';
 
 export interface GithubModuleDeps {
   githubClient: GithubClient;

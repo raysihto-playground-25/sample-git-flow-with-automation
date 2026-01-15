@@ -1,6 +1,7 @@
-import type { PullRequestData } from '../../github/index.js';
 import type { ActionConfig } from '../../config/index.js';
 import { CONVENTIONAL_COMMIT_REGEX } from '../../config/index.js';
+import type { PullRequestData } from '../../github/index.js';
+
 import type { CheckResult, MergeMethodResult } from './types.js';
 
 export interface PrValidator {

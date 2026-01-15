@@ -59,19 +59,49 @@ const mockBuildSummaryMarkdown = vi.fn().mockReturnValue('# Summary');
 vi.mock('@actions/core', () => mockCore);
 vi.mock('@actions/github', () => mockGithub);
 
-vi.mock('../src/tmp_anything.js', () => ({
-  executeAction: mockExecuteAction,
-  buildSummaryMarkdown: mockBuildSummaryMarkdown,
+// Mock the action module to return our mock executor
+vi.mock('../src/modules/action/index.js', () => ({
+  configureActionModule: vi.fn().mockReturnValue({
+    actionExecutor: {
+      executeAction: mockExecuteAction,
+    },
+  }),
 }));
 
-const { run } = await import('../src/tmp_something.js');
+// Mock the validation module to return our mock builder
+vi.mock('../src/modules/validation/index.js', () => ({
+  configureValidationModule: vi.fn().mockReturnValue({
+    commandParser: {},
+    prValidator: {},
+    markdownBuilder: {
+      buildSummaryMarkdown: mockBuildSummaryMarkdown,
+    },
+  }),
+}));
+
+// Mock other modules to return empty but valid configurations
+vi.mock('../src/modules/github/index.js', () => ({
+  configureGithubModule: vi.fn().mockReturnValue({
+    githubClient: {},
+    pullRequestService: {},
+    octokit: {},
+  }),
+}));
+
+vi.mock('../src/modules/merge/index.js', () => ({
+  configureMergeModule: vi.fn().mockReturnValue({
+    waitService: {},
+  }),
+}));
+
+const { run } = await import('../src/main.js');
 
 function setMockContextPayload(payload: Record<string, unknown>): void {
   const ctx = mockGithub.context as { payload: unknown };
   ctx.payload = payload;
 }
 
-describe('tmp_something.ts', () => {
+describe('main.ts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -135,8 +165,11 @@ describe('tmp_something.ts', () => {
       await run();
 
       expect(mockExecuteAction).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.any(Object),
+        expect.objectContaining({
+          owner: 'test-owner',
+          repo: 'test-repo',
+          prNumber: 123,
+        }),
         expect.objectContaining({
           releaseBranchPrefix: 'rel/',
           developBranch: 'main',

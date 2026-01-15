@@ -1,32 +1,159 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
-import type { ActionConfig, CheckResult, EventContext, Octokit, PullRequestData } from '../src/tmp_anything.js';
+import { configureActionModule } from '../src/modules/action/index.js';
+import type { ActionConfig, EventContext } from '../src/modules/config/index.js';
 import {
   COMMAND_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
   CONVENTIONAL_COMMIT_TYPES,
   TWEMOJI,
-  addReaction,
-  buildCheckResultsMarkdown,
-  buildSummaryMarkdown,
-  countUnresolvedThreads,
-  determineMergeMethod,
-  dismissReview,
-  executeAction,
-  fetchPullRequestCommits,
-  fetchPullRequestData,
-  getCollaboratorPermission,
-  getMergeableStateDescription,
-  hasValidAuthorAssociation,
-  hasValidPermission,
-  isBot,
-  isConventionalCommitTitle,
-  mergePullRequest,
-  parseCommand,
-  postComment,
-  validatePRState,
-  waitBeforeRetryMs,
-} from '../src/tmp_anything.js';
+} from '../src/modules/config/index.js';
+import type { Octokit, PullRequestData } from '../src/modules/github/index.js';
+import { configureGithubModule } from '../src/modules/github/index.js';
+import { configureMergeModule } from '../src/modules/merge/index.js';
+import type { CheckResult } from '../src/modules/validation/index.js';
+import { configureValidationModule } from '../src/modules/validation/index.js';
+
+// Helper functions that wrap the module APIs for backward compatibility with existing tests
+function executeAction(octokit: Octokit, context: EventContext, config: ActionConfig) {
+  const githubModule = configureGithubModule(octokit);
+  const validationModule = configureValidationModule();
+  const mergeModule = configureMergeModule();
+  const actionModule = configureActionModule(
+    githubModule.githubClient,
+    githubModule.pullRequestService,
+    validationModule.commandParser,
+    validationModule.prValidator,
+    validationModule.markdownBuilder,
+    mergeModule.waitService,
+  );
+  return actionModule.actionExecutor.executeAction(context, config);
+}
+
+function buildSummaryMarkdown(result: string, prNumber: number, actor: string, mergeMethod?: string) {
+  const validationModule = configureValidationModule();
+  return validationModule.markdownBuilder.buildSummaryMarkdown(result, prNumber, actor, mergeMethod);
+}
+
+function buildCheckResultsMarkdown(checks: CheckResult[]) {
+  const validationModule = configureValidationModule();
+  return validationModule.markdownBuilder.buildCheckResultsMarkdown(checks);
+}
+
+function parseCommand(commentBody: string) {
+  const validationModule = configureValidationModule();
+  return validationModule.commandParser.parseCommand(commentBody);
+}
+
+function isBot(userType: string) {
+  const validationModule = configureValidationModule();
+  return validationModule.commandParser.isBot(userType);
+}
+
+function hasValidAuthorAssociation(association: string) {
+  const validationModule = configureValidationModule();
+  return validationModule.commandParser.hasValidAuthorAssociation(association);
+}
+
+function hasValidPermission(permission: string) {
+  const validationModule = configureValidationModule();
+  return validationModule.commandParser.hasValidPermission(permission);
+}
+
+function determineMergeMethod(headRef: string, baseRef: string, config: ActionConfig) {
+  const validationModule = configureValidationModule();
+  return validationModule.prValidator.determineMergeMethod(headRef, baseRef, config);
+}
+
+function validatePRState(prData: PullRequestData) {
+  const validationModule = configureValidationModule();
+  return validationModule.prValidator.validatePRState(prData);
+}
+
+function getMergeableStateDescription(state: string) {
+  const validationModule = configureValidationModule();
+  return validationModule.prValidator.getMergeableStateDescription(state);
+}
+
+function isConventionalCommitTitle(title: string) {
+  const validationModule = configureValidationModule();
+  return validationModule.prValidator.isConventionalCommitTitle(title);
+}
+
+async function addReaction(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  commentId: number,
+  reaction: '+1' | '-1' | 'laugh' | 'confused' | 'heart' | 'hooray' | 'rocket' | 'eyes',
+) {
+  const githubModule = configureGithubModule(octokit);
+  return githubModule.githubClient.addReaction(owner, repo, commentId, reaction);
+}
+
+async function postComment(octokit: Octokit, owner: string, repo: string, prNumber: number, body: string) {
+  const githubModule = configureGithubModule(octokit);
+  return githubModule.githubClient.postComment(owner, repo, prNumber, body);
+}
+
+async function getCollaboratorPermission(octokit: Octokit, owner: string, repo: string, username: string) {
+  const githubModule = configureGithubModule(octokit);
+  return githubModule.githubClient.getCollaboratorPermission(owner, repo, username);
+}
+
+async function fetchPullRequestData(octokit: Octokit, owner: string, repo: string, prNumber: number) {
+  const githubModule = configureGithubModule(octokit);
+  return githubModule.pullRequestService.fetchPullRequestData(owner, repo, prNumber);
+}
+
+async function dismissReview(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+  reviewId: number,
+  message: string,
+) {
+  const githubModule = configureGithubModule(octokit);
+  return githubModule.pullRequestService.dismissReview(owner, repo, prNumber, reviewId, message);
+}
+
+async function countUnresolvedThreads(octokit: Octokit, owner: string, repo: string, prNumber: number) {
+  const githubModule = configureGithubModule(octokit);
+  return githubModule.pullRequestService.countUnresolvedThreads(owner, repo, prNumber);
+}
+
+async function fetchPullRequestCommits(octokit: Octokit, owner: string, repo: string, prNumber: number) {
+  const githubModule = configureGithubModule(octokit);
+  return githubModule.pullRequestService.fetchPullRequestCommits(owner, repo, prNumber);
+}
+
+async function mergePullRequest(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  prNumber: number,
+  method: 'squash' | 'merge',
+  sha: string,
+  commitTitle: string,
+  commitMessage: string,
+) {
+  const githubModule = configureGithubModule(octokit);
+  return githubModule.pullRequestService.mergePullRequest(
+    owner,
+    repo,
+    prNumber,
+    method,
+    sha,
+    commitTitle,
+    commitMessage,
+  );
+}
+
+async function waitBeforeRetryMs(ms: number) {
+  const mergeModule = configureMergeModule();
+  return mergeModule.waitService.waitBeforeRetryMs(ms);
+}
 
 function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
   return {

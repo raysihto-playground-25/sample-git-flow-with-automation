@@ -1,10 +1,11 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
+
+import { configureActionModule } from './modules/action/index.js';
 import type { ActionConfig, EventContext } from './modules/config/index.js';
 import { configureGithubModule } from './modules/github/index.js';
-import { configureValidationModule } from './modules/validation/index.js';
 import { configureMergeModule } from './modules/merge/index.js';
-import { configureActionModule } from './modules/action/index.js';
+import { configureValidationModule } from './modules/validation/index.js';
 
 export async function run(): Promise<void> {
   try {

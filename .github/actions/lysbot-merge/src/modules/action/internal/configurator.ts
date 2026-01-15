@@ -1,6 +1,7 @@
 import type { GithubClient, PullRequestService } from '../../github/index.js';
-import type { CommandParser, PrValidator, MarkdownBuilder } from '../../validation/index.js';
 import type { WaitService } from '../../merge/index.js';
+import type { CommandParser, PrValidator, MarkdownBuilder } from '../../validation/index.js';
+
 import { DefaultActionExecutor, type ActionExecutor } from './action-executor.js';
 
 export interface ActionModuleDeps {
