@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
-import type { ActionConfig, CheckResult, EventContext, Octokit, PullRequestData } from '../src/tmp_anything.js';
+import type { ActionConfig, CheckResult, EventContext, Octokit, PullRequestData } from '../src/modules/action/index.js';
 import {
   COMMAND_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
@@ -26,7 +26,7 @@ import {
   postComment,
   validatePRState,
   waitBeforeRetryMs,
-} from '../src/tmp_anything.js';
+} from '../src/modules/action/index.js';
 
 function createConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
   return {
