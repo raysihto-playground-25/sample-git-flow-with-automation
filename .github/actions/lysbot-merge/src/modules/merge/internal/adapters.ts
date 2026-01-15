@@ -9,7 +9,7 @@ export interface CoreAdapter {
   setFailed(message: string): void;
   info(message: string): void;
   summary: {
-    addRaw(text: string): { write(): Promise<void> };
+    addRaw(text: string): { write(): Promise<unknown> };
   };
 }
 
