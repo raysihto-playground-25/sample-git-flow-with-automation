@@ -1,8 +1,5 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ConfigModuleDeps {
-  // This module provides only types and constants, no services
-}
-
-export function configureConfigModule(): ConfigModuleDeps {
-  return {};
+// Config module provides only types and constants, no dependency injection needed
+// The configurator function is kept for consistency with other modules
+export function configureConfigModule(): void {
+  // No services to configure
 }

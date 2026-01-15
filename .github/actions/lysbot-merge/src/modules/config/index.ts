@@ -1,5 +1,4 @@
 export type { ActionConfig, EventContext, MergeOptions } from './internal/types.js';
-export type { ConfigModuleDeps } from './internal/configurator.js';
 export {
   COMMAND_REGEX,
   VALID_FLAGS,
