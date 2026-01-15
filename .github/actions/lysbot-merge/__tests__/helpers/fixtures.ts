@@ -55,56 +55,60 @@ export function createMockOctokit(): Octokit {
   return {
     rest: {
       reactions: {
-        createForIssueComment: async () => ({}),
+        createForIssueComment: () => Promise.resolve({}),
       },
       issues: {
-        createComment: async () => ({}),
+        createComment: () => Promise.resolve({}),
       },
       repos: {
-        getCollaboratorPermissionLevel: async () => ({
-          data: { permission: 'write' },
-        }),
+        getCollaboratorPermissionLevel: () =>
+          Promise.resolve({
+            data: { permission: 'write' },
+          }),
       },
       pulls: {
-        get: async () => ({
-          data: {
-            state: 'open',
-            locked: false,
-            draft: false,
-            merged: false,
-            mergeable: true,
-            mergeable_state: 'clean',
-            head: {
-              sha: 'abc1234567890',
-              ref: 'feature/test',
-              repo: { fork: false, owner: { id: 1 } },
+        get: () =>
+          Promise.resolve({
+            data: {
+              state: 'open',
+              locked: false,
+              draft: false,
+              merged: false,
+              mergeable: true,
+              mergeable_state: 'clean',
+              head: {
+                sha: 'abc1234567890',
+                ref: 'feature/test',
+                repo: { fork: false, owner: { id: 1 } },
+              },
+              base: {
+                ref: 'develop',
+                repo: { owner: { id: 1 } },
+              },
+              user: { login: 'testuser' },
+              title: 'feat: test pull request',
             },
-            base: {
-              ref: 'develop',
-              repo: { owner: { id: 1 } },
-            },
-            user: { login: 'testuser' },
-            title: 'feat: test pull request',
-          },
-        }),
-        listReviews: async () => ({ data: [] }),
-        listCommits: async () => ({ data: [] }),
-        dismissReview: async () => ({}),
-        merge: async () => ({
-          data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' },
-        }),
+          }),
+        listReviews: () => Promise.resolve({ data: [] }),
+        listCommits: () => Promise.resolve({ data: [] }),
+        dismissReview: () => Promise.resolve({}),
+        merge: () =>
+          Promise.resolve({
+            data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' },
+          }),
       },
     },
-    paginate: async () => [],
-    graphql: async () => ({
-      repository: {
-        pullRequest: {
-          reviewThreads: {
-            pageInfo: { hasNextPage: false, endCursor: null },
-            nodes: [],
+    paginate: () => Promise.resolve([]),
+    graphql: () =>
+      Promise.resolve({
+        repository: {
+          pullRequest: {
+            reviewThreads: {
+              pageInfo: { hasNextPage: false, endCursor: null },
+              nodes: [],
+            },
           },
         },
-      },
-    }),
+      }),
   } as unknown as Octokit;
 }

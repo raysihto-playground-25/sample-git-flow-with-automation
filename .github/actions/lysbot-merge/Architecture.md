@@ -213,6 +213,147 @@ main();
 
 ---
 
+## Testing Guidelines
+
+### 1. **Test Coverage Requirements**
+
+- Maintain **90%+ test coverage** for all modules
+- Statement coverage, branch coverage, and function coverage should all meet this threshold
+- Coverage is measured using Vitest with v8 coverage provider
+
+### 2. **No vi.mock - Use Dependency Injection**
+
+Tests must **not use `vi.mock`** or similar mocking mechanisms. Instead, use Pure DI for testability:
+
+**Anti-pattern (DO NOT USE):**
+
+```typescript
+vi.mock('@actions/core', () => mockCore);
+vi.mock('../src/service.js', () => ({ service: mockService }));
+```
+
+**Correct pattern (USE THIS):**
+
+```typescript
+// Test using dependency injection
+const testCore: CoreAdapter = new TestCoreAdapter();
+const testService: Service = new TestService();
+const module = configureModule(testCore, testService);
+```
+
+### 3. **Test Structure: Mirror src/ Directory**
+
+The `__tests__/` directory structure must **mirror** the `src/` directory structure:
+
+```
+src/
+  ├── main.ts
+  └── modules/
+        └── order/
+              ├── index.ts
+              └── internal/
+                    ├── configurator.ts
+                    ├── order-service.ts
+                    └── default-order-service.ts
+
+__tests__/
+  ├── main.test.ts
+  ├── helpers/                  # Shared test utilities
+  │     ├── fixtures.ts         # Test data factories
+  │     └── test-adapters.ts    # Test double implementations
+  └── modules/
+        └── order/
+              └── internal/
+                    ├── configurator.test.ts
+                    ├── order-service.test.ts        # If needed (usually just interfaces)
+                    └── default-order-service.test.ts
+```
+
+### 4. **Dependency Injection for Testing**
+
+Make external dependencies injectable by:
+
+1. **Define adapter interfaces** for external dependencies
+2. **Accept dependencies as parameters** in constructors or configurators
+3. **Create test double implementations** (test adapters) that implement the same interfaces
+
+Example:
+
+```typescript
+// src/modules/order/internal/adapters.ts
+export interface LoggerAdapter {
+  log(message: string): void;
+}
+
+// src/modules/order/internal/default-order-service.ts
+export class DefaultOrderService {
+  constructor(private logger: LoggerAdapter) {}
+
+  createOrder() {
+    this.logger.log('Order created');
+  }
+}
+
+// __tests__/helpers/test-adapters.ts
+export class TestLoggerAdapter implements LoggerAdapter {
+  private messages: string[] = [];
+
+  log(message: string): void {
+    this.messages.push(message);
+  }
+
+  getMessages(): string[] {
+    return [...this.messages];
+  }
+}
+
+// __tests__/modules/order/internal/default-order-service.test.ts
+it('should log when creating order', () => {
+  const logger = new TestLoggerAdapter();
+  const service = new DefaultOrderService(logger);
+
+  service.createOrder();
+
+  expect(logger.getMessages()).toContain('Order created');
+});
+```
+
+### 5. **Test Helpers and Fixtures**
+
+Create reusable test helpers in `__tests__/helpers/`:
+
+- **fixtures.ts**: Factory functions for creating test data
+- **test-adapters.ts**: Test double implementations of adapter interfaces
+
+Example:
+
+```typescript
+// __tests__/helpers/fixtures.ts
+export function createMockOrder(overrides: Partial<Order> = {}): Order {
+  return {
+    id: 'test-id',
+    status: 'pending',
+    ...overrides,
+  };
+}
+```
+
+### 6. **Testing Pure Functions vs. Classes**
+
+- **Pure functions**: Test directly with various inputs
+- **Classes with dependencies**: Inject test doubles via constructor
+- **Integration points**: Test the configurator to ensure proper wiring
+
+### 7. **Benefits of DI-Based Testing**
+
+- **No mocking framework magic**: Tests are transparent and maintainable
+- **Real behavior**: Tests use actual implementations where possible
+- **Flexibility**: Easy to substitute implementations (test doubles, fakes, stubs)
+- **Type safety**: TypeScript validates test doubles implement correct interfaces
+- **Refactoring confidence**: Changing implementations doesn't break test infrastructure
+
+---
+
 ## Testing and Extensibility
 
 - Consumers should depend on **interfaces**, not concrete implementations.

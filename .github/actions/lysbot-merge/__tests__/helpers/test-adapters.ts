@@ -103,7 +103,7 @@ export class TestGitHubAdapter implements GitHubAdapter {
     this.octokitInstance = octokit;
   }
 
-  getOctokit(_token: string): unknown {
+  getOctokit(): unknown {
     return this.octokitInstance;
   }
 

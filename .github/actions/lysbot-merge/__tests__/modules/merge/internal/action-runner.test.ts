@@ -30,11 +30,7 @@ describe('action-runner', () => {
 
     // Create mock merge service
     mockMergeService = {
-      executeAction: async (
-        _octokit: Octokit,
-        _context: EventContext,
-        _config: ActionConfig,
-      ): Promise<ActionResult> => {
+      executeAction: async (): Promise<ActionResult> => {
         return {
           status: 'merged',
           message: 'PR merged successfully',
@@ -67,11 +63,7 @@ describe('action-runner', () => {
       coreAdapter.setInput('mergeable_retry_interval', '5');
 
       let capturedConfig: ActionConfig | null = null;
-      mockMergeService.executeAction = async (
-        _octokit: Octokit,
-        _context: EventContext,
-        config: ActionConfig,
-      ): Promise<ActionResult> => {
+      mockMergeService.executeAction = async (_octokit, _context, config): Promise<ActionResult> => {
         capturedConfig = config;
         return { status: 'merged', message: 'Success', mergeMethod: 'squash' };
       };
@@ -147,11 +139,7 @@ describe('action-runner', () => {
 
     it('should build correct event context from GitHub context', async () => {
       let capturedContext: EventContext | null = null;
-      mockMergeService.executeAction = async (
-        _octokit: Octokit,
-        context: EventContext,
-        _config: ActionConfig,
-      ): Promise<ActionResult> => {
+      mockMergeService.executeAction = async (_octokit, context): Promise<ActionResult> => {
         capturedContext = context;
         return { status: 'merged', message: 'Success' };
       };
@@ -188,6 +176,7 @@ describe('action-runner', () => {
 
     it('should handle non-Error exceptions', async () => {
       mockMergeService.executeAction = async (): Promise<ActionResult> => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
         throw 'string error';
       };
 
