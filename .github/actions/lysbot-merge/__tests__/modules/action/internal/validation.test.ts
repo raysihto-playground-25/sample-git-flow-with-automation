@@ -6,8 +6,8 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { TWEMOJI } from '../src/constants.js';
-import type { ActionConfig, PullRequestData, CheckResult } from '../src/types.js';
+import { TWEMOJI } from '../../../../src/modules/action/internal/constants.js';
+import type { ActionConfig, PullRequestData, CheckResult } from '../../../../src/modules/action/internal/types.js';
 import {
   isCommand,
   parseCommand,
@@ -20,7 +20,7 @@ import {
   buildCheckResultsMarkdown,
   isConventionalCommitTitle,
   waitBeforeRetryMs,
-} from '../src/validation.js';
+} from '../../../../src/modules/action/internal/validation.js';
 
 // =============================================================================
 // Test Utilities

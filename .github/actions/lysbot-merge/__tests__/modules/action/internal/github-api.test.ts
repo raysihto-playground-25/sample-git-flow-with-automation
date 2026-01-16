@@ -15,8 +15,8 @@ import {
   countUnresolvedThreads,
   mergePullRequest,
   fetchPullRequestCommits,
-} from '../src/github-api.js';
-import type { Octokit } from '../src/types.js';
+} from '../../../../src/modules/action/internal/github-api.js';
+import type { Octokit } from '../../../../src/modules/action/internal/types.js';
 
 // =============================================================================
 // Test Utilities

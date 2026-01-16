@@ -8,9 +8,9 @@
 
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
-import { executeAction, buildSummaryMarkdown } from '../src/action.js';
-import { TWEMOJI } from '../src/constants.js';
-import type { ActionConfig, EventContext, Octokit } from '../src/types.js';
+import { executeAction, buildSummaryMarkdown } from '../../../../src/modules/action/internal/action.js';
+import { TWEMOJI } from '../../../../src/modules/action/internal/constants.js';
+import type { ActionConfig, EventContext, Octokit } from '../../../../src/modules/action/internal/types.js';
 
 // =============================================================================
 // Test Utilities

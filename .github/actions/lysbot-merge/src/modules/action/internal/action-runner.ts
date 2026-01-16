@@ -5,9 +5,10 @@
  * runtime integration with the business logic.
  */
 
-import { executeAction, buildSummaryMarkdown } from '../../../action.js';
-import type { ActionConfig, EventContext } from '../../../types.js';
 import type { ActionRunner, CoreDependencies, GitHubDependencies } from '../index.js';
+
+import { executeAction, buildSummaryMarkdown } from './action.js';
+import type { ActionConfig, EventContext } from './types.js';
 
 /**
  * Creates an ActionRunner instance with the provided dependencies.
