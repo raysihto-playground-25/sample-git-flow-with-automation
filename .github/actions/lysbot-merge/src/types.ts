@@ -119,5 +119,4 @@ export interface MergeOptions {
 export type Octokit = InstanceType<typeof GitHub>;
 
 // Type aliases for GitHub API response types
-export type Review = RestEndpointMethodTypes['pulls']['listReviews']['response']['data'][number];
 export type ReviewsArray = RestEndpointMethodTypes['pulls']['listReviews']['response']['data'];
