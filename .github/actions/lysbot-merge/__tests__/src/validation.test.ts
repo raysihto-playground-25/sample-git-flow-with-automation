@@ -18,7 +18,7 @@ import {
   buildCheckResultsMarkdown,
   isConventionalCommitTitle,
   waitBeforeRetryMs,
-} from '../src/validation.js';
+} from '../../src/validation.js';
 
 // =============================================================================
 // Test Utilities

@@ -120,3 +120,65 @@ export type Octokit = InstanceType<typeof GitHub>;
 
 // Type aliases for GitHub API response types
 export type ReviewsArray = RestEndpointMethodTypes['pulls']['listReviews']['response']['data'];
+
+/**
+ * Interface for GitHub Actions Core module.
+ * This abstracts the @actions/core module for dependency injection.
+ */
+export interface ActionsCore {
+  getInput(this: void, name: string, options?: { required?: boolean }): string;
+  setOutput(this: void, name: string, value: string): void;
+  setFailed(this: void, message: string): void;
+  warning(this: void, message: string): void;
+  info(this: void, message: string): void;
+  summary: {
+    addRaw(this: void, text: string): { write(this: void): Promise<void> };
+  };
+}
+
+/**
+ * Interface for GitHub context.
+ * This abstracts the github.context for dependency injection.
+ */
+export interface GitHubContext {
+  repo: {
+    owner: string;
+    repo: string;
+  };
+  actor: string;
+  runId: number;
+  eventName: string;
+  payload: {
+    issue?: {
+      number?: number;
+      pull_request?: unknown;
+    };
+    comment?: {
+      id?: number;
+      body?: string;
+      user?: {
+        type?: string;
+      };
+      author_association?: string;
+    };
+  };
+}
+
+/**
+ * Interface for GitHub API factory.
+ * This abstracts the github.getOctokit function for dependency injection.
+ */
+export interface GitHubApiFactory {
+  getOctokit(this: void, token: string): Octokit;
+}
+
+/**
+ * Dependencies required by the main run() function.
+ * This enables dependency injection and testing.
+ */
+export interface RunDependencies {
+  core: ActionsCore;
+  context: GitHubContext;
+  apiFactory: GitHubApiFactory;
+  serverUrl?: string;
+}
