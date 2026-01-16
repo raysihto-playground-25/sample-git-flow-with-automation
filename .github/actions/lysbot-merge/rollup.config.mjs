@@ -8,6 +8,7 @@ import { defineConfig } from 'rollup';
 
 const config = defineConfig({
   input: 'src/index.ts',
+
   output: {
     esModule: true,
     file: 'dist/index.js',

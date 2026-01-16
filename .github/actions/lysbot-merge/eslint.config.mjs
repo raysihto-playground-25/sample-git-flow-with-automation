@@ -29,9 +29,11 @@ const config = tseslint.config(
       promise,
       stylistic,
     },
+
     settings: {
       'import/resolver': { typescript: { alwaysTryTypes: true } },
     },
+
     rules: {
       // keep this list sorted alphabetically
       '@typescript-eslint/consistent-type-imports': 'error',
@@ -69,15 +71,6 @@ const config = tseslint.config(
       ],
       curly: 'error',
       eqeqeq: 'error',
-    },
-  },
-  {
-    files: ['*.config.mjs'],
-    languageOptions: {
-      globals: { console: 'readonly' },
-    },
-    rules: {
-      'no-console': 'off',
     },
   },
 
