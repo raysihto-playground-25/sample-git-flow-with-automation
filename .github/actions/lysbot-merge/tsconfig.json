@@ -30,5 +30,5 @@
     "target": "es2022"
   },
   "exclude": ["coverage", "dist", "node_modules"],
-  "include": ["*.config.mjs", ".ncurc.cjs", "__tests__", "src"]
+  "include": ["*.config.mjs", "*.config.ts", ".ncurc.cjs", "__tests__", "src"]
 }
