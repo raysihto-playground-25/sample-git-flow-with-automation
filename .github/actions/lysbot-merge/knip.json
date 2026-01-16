@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/knip@5.81.0/schema.json",
+  "$schema": "https://unpkg.com/knip@5/schema.json",
   "ignoreDependencies": ["@octokit/plugin-rest-endpoint-methods"],
   "ignoreExportsUsedInFile": true
 }
