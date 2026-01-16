@@ -9,7 +9,6 @@
 import {
   COMMAND_REGEX,
   VALID_FLAGS,
-  EMOJI,
   VALID_AUTHOR_ASSOCIATIONS,
   VALID_PERMISSIONS,
   CONVENTIONAL_COMMIT_REGEX,
@@ -211,14 +210,7 @@ export function getMergeableStateDescription(state: string): string {
 export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
   return checks
     .map((check) => {
-      let icon: string;
-      if (check.passed) {
-        icon = EMOJI.CHECK;
-      } else if (check.optional) {
-        icon = EMOJI.WARNING;
-      } else {
-        icon = EMOJI.CROSS;
-      }
+      const icon = check.passed ? '✅' : check.optional ? '⚠️' : '❌';
       const detail = check.details ? ` (${check.details})` : '';
       return `- ${icon} ${check.name}${detail}`;
     })
