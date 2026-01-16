@@ -1,8 +1,10 @@
 import eslint from '@eslint/js';
 import stylistic from '@stylistic/eslint-plugin';
+/* @ts-expect-error -- ESLint plugin module is required at runtime, but does not provide TypeScript typings */
+import eslintComments from 'eslint-plugin-eslint-comments';
 import import_ from 'eslint-plugin-import';
 import prettier from 'eslint-plugin-prettier';
-// @ts-expect-error --- eslint-plugin-promise has no typings here
+/* @ts-expect-error -- ESLint plugin module is required at runtime, but does not provide TypeScript typings */
 import promise from 'eslint-plugin-promise';
 import tseslint from 'typescript-eslint';
 
@@ -16,23 +18,35 @@ const config = tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+
     plugins: {
       // keep this list sorted alphabetically
+      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ESLint plugin import is valid at runtime, but lacks proper TypeScript typings */
+      eslintComments,
       import_,
       prettier,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ESLint plugin import is valid at runtime, but lacks proper TypeScript typings */
       promise,
       stylistic,
     },
+
     settings: {
       'import/resolver': { typescript: { alwaysTryTypes: true } },
     },
+
     rules: {
       // keep this list sorted alphabetically
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
+      'eslintComments/disable-enable-pair': ['error', { allowWholeFile: true }],
+      'eslintComments/no-unlimited-disable': 'error',
+      'eslintComments/no-unused-disable': 'error',
+      'eslintComments/no-use': ['error', { allow: ['eslint-disable-next-line'] }],
+      'eslintComments/require-description': ['error', { ignore: [] }],
+      'import_/no-deprecated': 'error',
+      'import_/no-duplicates': 'error',
       'import_/no-unresolved': 'error',
       'import_/order': ['error', { alphabetize: { order: 'asc' }, 'newlines-between': 'always' }],
       'no-console': 'error',

@@ -8,6 +8,7 @@ import { defineConfig } from 'rollup';
 
 const config = defineConfig({
   input: 'src/index.ts',
+
   output: {
     esModule: true,
     file: 'dist/index.js',
@@ -15,17 +16,29 @@ const config = defineConfig({
     inlineDynamicImports: true,
     sourcemap: false,
   },
+
+  onwarn(warning, defaultHandler) {
+    // Warnings originating entirely from node_modules may be candidates for suppression until upstream issues are resolved.
+    if (warning.ids?.every((id) => id.includes('/node_modules/'))) {
+      // Suppress circular dependency warnings from node_modules; this may become unnecessary once the upstream dependencies are fixed.
+      if (warning.code === 'CIRCULAR_DEPENDENCY') {
+        return;
+      }
+    }
+    defaultHandler(warning);
+  },
+
   plugins: [
-    // @ts-expect-error Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config
+    /* @ts-expect-error -- Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config */
     commonjs(),
-    // @ts-expect-error Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config
+    /* @ts-expect-error -- Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config */
     nodeResolve({ preferBuiltins: true }),
-    // @ts-expect-error Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config
+    /* @ts-expect-error -- Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config */
     terser({
       compress: { drop_console: true, drop_debugger: true },
       format: { comments: false },
     }),
-    // @ts-expect-error Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config
+    /* @ts-expect-error -- Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config */
     typescript(),
   ],
 });
