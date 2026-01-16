@@ -9,7 +9,7 @@
 import {
   COMMAND_REGEX,
   VALID_FLAGS,
-  TWEMOJI,
+  EMOJI,
   VALID_AUTHOR_ASSOCIATIONS,
   VALID_PERMISSIONS,
   CONVENTIONAL_COMMIT_REGEX,
@@ -213,11 +213,11 @@ export function buildCheckResultsMarkdown(checks: CheckResult[]): string {
     .map((check) => {
       let icon: string;
       if (check.passed) {
-        icon = TWEMOJI.CHECK;
+        icon = EMOJI.CHECK;
       } else if (check.optional) {
-        icon = TWEMOJI.WARNING;
+        icon = EMOJI.WARNING;
       } else {
-        icon = TWEMOJI.CROSS;
+        icon = EMOJI.CROSS;
       }
       const detail = check.details ? ` (${check.details})` : '';
       return `- ${icon} ${check.name}${detail}`;

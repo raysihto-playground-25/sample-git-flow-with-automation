@@ -18,16 +18,14 @@ export const COMMAND_REGEX = /^\s*\/lysbot\s+merge(?:\s+(.*))?\s*$/;
 export const VALID_FLAGS = ['--override-approval-requirement'] as const;
 
 /**
- * Twemoji images for cross-browser emoji compatibility.
- * https://github.com/twitter/twemoji (CC-BY 4.0 licensed)
+ * Emoji characters for status display.
  */
-export const TWEMOJI = {
-  CHECK:
-    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/2705.svg" width="20" height="20" alt="OK">',
-  CROSS:
-    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/274c.svg" width="20" height="20" alt="NG">',
-  WARNING:
-    '<img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/26a0.svg" width="20" height="20" alt="Warning">',
+export const EMOJI = {
+  CHECK: '✅',
+  CROSS: '❌',
+  WARNING: '⚠️',
+  SKIPPED: '⏭️',
+  INFO: 'ℹ️',
 } as const;
 
 /**
