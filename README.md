@@ -20,7 +20,3 @@ For details on actions that encapsulate specific automation logic, see [`.github
 ## License
 
 See [LICENSE](LICENSE) for details.
-
-### Third-Party Licenses
-
-- **Twemoji graphics** ([github.com/twitter/twemoji](https://github.com/twitter/twemoji)) are used for emoji display compatibility. Licensed under CC-BY 4.0. Copyright 2020 Twitter, Inc and other contributors.
