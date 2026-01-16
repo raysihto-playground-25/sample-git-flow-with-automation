@@ -51,7 +51,6 @@ const mockGithub = {
 vi.mock('@actions/core', () => mockCore);
 vi.mock('@actions/github', () => mockGithub);
 
-/* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */
 const { run } = await import('../../../src/main.js');
 
 describe('main.ts', () => {

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
 import { TWEMOJI } from '../../../../src/modules/action/index.js';
@@ -112,7 +114,7 @@ describe('ActionExecutor', () => {
       const octokit = createMockOctokit();
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext({ eventName: 'push' });
 
       const result = await executor.execute(context);
@@ -125,7 +127,7 @@ describe('ActionExecutor', () => {
       const octokit = createMockOctokit();
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext({ isPullRequest: false });
 
       const result = await executor.execute(context);
@@ -140,7 +142,7 @@ describe('ActionExecutor', () => {
       const octokit = createMockOctokit();
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext({ userType: 'Bot' });
 
       const result = await executor.execute(context);
@@ -153,7 +155,7 @@ describe('ActionExecutor', () => {
       const octokit = createMockOctokit();
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext({ commentBody: 'Hello world' });
 
       const result = await executor.execute(context);
@@ -166,7 +168,7 @@ describe('ActionExecutor', () => {
       const octokit = createMockOctokit();
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext({ authorAssociation: 'NONE' });
 
       const result = await executor.execute(context);
@@ -186,7 +188,7 @@ describe('ActionExecutor', () => {
       } as Awaited<ReturnType<typeof octokit.rest.repos.getCollaboratorPermissionLevel>>);
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -222,7 +224,7 @@ describe('ActionExecutor', () => {
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -256,7 +258,7 @@ describe('ActionExecutor', () => {
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -288,7 +290,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -303,7 +305,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -318,7 +320,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext({ commentBody: '/lysbot merge' });
 
       const result = await executor.execute(context);
@@ -346,7 +348,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
 
       const result = await executor.execute(context);
@@ -385,7 +387,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
 
       const result = await executor.execute(context);
@@ -450,7 +452,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -503,7 +505,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -562,7 +564,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -622,7 +624,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -675,7 +677,7 @@ describe('ActionExecutor', () => {
         mergeableRetryCount: 2,
         mergeableRetryInterval: 0,
       });
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -699,7 +701,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
 
       const result = await executor.execute(context);
@@ -738,7 +740,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
 
       const result = await executor.execute(context);
@@ -788,7 +790,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -851,7 +853,7 @@ describe('ActionExecutor', () => {
 
       const githubClient = new GitHubClient(octokit);
       const config = createConfig();
-      const executor = new ActionExecutor(githubClient, config, mockCore as any)@typescript-eslint/no-explicit-any, // eslint-disable-line @typescript-eslint/no-explicit-any;
+      const executor = new ActionExecutor(githubClient, config, mockCore as any);
       const context = createEventContext();
 
       const result = await executor.execute(context);
@@ -879,3 +881,5 @@ describe('ActionExecutor', () => {
     });
   });
 });
+
+/* eslint-enable @typescript-eslint/no-explicit-any */

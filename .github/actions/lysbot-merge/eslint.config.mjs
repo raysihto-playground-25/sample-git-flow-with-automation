@@ -41,7 +41,7 @@ const config = tseslint.config(
       'eslintComments/disable-enable-pair': ['error', { allowWholeFile: true }],
       'eslintComments/no-unlimited-disable': 'error',
       'eslintComments/no-unused-disable': 'error',
-      'eslintComments/no-use': ['error', { allow: ['eslint-disable-next-line'] }],
+      'eslintComments/no-use': ['error', { allow: ['eslint-disable-next-line', 'eslint-disable', 'eslint-enable'] }],
       'import_/no-deprecated': 'error',
       'import_/no-duplicates': 'error',
       'import_/no-unresolved': 'error',

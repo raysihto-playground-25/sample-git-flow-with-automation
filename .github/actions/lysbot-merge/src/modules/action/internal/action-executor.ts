@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type * as core from '@actions/core';
+import * as core from '@actions/core';
 
 import { buildCheckResultsMarkdown, waitBeforeRetryMs } from './formatting.js';
 import type { GitHubClient } from './github-client.js';

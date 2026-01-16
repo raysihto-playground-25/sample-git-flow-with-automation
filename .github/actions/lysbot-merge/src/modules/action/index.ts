@@ -1,7 +1,5 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type * as core from '@actions/core';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type * as github from '@actions/github';
+import * as core from '@actions/core';
+import * as github from '@actions/github';
 
 import { ActionRunner } from './internal/action-runner.js';
 

@@ -1,7 +1,7 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type * as core from '@actions/core';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type * as github from '@actions/github';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
+
+import * as core from '@actions/core';
+import * as github from '@actions/github';
 
 import { ActionExecutor } from './action-executor.js';
 import { buildSummaryMarkdown } from './formatting.js';
@@ -71,3 +71,5 @@ export class ActionRunner {
     }
   }
 }
+
+/* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument */
