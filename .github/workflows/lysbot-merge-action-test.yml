@@ -40,6 +40,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check dead-code
+        run: npm run check:deadcode
+
       - name: Check code formatting
         run: npm run check:format
 
