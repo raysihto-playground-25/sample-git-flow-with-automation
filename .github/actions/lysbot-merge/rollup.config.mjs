@@ -20,7 +20,7 @@ const config = defineConfig({
     // Warnings originating entirely from node_modules may be candidates for suppression until upstream issues are resolved.
     if (warning.ids?.every((id) => id.includes('/node_modules/'))) {
       // Suppress circular dependency warnings from node_modules; this may become unnecessary once the upstream dependencies are fixed.
-      if (['CIRCULAR_DEPENDENCY'].includes(warning.code ?? '')) {
+      if (warning.code === 'CIRCULAR_DEPENDENCY') {
         return;
       }
     }
