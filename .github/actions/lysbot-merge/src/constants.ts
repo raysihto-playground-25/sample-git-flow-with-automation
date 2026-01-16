@@ -24,6 +24,8 @@ export const EMOJI = {
   CHECK: '✅',
   CROSS: '❌',
   WARNING: '⚠️',
+  SKIPPED: '⏭️',
+  INFO: 'ℹ️',
 } as const;
 
 /**
