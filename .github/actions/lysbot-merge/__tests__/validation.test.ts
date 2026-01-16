@@ -83,29 +83,6 @@ describe('parseCommand', () => {
       expect(result).not.toBeNull();
       expect(result?.overrideApprovalRequirement).toBe(true);
     });
-  });
-
-  describe('invalid commands', () => {
-    it('returns null for non-command text', () => {
-      expect(parseCommand('hello world')).toBeNull();
-    });
-
-    it('returns null for command with unknown flags', () => {
-      expect(parseCommand('/lysbot merge --unknown-flag')).toBeNull();
-    });
-
-    it('returns null for malformed commands', () => {
-      expect(parseCommand('/lysbot')).toBeNull();
-      expect(parseCommand('lysbot merge')).toBeNull();
-      expect(parseCommand('/lysbot merge now')).toBeNull();
-      expect(parseCommand('run /lysbot merge')).toBeNull();
-    });
-  });
-
-  describe('valid command patterns', () => {
-    it('matches exact "/lysbot merge" command', () => {
-      expect(parseCommand('/lysbot merge')).not.toBeNull();
-    });
 
     it('matches with leading whitespace (space/tab/newline)', () => {
       expect(parseCommand('  /lysbot merge')).not.toBeNull();
@@ -124,28 +101,28 @@ describe('parseCommand', () => {
       expect(parseCommand('/lysbot   merge')).not.toBeNull();
       expect(parseCommand('/lysbot\tmerge')).not.toBeNull();
     });
-
-    it('matches with --override-approval-requirement flag', () => {
-      expect(parseCommand('/lysbot merge --override-approval-requirement')).not.toBeNull();
-      expect(parseCommand('  /lysbot merge --override-approval-requirement  ')).not.toBeNull();
-    });
   });
 
-  describe('invalid command patterns', () => {
-    it('rejects command with unknown arguments or flags', () => {
-      expect(parseCommand('/lysbot merge now')).toBeNull();
-      expect(parseCommand('/lysbot merge --force')).toBeNull();
-      expect(parseCommand('/lysbot merge --unknown-flag')).toBeNull();
+  describe('invalid commands', () => {
+    it('returns null for non-command text', () => {
+      expect(parseCommand('hello world')).toBeNull();
     });
 
-    it('rejects partial or malformed commands', () => {
+    it('returns null for command with unknown flags or arguments', () => {
+      expect(parseCommand('/lysbot merge --unknown-flag')).toBeNull();
+      expect(parseCommand('/lysbot merge now')).toBeNull();
+      expect(parseCommand('/lysbot merge --force')).toBeNull();
+    });
+
+    it('returns null for partial or malformed commands', () => {
       expect(parseCommand('/lysbot')).toBeNull();
       expect(parseCommand('/lysbot merg')).toBeNull();
       expect(parseCommand('lysbot merge')).toBeNull();
     });
 
-    it('rejects when command is embedded in other text', () => {
+    it('returns null when command is embedded in other text', () => {
       expect(parseCommand('Please /lysbot merge this')).toBeNull();
+      expect(parseCommand('run /lysbot merge')).toBeNull();
       expect(parseCommand('Run /lysbot merge')).toBeNull();
     });
 
