@@ -10,9 +10,9 @@
 
 import { describe, expect, it, vi, type Mock } from 'vitest';
 
-import * as action from '../../src/action.js';
-import { run } from '../../src/main.js';
-import type { ActionsCore, GitHubApiFactory, GitHubContext, Octokit, RunDependencies } from '../../src/types.js';
+import * as action from '../src/action.js';
+import { run } from '../src/main.js';
+import type { ActionsCore, GitHubApiFactory, GitHubContext, Octokit, RunDependencies } from '../src/types.js';
 
 /**
  * Creates a mock ActionsCore implementation for testing.
