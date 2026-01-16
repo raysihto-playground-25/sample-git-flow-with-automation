@@ -28,6 +28,14 @@ const config = defineConfig({
     // @ts-expect-error Rollup plugin is callable at runtime, but TS treats this ESM import type as non-callable in .mjs config
     typescript(),
   ],
+  onwarn: (warning, warn) => {
+    // Suppress circular dependency warnings for node_modules
+    if (warning.code === 'CIRCULAR_DEPENDENCY' && warning.ids?.some((id) => id.includes('node_modules'))) {
+      return;
+    }
+    // Use default warning handler for all other warnings
+    warn(warning);
+  },
 });
 
 export default config;
