@@ -67,23 +67,6 @@ export function parseCommand(commentBody: string): MergeOptions | null {
 }
 
 /**
- * Checks if a comment matches the `/lysbot merge` command pattern.
- * Now also accepts optional flags like `--override-approval-requirement`.
- *
- * @param commentBody - The body of the comment to check
- * @returns true if the comment is the merge command
- *
- * @example
- * isCommand('/lysbot merge')     // true
- * isCommand('  /lysbot merge  ') // true
- * isCommand('/lysbot merge --override-approval-requirement') // true
- * isCommand('/lysbot merge now') // false (invalid flag)
- */
-export function isCommand(commentBody: string): boolean {
-  return parseCommand(commentBody) !== null;
-}
-
-/**
  * Checks if the user type indicates a bot.
  *
  * @param userType - The type of user from GitHub API
