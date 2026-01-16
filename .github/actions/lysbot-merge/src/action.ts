@@ -89,7 +89,6 @@ export async function executeAction(
   }
 
   // Parse and validate the merge command
-  // Note: This replaces the previous isCommand() check to avoid parsing twice
   // parseCommand() returns null if the command format is invalid
   const mergeOptions = parseCommand(commentBody);
   if (!mergeOptions) {
