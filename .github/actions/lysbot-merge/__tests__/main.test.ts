@@ -2,10 +2,18 @@
  * main.test.ts - Tests for main.ts module
  *
  * Tests cover the run() function which is the main entry point for the GitHub Action.
- * This tests the GitHub Actions runtime integration code using Dependency Injection (DI).
+ * This module tests the GitHub Actions runtime integration code using Dependency
+ * Injection (DI) to provide test doubles.
  *
- * Instead of using vi.mock to "force" replaceability, we use DI/DIP to provide
- * a structure that is inherently replaceable from the start.
+ * TESTING APPROACH:
+ * =================
+ * Instead of using vi.mock to intercept module imports, this test suite uses
+ * Dependency Injection (DI) to inject test doubles directly into the run() function.
+ * This approach provides:
+ * - Explicit dependencies without hidden module mocks
+ * - Better type safety through TypeScript interfaces
+ * - Testability built into the code structure (DIP - Dependency Inversion Principle)
+ * - Easier to understand and maintain tests
  */
 
 import { describe, expect, it, vi, type Mock } from 'vitest';

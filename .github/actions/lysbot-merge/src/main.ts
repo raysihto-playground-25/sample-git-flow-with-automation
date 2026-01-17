@@ -4,20 +4,17 @@
  * This file is the main entry point that runs in the GitHub Actions environment.
  * It is responsible for:
  * 1. Reading inputs from the GitHub Actions environment
- * 2. Handling deprecated input parameters with warnings
- * 3. Parsing options YAML and constructing configuration
- * 4. Constructing the event context from github.context
- * 5. Calling the main action logic from action.ts
- * 6. Setting outputs and writing summaries
+ * 2. Parsing configuration from action inputs
+ * 3. Constructing the event context from github.context
+ * 4. Calling the main action logic from action.ts
+ * 5. Setting outputs and writing summaries
  *
- * TESTING APPROACH:
- * =================
- * This file contains GitHub Actions runtime integration code and has been tested
- * using vitest mocks to verify:
- * - Deprecated input handling and warning messages
- * - Options parsing with deprecated input fallbacks
- * - Integer parsing for numeric inputs
- * - Error handling and reporting
+ * DESIGN PATTERN:
+ * ===============
+ * This module uses Dependency Injection (DI) to enable testing without mocks.
+ * Dependencies (ActionsCore, GitHubContext, GitHubApiFactory) are injected via
+ * an optional parameter, allowing tests to provide test doubles while production
+ * code uses actual GitHub Actions modules.
  *
  * The core business logic remains in action.ts (executeAction, buildSummaryMarkdown)
  * which has comprehensive test coverage independent of GitHub Actions runtime.

@@ -2,7 +2,10 @@
  * types.ts - Type definitions and interfaces for lysbot-merge
  *
  * This module contains all TypeScript type definitions and interfaces
- * used throughout the lysbot-merge action.
+ * used throughout the lysbot-merge action, including:
+ * - Domain models (ActionConfig, EventContext, PullRequestData, etc.)
+ * - Dependency injection interfaces (ActionsCore, GitHubContext, GitHubApiFactory)
+ * - Result types (ActionResult, CheckResult, MergeMethodResult, etc.)
  */
 
 import type { GitHub } from '@actions/github/lib/utils.js';

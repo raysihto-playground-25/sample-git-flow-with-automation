@@ -1,7 +1,11 @@
 /**
- * github-api.test.ts - Unit tests for GitHub API functions
+ * github-api.test.ts - Tests for GitHub API interaction functions
  *
- * Tests cover GitHub API interaction functions with mocked responses.
+ * Tests cover all GitHub API interaction functions from github-api.ts
+ * using mocked Octokit responses. These tests verify:
+ * - API call parameters and payloads
+ * - Response handling and data transformation
+ * - Error handling for API failures
  */
 
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
