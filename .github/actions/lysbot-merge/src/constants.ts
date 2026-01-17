@@ -18,17 +18,6 @@ export const COMMAND_REGEX = /^\s*\/lysbot\s+merge(?:\s+(.*))?\s*$/;
 export const VALID_FLAGS = ['--override-approval-requirement'] as const;
 
 /**
- * Emoji characters for status display.
- */
-export const EMOJI = {
-  CHECK: '✅',
-  CROSS: '❌',
-  WARNING: '⚠️',
-  SKIPPED: '⏭️',
-  INFO: 'ℹ️',
-} as const;
-
-/**
  * Valid author associations that can use the /lysbot merge command.
  * Why: Only trusted users with write access should be able to trigger merges.
  * OWNER/MEMBER have org-level trust, COLLABORATOR has explicit repo access.

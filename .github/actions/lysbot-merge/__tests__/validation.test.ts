@@ -6,7 +6,6 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { EMOJI } from '../src/constants.js';
 import type { ActionConfig, PullRequestData, CheckResult } from '../src/types.js';
 import {
   parseCommand,
@@ -401,7 +400,7 @@ describe('buildCheckResultsMarkdown', () => {
     const checks: CheckResult[] = [{ name: 'Test check', passed: true }];
     const markdown = buildCheckResultsMarkdown(checks);
 
-    expect(markdown).toContain(EMOJI.CHECK);
+    expect(markdown).toContain('✅');
     expect(markdown).toContain('Test check');
   });
 
@@ -409,7 +408,7 @@ describe('buildCheckResultsMarkdown', () => {
     const checks: CheckResult[] = [{ name: 'Test check', passed: false, details: 'reason' }];
     const markdown = buildCheckResultsMarkdown(checks);
 
-    expect(markdown).toContain(EMOJI.CROSS);
+    expect(markdown).toContain('❌');
     expect(markdown).toContain('Test check');
     expect(markdown).toContain('(reason)');
   });
@@ -432,7 +431,7 @@ describe('buildCheckResultsMarkdown', () => {
     const checks: CheckResult[] = [{ name: 'Optional check', passed: false, details: 'not required', optional: true }];
     const markdown = buildCheckResultsMarkdown(checks);
 
-    expect(markdown).toContain(EMOJI.WARNING);
+    expect(markdown).toContain('⚠️');
     expect(markdown).toContain('Optional check');
     expect(markdown).toContain('(not required)');
   });
@@ -441,7 +440,7 @@ describe('buildCheckResultsMarkdown', () => {
     const checks: CheckResult[] = [{ name: 'Optional check', passed: true, optional: true }];
     const markdown = buildCheckResultsMarkdown(checks);
 
-    expect(markdown).toContain(EMOJI.CHECK);
+    expect(markdown).toContain('✅');
     expect(markdown).toContain('Optional check');
   });
 
@@ -456,11 +455,11 @@ describe('buildCheckResultsMarkdown', () => {
 
     expect(markdown.split('\n')).toHaveLength(4);
     // Required passing - check mark
-    expect(markdown).toContain(EMOJI.CHECK);
+    expect(markdown).toContain('✅');
     // Required failing - cross
-    expect(markdown).toContain(EMOJI.CROSS);
+    expect(markdown).toContain('❌');
     // Optional failing - warning
-    expect(markdown).toContain(EMOJI.WARNING);
+    expect(markdown).toContain('⚠️');
   });
 });
 

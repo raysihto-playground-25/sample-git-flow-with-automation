@@ -27,7 +27,6 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 
 import { executeAction, buildSummaryMarkdown } from './action.js';
-import { EMOJI } from './constants.js';
 import type { ActionConfig, EventContext } from './types.js';
 
 /**
@@ -97,10 +96,10 @@ export async function run(): Promise<void> {
 
     // Write summary
     const resultEmoji = {
-      merged: `${EMOJI.CHECK} Merged successfully`,
-      skipped: `${EMOJI.SKIPPED} Skipped`,
-      failed: `${EMOJI.CROSS} Failed`,
-      already_merged: `${EMOJI.INFO} Already merged`,
+      merged: '✅ Merged successfully',
+      skipped: '⏭️ Skipped',
+      failed: '❌ Failed',
+      already_merged: 'ℹ️ Already merged',
     }[result.status];
 
     const summaryMarkdown = buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);

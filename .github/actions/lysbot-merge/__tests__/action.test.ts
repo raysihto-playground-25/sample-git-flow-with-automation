@@ -9,7 +9,6 @@
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';
 
 import { executeAction, buildSummaryMarkdown } from '../src/action.js';
-import { EMOJI } from '../src/constants.js';
 import type { ActionConfig, EventContext, Octokit } from '../src/types.js';
 
 // =============================================================================
@@ -327,7 +326,7 @@ describe('executeAction', () => {
       });
       expect(mergeCheckComment).toBeDefined();
       const commentBody = mergeCheckComment?.[0]?.body ?? '';
-      expect(commentBody).toContain(EMOJI.CROSS);
+      expect(commentBody).toContain('❌');
       expect(commentBody).toContain('At least one valid approval');
       expect(commentBody).toContain('no valid approvals found');
     });
@@ -355,7 +354,7 @@ describe('executeAction', () => {
       });
       expect(mergeCheckComment).toBeDefined();
       const commentBody = mergeCheckComment?.[0]?.body ?? '';
-      expect(commentBody).toContain(EMOJI.WARNING);
+      expect(commentBody).toContain('⚠️');
       expect(commentBody).toContain('At least one valid approval');
       expect(commentBody).toContain('approval requirement overridden');
       expect(commentBody).toContain('--override-approval-requirement');
@@ -398,7 +397,7 @@ describe('executeAction', () => {
       expect(mergeCheckComment).toBeDefined();
       const commentBody = mergeCheckComment?.[0]?.body ?? '';
       expect(commentBody).toContain('review conversations are resolved');
-      expect(commentBody).toContain(EMOJI.CROSS);
+      expect(commentBody).toContain('❌');
     });
 
     it('Case D: title warning behavior - non-conventional title shows warning but does not block', async () => {
@@ -459,7 +458,7 @@ describe('executeAction', () => {
       ).mock.calls;
       const hasConventionalCommitsWarning = commentCalls.some((call) => {
         const body = call[0]?.body;
-        return body?.includes('Conventional Commits') && body?.includes(EMOJI.WARNING);
+        return body?.includes('Conventional Commits') && body?.includes('⚠️');
       });
       expect(hasConventionalCommitsWarning).toBe(true);
     });
@@ -643,7 +642,7 @@ describe('executeAction', () => {
       ).mock.calls;
       const hasConventionalCommitsCheck = commentCalls.some((call) => {
         const body = call[0]?.body;
-        return body?.includes('Conventional Commits') && body?.includes(EMOJI.WARNING);
+        return body?.includes('Conventional Commits') && body?.includes('⚠️');
       });
       expect(hasConventionalCommitsCheck).toBe(true);
     });
@@ -683,7 +682,7 @@ describe('executeAction', () => {
       ).mock.calls;
       const hasConventionalCommitsCheck = commentCalls.some((call) => {
         const body = call[0]?.body;
-        return body?.includes('Conventional Commits') && body?.includes(EMOJI.CHECK);
+        return body?.includes('Conventional Commits') && body?.includes('✅');
       });
       expect(hasConventionalCommitsCheck).toBe(true);
     });
