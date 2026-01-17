@@ -141,8 +141,7 @@ describe('main.ts', () => {
       expect(mockCore.setFailed).not.toHaveBeenCalled();
 
       // Cleanup
-      executeActionSpy.mockRestore();
-      buildSummaryMarkdownSpy.mockRestore();
+      vi.restoreAllMocks();
     });
 
     it('should handle custom configuration inputs', async () => {
