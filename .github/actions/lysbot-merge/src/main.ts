@@ -15,12 +15,12 @@
  * - Dependencies are injected via a required RunDependencies parameter with default
  * - Wiring logic is isolated in createProductionDependencies()
  * - Environment configuration is centralized in resolveRuntimeEnvironment()
- * - All dependencies are explicitly typed interfaces at a granular level:
- *   - ActionsCore: GitHub Actions core module
+ * - All dependencies are at maximum granularity with minimal interfaces:
+ *   - ActionsCore: Only the methods actually used from @actions/core
  *   - GitHubContext: GitHub context data
- *   - OctokitFactory: Octokit factory function
+ *   - getOctokit: The actual function (not wrapped in an object)
  *   - RuntimeEnvironment: Environment configuration
- * - Tests inject test doubles; production uses actual modules
+ * - Tests inject test doubles; production uses actual modules/functions
  *
  * The core business logic remains in action.ts (executeAction, buildSummaryMarkdown)
  * which has comprehensive test coverage independent of GitHub Actions runtime.
@@ -47,7 +47,11 @@ function resolveRuntimeEnvironment(): RuntimeEnvironment {
 /**
  * Wires up dependencies for production execution.
  * This function encapsulates the "wiring" logic, keeping run() focused on orchestration.
- * Dependencies are injected at a granular level for better testability and flexibility.
+ * Dependencies are injected at maximum granularity:
+ * - core: Actual @actions/core module (satisfies ActionsCore interface)
+ * - context: github.context object
+ * - getOctokit: github.getOctokit function (not the entire module)
+ * - env: Resolved runtime environment
  *
  * @returns Production dependencies
  */
@@ -55,7 +59,7 @@ function createProductionDependencies(): RunDependencies {
   return {
     core,
     context: github.context,
-    getOctokit: github,
+    getOctokit: github.getOctokit,
     env: resolveRuntimeEnvironment(),
   };
 }
@@ -116,7 +120,7 @@ export async function run(deps: RunDependencies = createProductionDependencies()
     };
 
     // Create Octokit instance
-    const octokit = deps.getOctokit.getOctokit(token);
+    const octokit = deps.getOctokit(token);
 
     // Run the main logic
     const result = await executeAction(octokit, context, config);

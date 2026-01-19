@@ -4,13 +4,14 @@
  * This module contains all TypeScript type definitions and interfaces
  * used throughout the lysbot-merge action, including:
  * - Domain models (ActionConfig, EventContext, PullRequestData, etc.)
- * - Dependency injection interfaces (ActionsCore, GitHubContext, OctokitFactory, RuntimeEnvironment)
+ * - Dependency injection interfaces (ActionsCore, GitHubContext, GetOctokitFunction, RuntimeEnvironment)
  * - Result types (ActionResult, CheckResult, MergeMethodResult, etc.)
  *
  * The DI interfaces follow these principles:
- * - Granular injection: Each dependency is a focused, single-purpose interface
+ * - Maximum granularity: Each dependency is minimal and focused
+ * - ActionsCore: Only includes methods actually used (not entire @actions/core)
  * - GitHubContext: Read-only context data from GitHub Actions
- * - OctokitFactory: Factory function to create Octokit instances
+ * - GetOctokitFunction: The actual function, not wrapped in an interface
  * - RuntimeEnvironment: Centralized environment variable access
  * - All RunDependencies fields are required to prevent partial injection errors
  * - Fields are readonly to prevent mutation after construction
@@ -134,13 +135,13 @@ export type ReviewsArray = RestEndpointMethodTypes['pulls']['listReviews']['resp
 
 /**
  * Interface for GitHub Actions Core module.
- * This abstracts the @actions/core module for dependency injection.
+ * This abstracts only the methods actually used from @actions/core.
+ * Provides a minimal interface for better encapsulation and clarity.
  */
 export interface ActionsCore {
   getInput(this: void, name: string, options?: { required?: boolean }): string;
   setOutput(this: void, name: string, value: string): void;
   setFailed(this: void, message: string): void;
-  warning(this: void, message: string): void;
   info(this: void, message: string): void;
   summary: {
     addRaw(this: void, text: string): { write(this: void): Promise<unknown> };
@@ -176,12 +177,10 @@ export interface GitHubContext {
 }
 
 /**
- * Interface for Octokit factory function.
- * This abstracts the github.getOctokit function for dependency injection.
+ * Type for the Octokit factory function.
+ * This is the actual getOctokit function, not a wrapper interface.
  */
-export interface OctokitFactory {
-  getOctokit(this: void, token: string): Octokit;
-}
+export type GetOctokitFunction = (token: string) => Octokit;
 
 /**
  * Interface for runtime environment configuration.
@@ -195,11 +194,15 @@ export interface RuntimeEnvironment {
  * Dependencies required by the main run() function.
  * This enables dependency injection and testing.
  * All fields are required to prevent partial injection errors.
- * Dependencies are injected at a granular level for better testability.
+ * Dependencies are injected at maximum granularity:
+ * - core: Only the methods actually used from @actions/core
+ * - context: GitHub context data
+ * - getOctokit: The actual factory function (not wrapped)
+ * - env: Environment configuration
  */
 export interface RunDependencies {
   readonly core: ActionsCore;
   readonly context: GitHubContext;
-  readonly getOctokit: OctokitFactory;
+  readonly getOctokit: GetOctokitFunction;
   readonly env: RuntimeEnvironment;
 }
