@@ -4,8 +4,14 @@
  * This module contains all TypeScript type definitions and interfaces
  * used throughout the lysbot-merge action, including:
  * - Domain models (ActionConfig, EventContext, PullRequestData, etc.)
- * - Dependency injection interfaces (ActionsCore, GitHubContext, GitHubApiFactory)
+ * - Dependency injection interfaces (ActionsCore, GitHubModule, RuntimeEnvironment)
  * - Result types (ActionResult, CheckResult, MergeMethodResult, etc.)
+ *
+ * The DI interfaces follow these principles:
+ * - GitHubModule combines context and getOctokit (from github module)
+ * - RuntimeEnvironment centralizes environment variable access
+ * - All RunDependencies fields are required to prevent partial injection errors
+ * - Fields are readonly to prevent mutation after construction
  */
 
 import type { GitHub } from '@actions/github/lib/utils.js';
@@ -135,7 +141,7 @@ export interface ActionsCore {
   warning(this: void, message: string): void;
   info(this: void, message: string): void;
   summary: {
-    addRaw(this: void, text: string): { write(this: void): Promise<void> };
+    addRaw(this: void, text: string): { write(this: void): Promise<unknown> };
   };
 }
 
@@ -168,20 +174,30 @@ export interface GitHubContext {
 }
 
 /**
- * Interface for GitHub API factory.
- * This abstracts the github.getOctokit function for dependency injection.
+ * Interface for GitHub module.
+ * This abstracts the @actions/github module for dependency injection.
+ * Contains both context and the getOctokit factory function.
  */
-export interface GitHubApiFactory {
+export interface GitHubModule {
+  context: GitHubContext;
   getOctokit(this: void, token: string): Octokit;
+}
+
+/**
+ * Interface for runtime environment configuration.
+ * This abstracts environment variables and runtime settings.
+ */
+export interface RuntimeEnvironment {
+  readonly serverUrl: string;
 }
 
 /**
  * Dependencies required by the main run() function.
  * This enables dependency injection and testing.
+ * All fields are required to prevent partial injection errors.
  */
 export interface RunDependencies {
-  core: ActionsCore;
-  context: GitHubContext;
-  apiFactory: GitHubApiFactory;
-  serverUrl?: string;
+  readonly core: ActionsCore;
+  readonly github: GitHubModule;
+  readonly env: RuntimeEnvironment;
 }
