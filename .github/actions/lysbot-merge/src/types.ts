@@ -4,13 +4,13 @@
  * This module contains all TypeScript type definitions and interfaces
  * used throughout the lysbot-merge action, including:
  * - Domain models (ActionConfig, EventContext, PullRequestData, etc.)
- * - Dependency injection interfaces (ActionsCore, GitHubContext, OctokitFactory, RuntimeEnvironment)
+ * - Dependency injection interfaces (ActionsCore, GitHubContext, GetOctokitFunction, RuntimeEnvironment)
  * - Result types (ActionResult, CheckResult, MergeMethodResult, etc.)
  *
  * The DI interfaces follow these principles:
  * - Granular injection: Each dependency is a focused, single-purpose interface
  * - GitHubContext: Read-only context data from GitHub Actions
- * - OctokitFactory: Factory function to create Octokit instances
+ * - GetOctokitFunction: Factory function to create Octokit instances
  * - RuntimeEnvironment: Centralized environment variable access
  * - All RunDependencies fields are required to prevent partial injection errors
  * - Fields are readonly to prevent mutation after construction
