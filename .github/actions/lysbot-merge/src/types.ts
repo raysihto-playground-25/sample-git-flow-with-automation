@@ -4,14 +4,13 @@
  * This module contains all TypeScript type definitions and interfaces
  * used throughout the lysbot-merge action, including:
  * - Domain models (ActionConfig, EventContext, PullRequestData, etc.)
- * - Dependency injection interfaces (ActionsCore, GitHubContext, GetOctokitFunction, RuntimeEnvironment)
+ * - Dependency injection interfaces (ActionsCore, GitHubContext, OctokitFactory, RuntimeEnvironment)
  * - Result types (ActionResult, CheckResult, MergeMethodResult, etc.)
  *
  * The DI interfaces follow these principles:
- * - Maximum granularity: Each dependency is minimal and focused
- * - ActionsCore: Only includes methods actually used (not entire @actions/core)
+ * - Granular injection: Each dependency is a focused, single-purpose interface
  * - GitHubContext: Read-only context data from GitHub Actions
- * - GetOctokitFunction: The actual function, not wrapped in an interface
+ * - OctokitFactory: Factory function to create Octokit instances
  * - RuntimeEnvironment: Centralized environment variable access
  * - All RunDependencies fields are required to prevent partial injection errors
  * - Fields are readonly to prevent mutation after construction
@@ -135,8 +134,7 @@ export type ReviewsArray = RestEndpointMethodTypes['pulls']['listReviews']['resp
 
 /**
  * Interface for GitHub Actions Core module.
- * This abstracts only the methods actually used from @actions/core.
- * Provides a minimal interface for better encapsulation and clarity.
+ * This abstracts the @actions/core module for dependency injection.
  */
 export interface ActionsCore {
   getInput(this: void, name: string, options?: { required?: boolean }): string;
@@ -194,11 +192,7 @@ export interface RuntimeEnvironment {
  * Dependencies required by the main run() function.
  * This enables dependency injection and testing.
  * All fields are required to prevent partial injection errors.
- * Dependencies are injected at maximum granularity:
- * - core: Only the methods actually used from @actions/core
- * - context: GitHub context data
- * - getOctokit: The actual factory function (not wrapped)
- * - env: Environment configuration
+ * Dependencies are injected at a granular level for better testability.
  */
 export interface RunDependencies {
   readonly core: ActionsCore;

@@ -1,12 +1,9 @@
 /**
  * action.test.ts - Tests for action.ts module
  *
- * Tests cover the main business logic functions exported from action.ts:
- * - executeAction(): Main orchestration logic for merge operations
- * - buildSummaryMarkdown(): Pure function for building markdown summaries
- *
- * These tests use mock Octokit instances to verify the action's behavior
- * without making actual API calls to GitHub.
+ * Tests cover all functions exported from action.ts:
+ * - executeAction: Main orchestration logic for merge operations
+ * - buildSummaryMarkdown: Pure function for building markdown summaries
  */
 
 import { describe, it, expect, vi, type MockedFunction } from 'vitest';

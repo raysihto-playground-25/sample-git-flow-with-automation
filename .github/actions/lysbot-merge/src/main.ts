@@ -82,12 +82,20 @@ export async function run(deps: RunDependencies = createProductionDependencies()
   try {
     // Get inputs
     const token = deps.core.getInput('github-token', { required: true });
+
+    // Parse integer inputs with safety checks
+    const retryCountInput = deps.core.getInput('mergeable_retry_count') || '5';
+    const retryIntervalInput = deps.core.getInput('mergeable_retry_interval') || '10';
+    const mergeableRetryCount = parseInt(retryCountInput, 10);
+    const mergeableRetryInterval = parseInt(retryIntervalInput, 10);
+
+    // Validate parsed integers and fall back to defaults if NaN
     const config: ActionConfig = {
       releaseBranchPrefix: deps.core.getInput('release_branch_prefix') || 'release/',
       developBranch: deps.core.getInput('develop_branch') || 'develop',
       syncBranchPrefix: deps.core.getInput('sync_branch_prefix') || 'fix/sync/',
-      mergeableRetryCount: parseInt(deps.core.getInput('mergeable_retry_count') || '5', 10),
-      mergeableRetryInterval: parseInt(deps.core.getInput('mergeable_retry_interval') || '10', 10),
+      mergeableRetryCount: Number.isNaN(mergeableRetryCount) ? 5 : mergeableRetryCount,
+      mergeableRetryInterval: Number.isNaN(mergeableRetryInterval) ? 10 : mergeableRetryInterval,
     };
 
     // Get event context

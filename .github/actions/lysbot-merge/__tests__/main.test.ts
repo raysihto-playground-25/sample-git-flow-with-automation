@@ -27,6 +27,8 @@ import type {
   Octokit,
   RunDependencies,
   RuntimeEnvironment,
+  ActionConfig,
+  EventContext,
 } from '../src/types.js';
 
 /**
@@ -526,7 +528,7 @@ describe('main.ts', () => {
 
       // Assert
       expect(executeActionSpy).toHaveBeenCalled();
-      const callArgs = executeActionSpy.mock.calls[0];
+      const callArgs = executeActionSpy.mock.calls[0] as [unknown, EventContext, ActionConfig];
       if (callArgs) {
         expect(callArgs[1]).toMatchObject({
           serverUrl: 'https://github.enterprise.com',
@@ -763,8 +765,20 @@ describe('main.ts', () => {
       // Act
       await run(deps);
 
-      // Assert
+      // Assert: Verify executeAction was called with default values
       expect(executeActionSpy).toHaveBeenCalled();
+      const callArgs = executeActionSpy.mock.calls[0] as [unknown, EventContext, ActionConfig];
+
+      const config: ActionConfig = callArgs[2];
+      // When parseInt returns NaN, config should use default values
+
+      expect(config.mergeableRetryCount).toBe(5); // default value
+
+      expect(config.mergeableRetryInterval).toBe(10); // default value
+
+      // Verify the action completed successfully despite invalid inputs
+      expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'merged');
+      expect(mockCore.setFailed).not.toHaveBeenCalled();
 
       // Cleanup
       vi.restoreAllMocks();
