@@ -4,12 +4,14 @@
  * This module contains all TypeScript type definitions and interfaces
  * used throughout the lysbot-merge action, including:
  * - Domain models (ActionConfig, EventContext, PullRequestData, etc.)
- * - Dependency injection interfaces (ActionsCore, GitHubModule, RuntimeEnvironment)
+ * - Dependency injection interfaces (ActionsCore, GitHubContext, OctokitFactory, RuntimeEnvironment)
  * - Result types (ActionResult, CheckResult, MergeMethodResult, etc.)
  *
  * The DI interfaces follow these principles:
- * - GitHubModule combines context and getOctokit (from github module)
- * - RuntimeEnvironment centralizes environment variable access
+ * - Granular injection: Each dependency is a focused, single-purpose interface
+ * - GitHubContext: Read-only context data from GitHub Actions
+ * - OctokitFactory: Factory function to create Octokit instances
+ * - RuntimeEnvironment: Centralized environment variable access
  * - All RunDependencies fields are required to prevent partial injection errors
  * - Fields are readonly to prevent mutation after construction
  */
@@ -174,12 +176,10 @@ export interface GitHubContext {
 }
 
 /**
- * Interface for GitHub module.
- * This abstracts the @actions/github module for dependency injection.
- * Contains both context and the getOctokit factory function.
+ * Interface for Octokit factory function.
+ * This abstracts the github.getOctokit function for dependency injection.
  */
-export interface GitHubModule {
-  context: GitHubContext;
+export interface OctokitFactory {
   getOctokit(this: void, token: string): Octokit;
 }
 
@@ -195,9 +195,11 @@ export interface RuntimeEnvironment {
  * Dependencies required by the main run() function.
  * This enables dependency injection and testing.
  * All fields are required to prevent partial injection errors.
+ * Dependencies are injected at a granular level for better testability.
  */
 export interface RunDependencies {
   readonly core: ActionsCore;
-  readonly github: GitHubModule;
+  readonly context: GitHubContext;
+  readonly getOctokit: OctokitFactory;
   readonly env: RuntimeEnvironment;
 }

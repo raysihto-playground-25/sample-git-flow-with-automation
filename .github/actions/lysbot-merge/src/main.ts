@@ -15,7 +15,11 @@
  * - Dependencies are injected via a required RunDependencies parameter with default
  * - Wiring logic is isolated in createProductionDependencies()
  * - Environment configuration is centralized in resolveRuntimeEnvironment()
- * - All dependencies are explicitly typed interfaces (ActionsCore, GitHubModule, RuntimeEnvironment)
+ * - All dependencies are explicitly typed interfaces at a granular level:
+ *   - ActionsCore: GitHub Actions core module
+ *   - GitHubContext: GitHub context data
+ *   - OctokitFactory: Octokit factory function
+ *   - RuntimeEnvironment: Environment configuration
  * - Tests inject test doubles; production uses actual modules
  *
  * The core business logic remains in action.ts (executeAction, buildSummaryMarkdown)
@@ -43,13 +47,15 @@ function resolveRuntimeEnvironment(): RuntimeEnvironment {
 /**
  * Wires up dependencies for production execution.
  * This function encapsulates the "wiring" logic, keeping run() focused on orchestration.
+ * Dependencies are injected at a granular level for better testability and flexibility.
  *
  * @returns Production dependencies
  */
 function createProductionDependencies(): RunDependencies {
   return {
     core,
-    github,
+    context: github.context,
+    getOctokit: github,
     env: resolveRuntimeEnvironment(),
   };
 }
@@ -64,7 +70,7 @@ function createProductionDependencies(): RunDependencies {
  * 4. Delegates to executeAction() for business logic
  * 5. Writes outputs and summaries
  *
- * Dependencies are injected to enable testing without mocks (DI/DIP pattern).
+ * Dependencies are injected at a granular level to enable testing without mocks (DI/DIP pattern).
  *
  * @param deps - Dependencies for GitHub Actions integration (defaults to production)
  */
@@ -86,31 +92,31 @@ export async function run(deps: RunDependencies = createProductionDependencies()
     //   - github.context.payload is intentionally typed as unknown, so some property accesses
     //     cannot be made fully type-safe. In those cases, we selectively disable ESLint on specific
     //     lines rather than adding noisy type assertions.
-    const payload = deps.github.context.payload;
+    const payload = deps.context.payload;
 
     // Build event context
     const context: EventContext = {
-      owner: deps.github.context.repo.owner,
-      repo: deps.github.context.repo.repo,
+      owner: deps.context.repo.owner,
+      repo: deps.context.repo.repo,
       // prNumber will be 0 if this is not a PR comment, but that's acceptable
       // because executeAction() will skip early when isPullRequest is false
       prNumber: payload.issue?.number ?? 0,
       commentId: payload.comment?.id ?? 0,
 
       commentBody: payload.comment?.body ?? '',
-      actor: deps.github.context.actor,
+      actor: deps.context.actor,
 
       userType: payload.comment?.user?.type ?? 'User',
 
       authorAssociation: payload.comment?.author_association ?? 'NONE',
       serverUrl: deps.env.serverUrl,
-      runId: deps.github.context.runId,
-      eventName: deps.github.context.eventName,
+      runId: deps.context.runId,
+      eventName: deps.context.eventName,
       isPullRequest: !!payload.issue?.pull_request,
     };
 
     // Create Octokit instance
-    const octokit = deps.github.getOctokit(token);
+    const octokit = deps.getOctokit.getOctokit(token);
 
     // Run the main logic
     const result = await executeAction(octokit, context, config);

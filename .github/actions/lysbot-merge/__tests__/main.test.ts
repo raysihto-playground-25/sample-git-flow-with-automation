@@ -23,8 +23,8 @@ import { run } from '../src/main.js';
 import type {
   ActionsCore,
   GitHubContext,
-  GitHubModule,
   Octokit,
+  OctokitFactory,
   RunDependencies,
   RuntimeEnvironment,
 } from '../src/types.js';
@@ -100,11 +100,10 @@ function createMockOctokit(): Octokit {
 }
 
 /**
- * Creates a mock GitHubModule for testing.
+ * Creates a mock OctokitFactory for testing.
  */
-function createMockGitHub(context: GitHubContext, octokit: Octokit): GitHubModule {
+function createMockOctokitFactory(octokit: Octokit): OctokitFactory {
   return {
-    context,
     getOctokit: vi.fn().mockReturnValue(octokit),
   };
 }
@@ -126,7 +125,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       // Mock core.getInput to return default config
@@ -148,7 +147,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -157,7 +157,7 @@ describe('main.ts', () => {
 
       // Assert
       expect(mockCore.getInput).toHaveBeenCalledWith('github-token', { required: true });
-      expect(mockGitHub.getOctokit).toHaveBeenCalledWith('test-token');
+      expect(mockOctokitFactory.getOctokit).toHaveBeenCalledWith('test-token');
       expect(executeActionSpy).toHaveBeenCalled();
       expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'merged');
       expect(mockCore.setOutput).toHaveBeenCalledWith('merge_method', 'squash');
@@ -175,7 +175,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       // Mock custom configuration
@@ -201,7 +201,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -230,7 +231,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -250,7 +251,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -269,7 +271,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -289,7 +291,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -311,7 +314,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -331,7 +334,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -353,7 +357,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -373,7 +377,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -405,7 +410,7 @@ describe('main.ts', () => {
         },
       });
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -425,7 +430,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -451,7 +457,7 @@ describe('main.ts', () => {
         },
       });
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -471,7 +477,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -490,7 +497,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv({ serverUrl: 'https://github.enterprise.com' });
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -510,7 +517,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -535,7 +543,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -549,7 +557,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -569,7 +578,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -583,7 +592,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -602,7 +612,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -622,7 +632,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -641,7 +652,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -661,7 +672,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -680,7 +692,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -702,7 +714,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
@@ -721,7 +734,7 @@ describe('main.ts', () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
-      const mockGitHub = createMockGitHub(mockContext, mockOctokit);
+      const mockOctokitFactory = createMockOctokitFactory(mockOctokit);
       const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -743,7 +756,8 @@ describe('main.ts', () => {
 
       const deps: RunDependencies = {
         core: mockCore,
-        github: mockGitHub,
+        context: mockContext,
+        getOctokit: mockOctokitFactory,
         env: mockEnv,
       };
 
