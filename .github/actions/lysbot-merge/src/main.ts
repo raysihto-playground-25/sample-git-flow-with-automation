@@ -12,7 +12,7 @@
  * DESIGN PATTERN:
  * ===============
  * This module uses Dependency Injection (DI) with clear boundaries:
- * - Dependencies are injected via a required RunDependencies parameter with default
+ * - Dependencies are injected via an optional RunDependencies parameter (defaults to production dependencies)
  * - Wiring logic is isolated in createProductionDependencies()
  * - Environment configuration is centralized in resolveRuntimeEnvironment()
  * - All dependencies are at maximum granularity with minimal interfaces:
