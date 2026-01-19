@@ -783,5 +783,128 @@ describe('main.ts', () => {
       // Cleanup
       vi.restoreAllMocks();
     });
+
+    it('should handle negative retry count by using default', async () => {
+      const mockCore = createMockCore();
+      const mockContext = createMockContext();
+      const mockOctokit = createMockOctokit();
+      const mockGetOctokit = createMockGetOctokit(mockOctokit);
+      const mockEnv = createMockEnv();
+
+      (mockCore.getInput as Mock).mockImplementation((name: string) => {
+        const config: Record<string, string> = {
+          'github-token': 'test-token',
+          mergeable_retry_count: '-5',
+          mergeable_retry_interval: '10',
+        };
+        return config[name] || '';
+      });
+
+      const executeActionSpy = vi.spyOn(action, 'executeAction').mockResolvedValue({
+        status: 'merged',
+        message: 'Success',
+      });
+
+      vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
+
+      const deps: RunDependencies = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
+
+      await run(deps);
+
+      const callArgs = executeActionSpy.mock.calls[0] as [unknown, EventContext, ActionConfig];
+      const config: ActionConfig = callArgs[2];
+
+      expect(config.mergeableRetryCount).toBe(5); // default when negative
+      expect(config.mergeableRetryInterval).toBe(10); // valid value unchanged
+
+      vi.restoreAllMocks();
+    });
+
+    it('should handle excessive retry values by using default', async () => {
+      const mockCore = createMockCore();
+      const mockContext = createMockContext();
+      const mockOctokit = createMockOctokit();
+      const mockGetOctokit = createMockGetOctokit(mockOctokit);
+      const mockEnv = createMockEnv();
+
+      (mockCore.getInput as Mock).mockImplementation((name: string) => {
+        const config: Record<string, string> = {
+          'github-token': 'test-token',
+          mergeable_retry_count: '100', // > max 20
+          mergeable_retry_interval: '120', // > max 60
+        };
+        return config[name] || '';
+      });
+
+      const executeActionSpy = vi.spyOn(action, 'executeAction').mockResolvedValue({
+        status: 'merged',
+        message: 'Success',
+      });
+
+      vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
+
+      const deps: RunDependencies = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
+
+      await run(deps);
+
+      const callArgs = executeActionSpy.mock.calls[0] as [unknown, EventContext, ActionConfig];
+      const config: ActionConfig = callArgs[2];
+
+      expect(config.mergeableRetryCount).toBe(5); // default when > 20
+      expect(config.mergeableRetryInterval).toBe(10); // default when > 60
+
+      vi.restoreAllMocks();
+    });
+
+    it('should accept boundary values within valid range', async () => {
+      const mockCore = createMockCore();
+      const mockContext = createMockContext();
+      const mockOctokit = createMockOctokit();
+      const mockGetOctokit = createMockGetOctokit(mockOctokit);
+      const mockEnv = createMockEnv();
+
+      (mockCore.getInput as Mock).mockImplementation((name: string) => {
+        const config: Record<string, string> = {
+          'github-token': 'test-token',
+          mergeable_retry_count: '20', // max valid
+          mergeable_retry_interval: '1', // min valid
+        };
+        return config[name] || '';
+      });
+
+      const executeActionSpy = vi.spyOn(action, 'executeAction').mockResolvedValue({
+        status: 'merged',
+        message: 'Success',
+      });
+
+      vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
+
+      const deps: RunDependencies = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
+
+      await run(deps);
+
+      const callArgs = executeActionSpy.mock.calls[0] as [unknown, EventContext, ActionConfig];
+      const config: ActionConfig = callArgs[2];
+
+      expect(config.mergeableRetryCount).toBe(20); // max boundary accepted
+      expect(config.mergeableRetryInterval).toBe(1); // min boundary accepted
+
+      vi.restoreAllMocks();
+    });
   });
 });
