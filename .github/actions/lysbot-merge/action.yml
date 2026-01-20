@@ -63,11 +63,11 @@ inputs:
     required: false
     default: 'fix/sync/'
   mergeable_retry_count:
-    description: 'OPTIONAL: Number of retries for waiting on GitHub to calculate mergeable status'
+    description: 'OPTIONAL: Number of retries for waiting on GitHub to calculate mergeable status (valid range: 1-20)'
     required: false
     default: '5'
   mergeable_retry_interval:
-    description: 'OPTIONAL: Interval in seconds between retries'
+    description: 'OPTIONAL: Interval in seconds between retries (valid range: 1-60)'
     required: false
     default: '10'
 

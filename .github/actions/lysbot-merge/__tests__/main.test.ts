@@ -730,7 +730,7 @@ describe('main.ts', () => {
       vi.restoreAllMocks();
     });
 
-    it('should handle invalid integer inputs gracefully', async () => {
+    it('should reject invalid integer inputs with clear error message', async () => {
       // Arrange
       const mockCore = createMockCore();
       const mockContext = createMockContext();
@@ -742,18 +742,10 @@ describe('main.ts', () => {
         const config: Record<string, string> = {
           'github-token': 'test-token',
           mergeable_retry_count: 'not-a-number',
-          mergeable_retry_interval: 'also-not-a-number',
+          mergeable_retry_interval: '10',
         };
         return config[name] || '';
       });
-
-      const executeActionSpy = vi.spyOn(action, 'executeAction').mockResolvedValue({
-        status: 'merged',
-        message: 'Success',
-        mergeMethod: 'squash',
-      });
-
-      vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
       const deps: RunDependencies = {
         core: mockCore,
@@ -765,26 +757,19 @@ describe('main.ts', () => {
       // Act
       await run(deps);
 
-      // Assert: Verify executeAction was called with default values
-      expect(executeActionSpy).toHaveBeenCalled();
-      const callArgs = executeActionSpy.mock.calls[0] as [unknown, EventContext, ActionConfig];
-
-      const config: ActionConfig = callArgs[2];
-      // When parseInt returns NaN, config should use default values
-
-      expect(config.mergeableRetryCount).toBe(5); // default value
-
-      expect(config.mergeableRetryInterval).toBe(10); // default value
-
-      // Verify the action completed successfully despite invalid inputs
-      expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'merged');
-      expect(mockCore.setFailed).not.toHaveBeenCalled();
+      // Assert: Action should fail with clear error message
+      expect(mockCore.setFailed).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'lysbot-merge action failed: Invalid mergeable_retry_count: "not-a-number" is not a valid integer',
+        ),
+      );
+      expect(mockCore.setFailed).toHaveBeenCalledWith(expect.stringContaining('Must be between 1 and 20'));
 
       // Cleanup
       vi.restoreAllMocks();
     });
 
-    it('should handle negative retry count by using default', async () => {
+    it('should reject negative retry count with clear error message', async () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
@@ -800,13 +785,6 @@ describe('main.ts', () => {
         return config[name] || '';
       });
 
-      const executeActionSpy = vi.spyOn(action, 'executeAction').mockResolvedValue({
-        status: 'merged',
-        message: 'Success',
-      });
-
-      vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
-
       const deps: RunDependencies = {
         core: mockCore,
         context: mockContext,
@@ -816,16 +794,15 @@ describe('main.ts', () => {
 
       await run(deps);
 
-      const callArgs = executeActionSpy.mock.calls[0] as [unknown, EventContext, ActionConfig];
-      const config: ActionConfig = callArgs[2];
-
-      expect(config.mergeableRetryCount).toBe(5); // default when negative
-      expect(config.mergeableRetryInterval).toBe(10); // valid value unchanged
+      expect(mockCore.setFailed).toHaveBeenCalledWith(
+        expect.stringContaining('lysbot-merge action failed: Invalid mergeable_retry_count: -5 is out of range'),
+      );
+      expect(mockCore.setFailed).toHaveBeenCalledWith(expect.stringContaining('Must be between 1 and 20'));
 
       vi.restoreAllMocks();
     });
 
-    it('should handle excessive retry values by using default', async () => {
+    it('should reject excessive retry values with clear error message', async () => {
       const mockCore = createMockCore();
       const mockContext = createMockContext();
       const mockOctokit = createMockOctokit();
@@ -836,17 +813,10 @@ describe('main.ts', () => {
         const config: Record<string, string> = {
           'github-token': 'test-token',
           mergeable_retry_count: '100', // > max 20
-          mergeable_retry_interval: '120', // > max 60
+          mergeable_retry_interval: '10',
         };
         return config[name] || '';
       });
-
-      const executeActionSpy = vi.spyOn(action, 'executeAction').mockResolvedValue({
-        status: 'merged',
-        message: 'Success',
-      });
-
-      vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
       const deps: RunDependencies = {
         core: mockCore,
@@ -857,11 +827,10 @@ describe('main.ts', () => {
 
       await run(deps);
 
-      const callArgs = executeActionSpy.mock.calls[0] as [unknown, EventContext, ActionConfig];
-      const config: ActionConfig = callArgs[2];
-
-      expect(config.mergeableRetryCount).toBe(5); // default when > 20
-      expect(config.mergeableRetryInterval).toBe(10); // default when > 60
+      expect(mockCore.setFailed).toHaveBeenCalledWith(
+        expect.stringContaining('lysbot-merge action failed: Invalid mergeable_retry_count: 100 is out of range'),
+      );
+      expect(mockCore.setFailed).toHaveBeenCalledWith(expect.stringContaining('Must be between 1 and 20'));
 
       vi.restoreAllMocks();
     });

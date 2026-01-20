@@ -56,26 +56,40 @@ function createProductionDependencies(): RunDependencies {
 
 /**
  * Parses and validates action configuration from inputs.
- * Ensures integer values are valid and within reasonable bounds.
+ * Ensures integer values are valid and within acceptable bounds.
+ * Throws an error if validation fails.
  *
  * @param core - ActionsCore interface for reading inputs
  * @returns Validated action configuration
+ * @throws Error if any input validation fails
  */
 function parseConfig(core: ActionsCore): ActionConfig {
   const retryCountInput = core.getInput('mergeable_retry_count') || '5';
   const retryIntervalInput = core.getInput('mergeable_retry_interval') || '10';
 
-  let mergeableRetryCount = parseInt(retryCountInput, 10);
-  let mergeableRetryInterval = parseInt(retryIntervalInput, 10);
+  const mergeableRetryCount = parseInt(retryCountInput, 10);
+  const mergeableRetryInterval = parseInt(retryIntervalInput, 10);
 
-  // Validate and sanitize retry count (default: 5, min: 1, max: 20)
-  if (Number.isNaN(mergeableRetryCount) || mergeableRetryCount < 1 || mergeableRetryCount > 20) {
-    mergeableRetryCount = 5;
+  // Validate retry count: must be integer between 1 and 20
+  if (Number.isNaN(mergeableRetryCount)) {
+    throw new Error(
+      `Invalid mergeable_retry_count: "${retryCountInput}" is not a valid integer. Must be between 1 and 20.`,
+    );
+  }
+  if (mergeableRetryCount < 1 || mergeableRetryCount > 20) {
+    throw new Error(`Invalid mergeable_retry_count: ${mergeableRetryCount} is out of range. Must be between 1 and 20.`);
   }
 
-  // Validate and sanitize retry interval (default: 10, min: 1, max: 60)
-  if (Number.isNaN(mergeableRetryInterval) || mergeableRetryInterval < 1 || mergeableRetryInterval > 60) {
-    mergeableRetryInterval = 10;
+  // Validate retry interval: must be integer between 1 and 60
+  if (Number.isNaN(mergeableRetryInterval)) {
+    throw new Error(
+      `Invalid mergeable_retry_interval: "${retryIntervalInput}" is not a valid integer. Must be between 1 and 60.`,
+    );
+  }
+  if (mergeableRetryInterval < 1 || mergeableRetryInterval > 60) {
+    throw new Error(
+      `Invalid mergeable_retry_interval: ${mergeableRetryInterval} is out of range. Must be between 1 and 60.`,
+    );
   }
 
   return {
