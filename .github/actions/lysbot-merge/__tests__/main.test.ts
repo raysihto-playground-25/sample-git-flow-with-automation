@@ -795,9 +795,10 @@ describe('main.ts', () => {
       await run(deps);
 
       expect(mockCore.setFailed).toHaveBeenCalledWith(
-        expect.stringContaining('lysbot-merge action failed: Invalid mergeable_retry_count: -5 is out of range'),
+        expect.stringMatching(
+          /lysbot-merge action failed: Invalid mergeable_retry_count: -5 is out of range[\s\S]*Must be between 1 and 20/,
+        ),
       );
-      expect(mockCore.setFailed).toHaveBeenCalledWith(expect.stringContaining('Must be between 1 and 20'));
 
       vi.restoreAllMocks();
     });
@@ -828,9 +829,10 @@ describe('main.ts', () => {
       await run(deps);
 
       expect(mockCore.setFailed).toHaveBeenCalledWith(
-        expect.stringContaining('lysbot-merge action failed: Invalid mergeable_retry_count: 100 is out of range'),
+        expect.stringMatching(
+          /lysbot-merge action failed: Invalid mergeable_retry_count: 100 is out of range[\s\S]*Must be between 1 and 20/,
+        ),
       );
-      expect(mockCore.setFailed).toHaveBeenCalledWith(expect.stringContaining('Must be between 1 and 20'));
 
       vi.restoreAllMocks();
     });
@@ -873,6 +875,145 @@ describe('main.ts', () => {
       expect(config.mergeableRetryCount).toBe(20); // max boundary accepted
       expect(config.mergeableRetryInterval).toBe(1); // min boundary accepted
 
+      vi.restoreAllMocks();
+    });
+
+    it('should reject invalid mergeable_retry_interval with clear error message', async () => {
+      const mockCore = createMockCore();
+      const mockContext = createMockContext();
+      const mockOctokit = createMockOctokit();
+      const mockGetOctokit = createMockGetOctokit(mockOctokit);
+      const mockEnv = createMockEnv();
+
+      (mockCore.getInput as Mock).mockImplementation((name: string) => {
+        const config: Record<string, string> = {
+          'github-token': 'test-token',
+          mergeable_retry_count: '5',
+          mergeable_retry_interval: 'not-a-number',
+        };
+        return config[name] || '';
+      });
+
+      const deps: RunDependencies = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
+
+      await run(deps);
+
+      expect(mockCore.setFailed).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /lysbot-merge action failed: Invalid mergeable_retry_interval: "not-a-number" is not a valid integer[\s\S]*Must be between 1 and 60/,
+        ),
+      );
+
+      vi.restoreAllMocks();
+    });
+
+    it('should reject out-of-range mergeable_retry_interval (too small)', async () => {
+      const mockCore = createMockCore();
+      const mockContext = createMockContext();
+      const mockOctokit = createMockOctokit();
+      const mockGetOctokit = createMockGetOctokit(mockOctokit);
+      const mockEnv = createMockEnv();
+
+      (mockCore.getInput as Mock).mockImplementation((name: string) => {
+        const config: Record<string, string> = {
+          'github-token': 'test-token',
+          mergeable_retry_count: '5',
+          mergeable_retry_interval: '0',
+        };
+        return config[name] || '';
+      });
+
+      const deps: RunDependencies = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
+
+      await run(deps);
+
+      expect(mockCore.setFailed).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /lysbot-merge action failed: Invalid mergeable_retry_interval: 0 is out of range[\s\S]*Must be between 1 and 60/,
+        ),
+      );
+
+      vi.restoreAllMocks();
+    });
+
+    it('should reject out-of-range mergeable_retry_interval (too large)', async () => {
+      const mockCore = createMockCore();
+      const mockContext = createMockContext();
+      const mockOctokit = createMockOctokit();
+      const mockGetOctokit = createMockGetOctokit(mockOctokit);
+      const mockEnv = createMockEnv();
+
+      (mockCore.getInput as Mock).mockImplementation((name: string) => {
+        const config: Record<string, string> = {
+          'github-token': 'test-token',
+          mergeable_retry_count: '5',
+          mergeable_retry_interval: '61',
+        };
+        return config[name] || '';
+      });
+
+      const deps: RunDependencies = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
+
+      await run(deps);
+
+      expect(mockCore.setFailed).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /lysbot-merge action failed: Invalid mergeable_retry_interval: 61 is out of range[\s\S]*Must be between 1 and 60/,
+        ),
+      );
+
+      vi.restoreAllMocks();
+    });
+
+    it('should log stack trace when error with stack is thrown', async () => {
+      const mockCore = createMockCore();
+      const mockContext = createMockContext();
+      const mockOctokit = createMockOctokit();
+      const mockGetOctokit = createMockGetOctokit(mockOctokit);
+      const mockEnv = createMockEnv();
+
+      (mockCore.getInput as Mock).mockImplementation((name: string) => {
+        if (name === 'github-token') {
+          return 'test-token';
+        }
+        return '';
+      });
+
+      const executeActionSpy = vi.spyOn(action, 'executeAction').mockImplementation(() => {
+        const error = new Error('Test error with stack');
+        error.stack = 'Error: Test error with stack\n    at TestLocation (test.ts:123:45)';
+        throw error;
+      });
+
+      const deps: RunDependencies = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
+
+      await run(deps);
+
+      expect(mockCore.setFailed).toHaveBeenCalledWith('lysbot-merge action failed: Test error with stack');
+      expect(mockCore.info).toHaveBeenCalledWith(expect.stringContaining('Stack trace: Error: Test error with stack'));
+      expect(mockCore.info).toHaveBeenCalledWith(expect.stringContaining('at TestLocation (test.ts:123:45)'));
+
+      executeActionSpy.mockRestore();
       vi.restoreAllMocks();
     });
   });
