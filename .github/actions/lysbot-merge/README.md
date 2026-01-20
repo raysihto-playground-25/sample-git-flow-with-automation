@@ -207,14 +207,18 @@ jobs:
 
 ## Inputs
 
-| Input                      | Type   | Required | Default     | Description                                        |
-| -------------------------- | ------ | -------- | ----------- | -------------------------------------------------- |
-| `github-token`             | string | Yes      | -           | GitHub token for API authentication                |
-| `release_branch_prefix`    | string | No       | `release/`  | Prefix for release branches                        |
-| `develop_branch`           | string | No       | `develop`   | Name of the develop branch                         |
-| `sync_branch_prefix`       | string | No       | `fix/sync/` | Prefix for sync branches (back-merges)             |
-| `mergeable_retry_count`    | number | No       | `5`         | Number of retries for mergeable status calculation |
-| `mergeable_retry_interval` | number | No       | `10`        | Interval in seconds between retries                |
+| Input                      | Type   | Required | Default     | Valid Range | Description                                         |
+| -------------------------- | ------ | -------- | ----------- | ----------- | --------------------------------------------------- |
+| `github-token`             | string | Yes      | -           | -           | GitHub token for API authentication                 |
+| `release_branch_prefix`    | string | No       | `release/`  | -           | Prefix for release branches                         |
+| `develop_branch`           | string | No       | `develop`   | -           | Name of the develop branch                          |
+| `sync_branch_prefix`       | string | No       | `fix/sync/` | -           | Prefix for sync branches (back-merges)              |
+| `mergeable_retry_count`    | number | No       | `5`         | 1-20        | Number of retries for mergeable status calculation  |
+| `mergeable_retry_interval` | number | No       | `10`        | 1-60        | Interval in seconds between retries                 |
+
+> [!NOTE]
+>
+> **Input Validation**: Out-of-range values for `mergeable_retry_count` and `mergeable_retry_interval` will cause the action to fail with a clear error message indicating the valid range.
 
 ## Outputs
 
