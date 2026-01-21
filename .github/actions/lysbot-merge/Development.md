@@ -20,7 +20,7 @@ npm run package     # Build package with rollup
 
 ## Code Structure
 
-The codebase has been modularized for better maintainability and testability, following the **Single Responsibility Principle**. Each module focuses on a specific concern:
+The codebase has been modularized for better maintainability and testability, following the **Single Responsibility Principle** and **Dependency Inversion Principle (DIP)**. Each module focuses on a specific concern:
 
 ### Current File Structure
 
@@ -30,8 +30,8 @@ src/
 ├── constants.ts      # Configuration constants and regex patterns
 ├── github-api.ts     # GitHub API interaction wrappers
 ├── index.ts          # Action entry point for bundler
-├── main.ts           # GitHub Actions runtime integration (tested with mocks)
-├── types.ts          # Type definitions and interfaces
+├── main.ts           # GitHub Actions runtime integration with DI
+├── types.ts          # Type definitions and DI interfaces
 └── validation.ts     # Pure validation and business logic functions
 ```
 
@@ -53,20 +53,21 @@ src/
    - API calls, data fetching, mutations (reactions, comments, merges)
    - Depends on: types
 
-4. **`main.ts`** (GitHub Actions runtime integration - tested with mocks)
-   - Integration layer with GitHub Actions runtime
-   - Reads inputs from GitHub Actions environment (`core.getInput`)
-   - Handles deprecated input parameters with warnings
-   - Constructs context from GitHub runtime (`github.context`, `process.env`)
+4. **`main.ts`** (GitHub Actions runtime integration with Dependency Injection)
+   - Integration layer with GitHub Actions runtime using DI/DIP pattern
+   - Accepts `RunDependencies` parameter for all external dependencies
+   - Helper functions: `parseConfig()`, `buildEventContext()`, `createProductionDependencies()`
+   - `parseConfig()` validates inputs with strict bounds checking (rejects out-of-range values)
    - Delegates to `action.ts` for merge business logic
-   - Writes outputs and summaries to GitHub Actions (`core.setOutput`, `core.summary`)
-   - Tested using vitest mocks to verify input handling, options parsing, and error handling
-   - Contains conditional logic for backward compatibility with deprecated inputs
+   - Writes outputs and summaries to GitHub Actions
+   - Tested using direct dependency injection (no vi.mock)
+   - Production uses actual modules; tests inject test doubles
 
 5. **`types.ts`**
    - All TypeScript type definitions and interfaces
+   - DI interfaces: `ActionsCore`, `GitHubContext`, `GetOctokitFunction`, `RuntimeEnvironment`, `RunDependencies`
+   - Domain models and result types
    - No runtime logic, purely type declarations
-   - Imported by all other modules as needed
 
 6. **`validation.ts`**
    - Pure functions for validation and business logic
@@ -95,7 +96,18 @@ For GitHub Actions input handling guidelines (including DEPRECATED and OPTIONAL 
 
 # Testing
 
-This action uses **Vitest** for unit testing. The test suite focuses on testing pure logic functions and mocking GitHub API interactions for isolation.
+This action uses **Vitest** for unit testing with **Dependency Injection** for testability.
+
+## Testing Strategy
+
+The test suite uses **direct dependency injection** instead of vi.mock for better maintainability:
+
+- **No vi.mock**: Tests inject test doubles directly via `RunDependencies`
+- **Clear contracts**: Minimal interfaces document actual dependencies
+- **Better type safety**: TypeScript validates injected dependencies
+- **Explicit mocking**: Each test constructs only the mocks it needs
+
+## Test Coverage
 
 | Test Type             | Status             | Description                                                            |
 | --------------------- | ------------------ | ---------------------------------------------------------------------- |
@@ -111,4 +123,27 @@ npm run check:test
 
 # Run tests in watch mode
 npm run test:watch
+```
+
+## Testing Example
+
+Tests use dependency injection instead of vi.mock:
+
+```typescript
+// Create test doubles
+const mockCore = createMockCore();
+const mockContext = createMockContext();
+const mockOctokit = createMockOctokit();
+const mockGetOctokit = vi.fn().mockReturnValue(mockOctokit);
+
+// Inject dependencies
+const deps: RunDependencies = {
+  core: mockCore,
+  context: mockContext,
+  getOctokit: mockGetOctokit,
+  env: { serverUrl: 'https://github.com' },
+};
+
+// Execute with injected dependencies
+await run(deps);
 ```
