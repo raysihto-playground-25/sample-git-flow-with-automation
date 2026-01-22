@@ -1,7 +1,11 @@
 /**
- * constants.test.ts - Unit tests for constants
+ * constants.test.ts - Tests for constants module
  *
- * Tests validate the constants and regex patterns used throughout the action.
+ * Tests validate the constants, regex patterns, and configuration values
+ * used throughout the action, including:
+ * - COMMAND_REGEX: Matching /lysbot merge commands
+ * - CONVENTIONAL_COMMIT_REGEX: Validating commit message formats
+ * - CONVENTIONAL_COMMIT_TYPES: Allowed commit types
  */
 
 import { describe, it, expect } from 'vitest';

@@ -1,7 +1,14 @@
 /**
- * validation.test.ts - Unit tests for validation functions
+ * validation.test.ts - Tests for validation and business logic functions
  *
- * Tests cover all pure validation and business logic functions.
+ * Tests cover all pure validation and business logic functions from validation.ts.
+ * These functions have no side effects and are easily testable without mocks.
+ * Test coverage includes:
+ * - Command parsing and flag validation
+ * - Permission and authorization checks
+ * - PR state validation
+ * - Merge method determination
+ * - Conventional Commits format validation
  */
 
 import { describe, it, expect } from 'vitest';

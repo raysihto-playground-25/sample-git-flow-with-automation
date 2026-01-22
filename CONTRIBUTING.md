@@ -137,8 +137,10 @@ When refactoring code in this repository, follow these principles to maintain co
    - Business rules are isolated from infrastructure
 
 2. **Testing Strategy**
-   - GitHub Actions runtime integration code should be tested using vitest mocks
+   - Use dependency injection (DI/DIP) for testability rather than vi.mock
+   - GitHub Actions integration code should accept dependencies via parameters
    - All business logic should be extracted to separate modules for comprehensive testing
+   - Tests should inject test doubles directly; production code uses actual modules
    - This separation maximizes maintainability and test coverage
 
 3. **Dependency Direction**
@@ -149,8 +151,9 @@ When refactoring code in this repository, follow these principles to maintain co
 4. **Testability**
    - Pure functions are in separate modules for easy unit testing
    - API interactions are grouped for easy mocking
-   - Orchestration logic can be tested with mocked dependencies
-   - Runtime integration is tested using vitest mocks for the GitHub Actions environment
+   - Orchestration logic accepts dependencies via parameters (DI/DIP pattern)
+   - Runtime integration is tested by injecting test doubles directly
+   - Avoid vi.mock; use explicit dependency injection instead
 
 ### Naming Conventions
 
@@ -189,8 +192,9 @@ When adding new features or making changes, follow these guidelines:
 
 3. **Testing Requirements**
    - All business logic MUST be testable and have tests
-   - Runtime integration logic should be tested with vitest mocks
+   - Runtime integration logic should be tested with dependency injection
    - Business logic should be tested comprehensively without mocks
+   - Use direct dependency injection instead of vi.mock for better maintainability
    - Target 80%+ coverage for all modules
 
 4. **Breaking Changes**
