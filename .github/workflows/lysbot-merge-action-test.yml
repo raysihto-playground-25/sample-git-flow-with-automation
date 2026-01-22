@@ -12,8 +12,8 @@ name: lysbot-merge-action-test
 on:
   pull_request:
     paths:
-      - '.github/actions/lysbot-merge/**'
-      - '.github/workflows/lysbot-merge-action-test.yml'
+      - ".github/actions/lysbot-merge/**"
+      - ".github/workflows/lysbot-merge-action-test.yml"
   workflow_dispatch:
 
 defaults:
@@ -33,9 +33,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: '.github/actions/lysbot-merge/package-lock.json'
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: ".github/actions/lysbot-merge/package-lock.json"
 
       - name: Install dependencies
         run: npm ci

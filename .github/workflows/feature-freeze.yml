@@ -4,14 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       bump_type:
-        description: 'Version bump type'
+        description: "Version bump type"
         required: true
         type: choice
         options:
           - major
           - minor
           - patch
-        default: 'minor'
+        default: "minor"
 
 concurrency:
   group: feature-freeze
@@ -124,7 +124,7 @@ jobs:
           git fetch origin "$SOURCE_BRANCH"
           git checkout -b "$RELEASE_BRANCH" "origin/$SOURCE_BRANCH"
           git commit --allow-empty -m "chore(release): Release candidate v${NEW_VERSION}-rc.1"
-          
+
           # Push the branch (RC tag will be created by the Release Branch Automation workflow)
           if ! git push origin "$RELEASE_BRANCH" 2>&1; then
             echo "Error: Failed to push release branch. It may already exist."
