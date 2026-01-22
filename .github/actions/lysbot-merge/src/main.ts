@@ -1,100 +1,152 @@
 /**
  * main.ts - Entry point for the lysbot-merge GitHub Action
  *
- * This file is the main entry point that runs in the GitHub Actions environment.
- * It is responsible for:
- * 1. Reading inputs from the GitHub Actions environment
- * 2. Handling deprecated input parameters with warnings
- * 3. Parsing options YAML and constructing configuration
- * 4. Constructing the event context from github.context
- * 5. Calling the main action logic from action.ts
- * 6. Setting outputs and writing summaries
+ * Orchestrates the GitHub Action execution with clear separation of concerns:
+ * - Dependency wiring (createProductionDependencies)
+ * - Configuration parsing (parseConfig)
+ * - Context building (buildEventContext)
+ * - Business logic delegation (executeAction)
+ * - Output handling
  *
- * TESTING APPROACH:
- * =================
- * This file contains GitHub Actions runtime integration code and has been tested
- * using vitest mocks to verify:
- * - Deprecated input handling and warning messages
- * - Options parsing with deprecated input fallbacks
- * - Integer parsing for numeric inputs
- * - Error handling and reporting
- *
- * The core business logic remains in action.ts (executeAction, buildSummaryMarkdown)
- * which has comprehensive test coverage independent of GitHub Actions runtime.
+ * DESIGN PATTERN: Dependency Injection (DI/DIP)
+ * - All dependencies injected via RunDependencies parameter
+ * - Helper functions extract configuration and context building logic
+ * - Minimal interfaces document actual dependencies
+ * - Tests inject test doubles; production uses actual modules
  */
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
 import { executeAction, buildSummaryMarkdown } from './action.js';
-import type { ActionConfig, EventContext } from './types.js';
+import type {
+  ActionConfig,
+  EventContext,
+  RunDependencies,
+  RuntimeEnvironment,
+  ActionsCore,
+  GitHubContext,
+} from './types.js';
+
+/**
+ * Resolves runtime environment configuration.
+ *
+ * @returns Runtime environment configuration
+ */
+function resolveRuntimeEnvironment(): RuntimeEnvironment {
+  return {
+    serverUrl: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
+  };
+}
+
+/**
+ * Wires up dependencies for production execution.
+ * Encapsulates dependency creation logic.
+ *
+ * @returns Production dependencies
+ */
+function createProductionDependencies(): RunDependencies {
+  return {
+    core,
+    context: github.context,
+    getOctokit: github.getOctokit,
+    env: resolveRuntimeEnvironment(),
+  };
+}
+
+/**
+ * Parses and validates action configuration from inputs.
+ * Ensures integer values are valid and within acceptable bounds.
+ * Throws an error if validation fails.
+ *
+ * @param core - ActionsCore interface for reading inputs
+ * @returns Validated action configuration
+ * @throws Error if any input validation fails
+ */
+function parseConfig(core: ActionsCore): ActionConfig {
+  const retryCountInput = core.getInput('mergeable_retry_count') || '5';
+  const retryIntervalInput = core.getInput('mergeable_retry_interval') || '10';
+
+  const mergeableRetryCount = parseInt(retryCountInput, 10);
+  const mergeableRetryInterval = parseInt(retryIntervalInput, 10);
+
+  // Validate retry count: must be integer between 1 and 20
+  if (Number.isNaN(mergeableRetryCount)) {
+    throw new Error(
+      `Invalid mergeable_retry_count: "${retryCountInput}" is not a valid integer. Must be between 1 and 20.`,
+    );
+  }
+  if (mergeableRetryCount < 1 || mergeableRetryCount > 20) {
+    throw new Error(`Invalid mergeable_retry_count: ${mergeableRetryCount} is out of range. Must be between 1 and 20.`);
+  }
+
+  // Validate retry interval: must be integer between 1 and 60
+  if (Number.isNaN(mergeableRetryInterval)) {
+    throw new Error(
+      `Invalid mergeable_retry_interval: "${retryIntervalInput}" is not a valid integer. Must be between 1 and 60.`,
+    );
+  }
+  if (mergeableRetryInterval < 1 || mergeableRetryInterval > 60) {
+    throw new Error(
+      `Invalid mergeable_retry_interval: ${mergeableRetryInterval} is out of range. Must be between 1 and 60.`,
+    );
+  }
+
+  return {
+    releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
+    developBranch: core.getInput('develop_branch') || 'develop',
+    syncBranchPrefix: core.getInput('sync_branch_prefix') || 'fix/sync/',
+    mergeableRetryCount,
+    mergeableRetryInterval,
+  };
+}
+
+/**
+ * Builds event context from GitHub context payload.
+ *
+ * @param context - GitHub context from actions/github
+ * @param env - Runtime environment configuration
+ * @returns Event context for action execution
+ */
+function buildEventContext(context: GitHubContext, env: RuntimeEnvironment): EventContext {
+  const payload = context.payload;
+
+  return {
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    prNumber: payload.issue?.number ?? 0,
+    commentId: payload.comment?.id ?? 0,
+    commentBody: payload.comment?.body ?? '',
+    actor: context.actor,
+    userType: payload.comment?.user?.type ?? 'User',
+    authorAssociation: payload.comment?.author_association ?? 'NONE',
+    serverUrl: env.serverUrl,
+    runId: context.runId,
+    eventName: context.eventName,
+    isPullRequest: !!payload.issue?.pull_request,
+  };
+}
 
 /**
  * Main function that runs the action.
+ * Orchestrates configuration parsing, context building, and action execution.
  *
- * This function:
- * 1. Reads inputs from GitHub Actions environment (core.getInput)
- * 2. Reads context from GitHub Actions runtime (github.context, process.env)
- * 3. Delegates all merge business logic to executeAction() in action.ts
- * 4. Writes outputs to GitHub Actions environment (core.setOutput, core.summary)
- *
- * This function is tested using vitest mocks to verify the deprecated input
- * handling, options parsing, and error handling logic.
+ * @param deps - Dependencies for GitHub Actions integration (defaults to production)
  */
-export async function run(): Promise<void> {
+export async function run(deps: RunDependencies = createProductionDependencies()): Promise<void> {
   try {
-    // Get inputs
-    const token = core.getInput('github-token', { required: true });
-    const config: ActionConfig = {
-      releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
-      developBranch: core.getInput('develop_branch') || 'develop',
-      syncBranchPrefix: core.getInput('sync_branch_prefix') || 'fix/sync/',
-      mergeableRetryCount: parseInt(core.getInput('mergeable_retry_count') || '5', 10),
-      mergeableRetryInterval: parseInt(core.getInput('mergeable_retry_interval') || '10', 10),
-    };
+    const token = deps.core.getInput('github-token', { required: true });
+    const config = parseConfig(deps.core);
+    const context = buildEventContext(deps.context, deps.env);
+    const octokit = deps.getOctokit(token);
 
-    // Get event context
-    //
-    // Note:
-    //   - github.context.payload is intentionally typed as unknown, so some property accesses
-    //     cannot be made fully type-safe. In those cases, we selectively disable ESLint on specific
-    //     lines rather than adding noisy type assertions.
-    const payload = github.context.payload;
-
-    // Build event context
-    const context: EventContext = {
-      owner: github.context.repo.owner,
-      repo: github.context.repo.repo,
-      // prNumber will be 0 if this is not a PR comment, but that's acceptable
-      // because executeAction() will skip early when isPullRequest is false
-      prNumber: payload.issue?.number ?? 0,
-      commentId: payload.comment?.id ?? 0,
-      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- GitHub Actions event payload is typed as unknown */
-      commentBody: payload.comment?.body ?? '',
-      actor: github.context.actor,
-      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- GitHub Actions event payload is typed as unknown */
-      userType: payload.comment?.user?.type ?? 'User',
-      /* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- GitHub Actions event payload is typed as unknown */
-      authorAssociation: payload.comment?.author_association ?? 'NONE',
-      serverUrl: process.env.GITHUB_SERVER_URL ?? 'https://github.com',
-      runId: github.context.runId,
-      eventName: github.context.eventName,
-      isPullRequest: !!payload.issue?.pull_request,
-    };
-
-    // Create Octokit instance
-    const octokit = github.getOctokit(token);
-
-    // Run the main logic
     const result = await executeAction(octokit, context, config);
 
-    // Set outputs
-    core.setOutput('result', result.status);
+    deps.core.setOutput('result', result.status);
     if (result.mergeMethod) {
-      core.setOutput('merge_method', result.mergeMethod);
+      deps.core.setOutput('merge_method', result.mergeMethod);
     }
 
-    // Write summary
     const resultEmoji = {
       merged: '✅ Merged successfully',
       skipped: '⏭️ Skipped',
@@ -103,18 +155,20 @@ export async function run(): Promise<void> {
     }[result.status];
 
     const summaryMarkdown = buildSummaryMarkdown(resultEmoji, context.prNumber, context.actor, result.mergeMethod);
-    await core.summary.addRaw(summaryMarkdown).write();
+    await deps.core.summary.addRaw(summaryMarkdown).write();
 
-    // Log result
-    core.info(`lysbot-merge result: ${result.status} - ${result.message}`);
+    deps.core.info(`lysbot-merge result: ${result.status} - ${result.message}`);
 
-    // Mark as failed if the result status is failed
     if (result.status === 'failed') {
-      // Don't fail the workflow - failures are communicated via PR comments
-      core.info('Merge checks or operation failed. See PR comments for details.');
+      deps.core.info('Merge checks or operation failed. See PR comments for details.');
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    core.setFailed(`lysbot-merge action failed: ${message}`);
+    const stack = error instanceof Error ? error.stack : undefined;
+
+    deps.core.setFailed(`lysbot-merge action failed: ${message}`);
+    if (stack) {
+      deps.core.info(`Stack trace: ${stack}`);
+    }
   }
 }
