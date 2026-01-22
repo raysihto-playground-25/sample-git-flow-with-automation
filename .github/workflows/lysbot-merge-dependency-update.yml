@@ -1,7 +1,7 @@
-name: Dependency Update
+name: lysbot-merge Dependency Update
 
 # =============================================================================
-# Dependency Update Workflow
+# lysbot-merge Dependency Update Workflow
 # =============================================================================
 # This workflow automatically updates npm dependencies in the lysbot-merge
 # action by running `npm run all:full-upgrade` and creating a PR with changes.
@@ -35,7 +35,7 @@ name: Dependency Update
 # 4. If no changes are detected, skips PR creation
 #
 # BRANCH NAMING:
-# - Uses: bot/dependency-update-{timestamp}
+# - Uses: bot/lysbot-merge-deps-{timestamp}
 # - Timestamp ensures each run creates a unique branch
 #
 # PR LABELING:
@@ -52,14 +52,14 @@ on:
   # schedule:
   #   - cron: '0 9 * * 1'
 
-# Ensure only one dependency update workflow runs at a time
+# Ensure only one lysbot-merge dependency update workflow runs at a time
 concurrency:
-  group: dependency-update
+  group: lysbot-merge-dependency-update
   cancel-in-progress: false
 
 jobs:
   update-dependencies:
-    name: Update Dependencies
+    name: Update lysbot-merge Dependencies
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -116,13 +116,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Find existing open PRs created by this workflow
-          # We identify them by looking for PRs with the prefix "fix(deps):"
+          # We identify them by looking for PRs from branches with the prefix "bot/lysbot-merge-deps-"
           # and created by github-actions[bot]
           EXISTING_PRS=$(gh pr list \
             --author "app/github-actions" \
             --state open \
             --json number,title,headRefName \
-            --jq '.[] | select(.headRefName | startswith("bot/dependency-update-")) | .number' \
+            --jq '.[] | select(.headRefName | startswith("bot/lysbot-merge-deps-")) | .number' \
             | tr '\n' ' ')
           
           if [ -n "$EXISTING_PRS" ]; then
@@ -139,8 +139,8 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'fix(deps): update lysbot-merge dependencies'
-          title: 'fix(deps): update lysbot-merge dependencies'
+          commit-message: 'fix(lysbot-merge): update dependencies'
+          title: 'fix(lysbot-merge): update dependencies'
           body: |
             ## 🤖 Automated Dependency Update
             
@@ -162,10 +162,10 @@ jobs:
             
             ---
             
-            _This PR was automatically created by the [dependency-update workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/dependency-update.yml)._
+            _This PR was automatically created by the [lysbot-merge-dependency-update workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-dependency-update.yml)._
             
             _Triggered by: @${{ github.actor }}_
-          branch: bot/dependency-update-${{ github.run_id }}
+          branch: bot/lysbot-merge-deps-${{ github.run_id }}
           branch-suffix: timestamp
           delete-branch: true
           labels: dependencies
@@ -197,7 +197,7 @@ jobs:
       - name: Summary
         if: always()
         run: |
-          echo "## Dependency Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## lysbot-merge Dependency Update Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ steps.check_changes.outputs.has_changes }}" = "true" ]; then
