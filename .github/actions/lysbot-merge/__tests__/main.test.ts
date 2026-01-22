@@ -16,7 +16,7 @@
  * - Easier to understand and maintain tests
  */
 
-import { describe, expect, it, vi, type Mock } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach, type Mock } from 'vitest';
 
 import * as action from '../src/action.js';
 import { run } from '../src/main.js';
@@ -121,15 +121,41 @@ function createMockEnv(overrides?: Partial<RuntimeEnvironment>): RuntimeEnvironm
 
 describe('main.ts', () => {
   describe('run()', () => {
-    it('should successfully execute with default configuration', async () => {
-      // Arrange: Create test doubles
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
+    // Shared test fixtures
+    let mockCore: ActionsCore;
+    let mockContext: GitHubContext;
+    let mockOctokit: Octokit;
+    let mockGetOctokit: GetOctokitFunction;
+    let mockEnv: RuntimeEnvironment;
+    let deps: RunDependencies;
 
-      // Mock core.getInput to return default config
+    /**
+     * Helper to create standard test dependencies
+     */
+    function setupStandardDeps(): void {
+      mockCore = createMockCore();
+      mockContext = createMockContext();
+      mockOctokit = createMockOctokit();
+      mockGetOctokit = createMockGetOctokit(mockOctokit);
+      mockEnv = createMockEnv();
+      deps = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
+    }
+
+    beforeEach(() => {
+      setupStandardDeps();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should successfully execute with default configuration', async () => {
+      // Arrange: Mock core.getInput to return default config
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
           return 'test-token';
@@ -146,13 +172,6 @@ describe('main.ts', () => {
 
       const buildSummaryMarkdownSpy = vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Test Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
@@ -166,18 +185,10 @@ describe('main.ts', () => {
       expect(mockCore.summary.addRaw).toHaveBeenCalledWith('# Test Summary');
       expect(mockCore.info).toHaveBeenCalledWith('lysbot-merge result: merged - Pull request successfully merged');
       expect(mockCore.setFailed).not.toHaveBeenCalled();
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should handle custom configuration inputs', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       // Mock custom configuration
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
@@ -200,13 +211,6 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
@@ -222,18 +226,10 @@ describe('main.ts', () => {
           mergeableRetryInterval: 5,
         }),
       );
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should use default values when optional inputs are empty', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -250,30 +246,15 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
       // Assert
       expect(executeActionSpy).toHaveBeenCalled();
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should handle skipped merge result', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -290,13 +271,6 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
@@ -305,18 +279,10 @@ describe('main.ts', () => {
       expect(mockCore.setOutput).not.toHaveBeenCalledWith('merge_method', expect.anything());
       expect(mockCore.info).toHaveBeenCalledWith('lysbot-merge result: skipped - Merge was skipped');
       expect(mockCore.setFailed).not.toHaveBeenCalled();
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should handle failed merge result', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -333,13 +299,6 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
@@ -348,18 +307,10 @@ describe('main.ts', () => {
       expect(mockCore.info).toHaveBeenCalledWith('lysbot-merge result: failed - Merge checks failed');
       expect(mockCore.info).toHaveBeenCalledWith('Merge checks or operation failed. See PR comments for details.');
       expect(mockCore.setFailed).not.toHaveBeenCalled();
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should handle already_merged result', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -376,28 +327,17 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
       // Assert
       expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'already_merged');
       expect(mockCore.setFailed).not.toHaveBeenCalled();
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should handle missing pull_request in payload', async () => {
-      // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext({
+      // Arrange: Override context with custom payload
+      mockContext = createMockContext({
         payload: {
           issue: {
             number: 123,
@@ -410,9 +350,12 @@ describe('main.ts', () => {
           },
         },
       });
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
+      deps = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -429,27 +372,16 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
       // Assert
       expect(executeActionSpy).toHaveBeenCalled();
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should handle missing comment in payload', async () => {
-      // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext({
+      // Arrange: Override context with custom payload
+      mockContext = createMockContext({
         payload: {
           issue: {
             number: 123,
@@ -457,9 +389,12 @@ describe('main.ts', () => {
           },
         },
       });
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
+      deps = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -476,30 +411,22 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
       // Assert
       expect(executeActionSpy).toHaveBeenCalled();
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should use custom serverUrl from environment', async () => {
-      // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv({ serverUrl: 'https://github.enterprise.com' });
+      // Arrange: Override environment with custom serverUrl
+      mockEnv = createMockEnv({ serverUrl: 'https://github.enterprise.com' });
+      deps = {
+        core: mockCore,
+        context: mockContext,
+        getOctokit: mockGetOctokit,
+        env: mockEnv,
+      };
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -516,13 +443,6 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
@@ -534,18 +454,10 @@ describe('main.ts', () => {
           serverUrl: 'https://github.enterprise.com',
         });
       }
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should handle errors from executeAction', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -556,31 +468,16 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'executeAction').mockRejectedValue(new Error('API error'));
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
       // Assert
       expect(mockCore.setFailed).toHaveBeenCalledWith('lysbot-merge action failed: API error');
       expect(mockCore.setOutput).not.toHaveBeenCalled();
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should handle non-Error exceptions', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -591,30 +488,15 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'executeAction').mockRejectedValue('string error');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
       // Assert
       expect(mockCore.setFailed).toHaveBeenCalledWith('lysbot-merge action failed: Unknown error');
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should build correct summary markdown', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -631,30 +513,15 @@ describe('main.ts', () => {
 
       const buildSummaryMarkdownSpy = vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Test Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
       // Assert
       expect(buildSummaryMarkdownSpy).toHaveBeenCalledWith('✅ Merged successfully', 123, 'test-actor', 'squash');
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should handle different merge methods in summary', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -671,30 +538,15 @@ describe('main.ts', () => {
 
       const buildSummaryMarkdownSpy = vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Test Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
       // Assert
       expect(buildSummaryMarkdownSpy).toHaveBeenCalledWith('✅ Merged successfully', 123, 'test-actor', 'merge');
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should parse integer inputs correctly', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
@@ -713,30 +565,15 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       // Act
       await run(deps);
 
       // Assert
       expect(executeActionSpy).toHaveBeenCalled();
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should reject invalid integer inputs with clear error message', async () => {
       // Arrange
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
@@ -746,13 +583,6 @@ describe('main.ts', () => {
         };
         return config[name] || '';
       });
-
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
 
       // Act
       await run(deps);
@@ -764,17 +594,10 @@ describe('main.ts', () => {
         ),
       );
       expect(mockCore.setFailed).toHaveBeenCalledWith(expect.stringContaining('Must be between 1 and 20'));
-
-      // Cleanup
-      vi.restoreAllMocks();
     });
 
     it('should reject negative retry count with clear error message', async () => {
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
+      // Arrange
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
@@ -785,13 +608,6 @@ describe('main.ts', () => {
         return config[name] || '';
       });
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       await run(deps);
 
       expect(mockCore.setFailed).toHaveBeenCalledWith(
@@ -799,16 +615,10 @@ describe('main.ts', () => {
           /lysbot-merge action failed: Invalid mergeable_retry_count: -5 is out of range[\s\S]*Must be between 1 and 20/,
         ),
       );
-
-      vi.restoreAllMocks();
     });
 
     it('should reject excessive retry values with clear error message', async () => {
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
+      // Arrange
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
@@ -819,13 +629,6 @@ describe('main.ts', () => {
         return config[name] || '';
       });
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       await run(deps);
 
       expect(mockCore.setFailed).toHaveBeenCalledWith(
@@ -833,16 +636,10 @@ describe('main.ts', () => {
           /lysbot-merge action failed: Invalid mergeable_retry_count: 100 is out of range[\s\S]*Must be between 1 and 20/,
         ),
       );
-
-      vi.restoreAllMocks();
     });
 
     it('should accept boundary values within valid range', async () => {
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
+      // Arrange
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
@@ -860,13 +657,6 @@ describe('main.ts', () => {
 
       vi.spyOn(action, 'buildSummaryMarkdown').mockReturnValue('# Summary');
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       await run(deps);
 
       const callArgs = executeActionSpy.mock.calls[0] as [unknown, EventContext, ActionConfig];
@@ -874,16 +664,10 @@ describe('main.ts', () => {
 
       expect(config.mergeableRetryCount).toBe(20); // max boundary accepted
       expect(config.mergeableRetryInterval).toBe(1); // min boundary accepted
-
-      vi.restoreAllMocks();
     });
 
     it('should reject invalid mergeable_retry_interval with clear error message', async () => {
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
+      // Arrange
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
@@ -894,13 +678,6 @@ describe('main.ts', () => {
         return config[name] || '';
       });
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       await run(deps);
 
       expect(mockCore.setFailed).toHaveBeenCalledWith(
@@ -908,16 +685,10 @@ describe('main.ts', () => {
           /lysbot-merge action failed: Invalid mergeable_retry_interval: "not-a-number" is not a valid integer[\s\S]*Must be between 1 and 60/,
         ),
       );
-
-      vi.restoreAllMocks();
     });
 
     it('should reject out-of-range mergeable_retry_interval (too small)', async () => {
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
+      // Arrange
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
@@ -928,13 +699,6 @@ describe('main.ts', () => {
         return config[name] || '';
       });
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       await run(deps);
 
       expect(mockCore.setFailed).toHaveBeenCalledWith(
@@ -942,16 +706,10 @@ describe('main.ts', () => {
           /lysbot-merge action failed: Invalid mergeable_retry_interval: 0 is out of range[\s\S]*Must be between 1 and 60/,
         ),
       );
-
-      vi.restoreAllMocks();
     });
 
     it('should reject out-of-range mergeable_retry_interval (too large)', async () => {
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
+      // Arrange
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
@@ -962,13 +720,6 @@ describe('main.ts', () => {
         return config[name] || '';
       });
 
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
-
       await run(deps);
 
       expect(mockCore.setFailed).toHaveBeenCalledWith(
@@ -976,16 +727,10 @@ describe('main.ts', () => {
           /lysbot-merge action failed: Invalid mergeable_retry_interval: 61 is out of range[\s\S]*Must be between 1 and 60/,
         ),
       );
-
-      vi.restoreAllMocks();
     });
 
     it('should log stack trace when error with stack is thrown', async () => {
-      const mockCore = createMockCore();
-      const mockContext = createMockContext();
-      const mockOctokit = createMockOctokit();
-      const mockGetOctokit = createMockGetOctokit(mockOctokit);
-      const mockEnv = createMockEnv();
+      // Arrange
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         if (name === 'github-token') {
@@ -994,27 +739,18 @@ describe('main.ts', () => {
         return '';
       });
 
-      const executeActionSpy = vi.spyOn(action, 'executeAction').mockImplementation(() => {
+      // Setup spy to throw error with stack trace
+      vi.spyOn(action, 'executeAction').mockImplementation(() => {
         const error = new Error('Test error with stack');
         error.stack = 'Error: Test error with stack\n    at TestLocation (test.ts:123:45)';
         throw error;
       });
-
-      const deps: RunDependencies = {
-        core: mockCore,
-        context: mockContext,
-        getOctokit: mockGetOctokit,
-        env: mockEnv,
-      };
 
       await run(deps);
 
       expect(mockCore.setFailed).toHaveBeenCalledWith('lysbot-merge action failed: Test error with stack');
       expect(mockCore.info).toHaveBeenCalledWith(expect.stringContaining('Stack trace: Error: Test error with stack'));
       expect(mockCore.info).toHaveBeenCalledWith(expect.stringContaining('at TestLocation (test.ts:123:45)'));
-
-      executeActionSpy.mockRestore();
-      vi.restoreAllMocks();
     });
   });
 });
