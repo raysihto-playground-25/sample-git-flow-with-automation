@@ -1,0 +1,218 @@
+name: Dependency Update
+
+# =============================================================================
+# Dependency Update Workflow
+# =============================================================================
+# This workflow automatically updates npm dependencies in the lysbot-merge
+# action by running `npm run all:full-upgrade` and creating a PR with changes.
+#
+# TRIGGERS:
+# - Manual trigger via workflow_dispatch
+# - Optional: Schedule trigger (commented out by default)
+#
+# REQUIRED PERMISSIONS:
+# - contents: write    - To push changes to a new branch
+# - pull-requests: write - To create and manage PRs
+#
+# REQUIRED REPOSITORY SETTINGS:
+# 1. Under Settings > Actions > General > Workflow permissions:
+#    - Enable "Read and write permissions" OR
+#    - Use a PAT (Personal Access Token) with repo scope
+# 2. Allow GitHub Actions to create and approve pull requests (optional, for
+#    better automation experience)
+#
+# WORKFLOW BEHAVIOR:
+# 1. Checks out the repository
+# 2. Runs `npm run all:full-upgrade` in .github/actions/lysbot-merge directory
+#    - Deletes package-lock.json
+#    - Updates all dependencies to latest versions
+#    - Runs linting, formatting, and tests
+#    - Rebuilds the action bundle
+# 3. If changes are detected:
+#    - Creates a new PR with dependency updates
+#    - If an old PR from this workflow exists, closes it with a reference
+#      to the new PR
+# 4. If no changes are detected, skips PR creation
+#
+# BRANCH NAMING:
+# - Uses: bot/dependency-update-{timestamp}
+# - Timestamp ensures each run creates a unique branch
+#
+# PR LABELING:
+# - Automatically adds 'dependencies' label to the PR
+# - You may customize labels by modifying the 'labels' input below
+# =============================================================================
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+  
+  # Optional: Schedule trigger (uncomment to enable)
+  # Runs every Monday at 9:00 AM UTC
+  # schedule:
+  #   - cron: '0 9 * * 1'
+
+# Ensure only one dependency update workflow runs at a time
+concurrency:
+  group: dependency-update
+  cancel-in-progress: false
+
+jobs:
+  update-dependencies:
+    name: Update Dependencies
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          # Fetch all history for accurate diff detection
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: '.github/actions/lysbot-merge/package-lock.json'
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run dependency upgrade
+        id: upgrade
+        working-directory: .github/actions/lysbot-merge
+        run: |
+          # Run the full upgrade process
+          # This will:
+          # 1. Delete package-lock.json
+          # 2. Update all dependencies to latest
+          # 3. Run linting, formatting, and tests
+          # 4. Rebuild the dist bundle
+          npm run all:full-upgrade
+          
+          echo "✅ Dependency upgrade completed successfully"
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          # Check if there are any changes after the upgrade
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected"
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No changes detected - dependencies are already up to date"
+          fi
+
+      - name: Find existing dependency update PRs
+        id: find_existing_pr
+        if: steps.check_changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Find existing open PRs created by this workflow
+          # We identify them by looking for PRs with the prefix "fix(deps):"
+          # and created by github-actions[bot]
+          EXISTING_PRS=$(gh pr list \
+            --author "app/github-actions" \
+            --state open \
+            --json number,title,headRefName \
+            --jq '.[] | select(.headRefName | startswith("bot/dependency-update-")) | .number' \
+            | tr '\n' ' ')
+          
+          if [ -n "$EXISTING_PRS" ]; then
+            echo "existing_prs=$EXISTING_PRS" >> $GITHUB_OUTPUT
+            echo "✅ Found existing PR(s): $EXISTING_PRS"
+          else
+            echo "existing_prs=" >> $GITHUB_OUTPUT
+            echo "ℹ️ No existing dependency update PRs found"
+          fi
+
+      - name: Create Pull Request
+        id: create_pr
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'fix(deps): update lysbot-merge dependencies'
+          title: 'fix(deps): update lysbot-merge dependencies'
+          body: |
+            ## 🤖 Automated Dependency Update
+            
+            This PR updates npm dependencies in the lysbot-merge action to their latest versions.
+            
+            ### Changes
+            
+            - Ran `npm run all:full-upgrade` in `.github/actions/lysbot-merge`
+            - Updated `package.json` and `package-lock.json`
+            - Ran linting, formatting, and tests
+            - Rebuilt the action bundle (`dist/`)
+            
+            ### Review Checklist
+            
+            - [ ] Check the dependency changes in `package.json`
+            - [ ] Review breaking changes in updated packages
+            - [ ] Verify all tests pass in CI
+            - [ ] Ensure the action bundle is correctly updated
+            
+            ---
+            
+            _This PR was automatically created by the [dependency-update workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/dependency-update.yml)._
+            
+            _Triggered by: @${{ github.actor }}_
+          branch: bot/dependency-update-${{ github.run_id }}
+          branch-suffix: timestamp
+          delete-branch: true
+          labels: dependencies
+          # Use default branch as base
+          # base: develop
+
+      - name: Close old dependency update PRs
+        if: steps.check_changes.outputs.has_changes == 'true' && steps.find_existing_pr.outputs.existing_prs != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_PR_URL="${{ steps.create_pr.outputs.pull-request-url }}"
+          EXISTING_PRS="${{ steps.find_existing_pr.outputs.existing_prs }}"
+          
+          echo "Closing old dependency update PR(s): $EXISTING_PRS"
+          echo "New PR: $NEW_PR_URL"
+          
+          for PR_NUMBER in $EXISTING_PRS; do
+            # Skip if this is the newly created PR
+            if gh pr view "$PR_NUMBER" --json url --jq .url | grep -q "$NEW_PR_URL"; then
+              echo "Skipping PR #$PR_NUMBER (this is the new PR)"
+              continue
+            fi
+            
+            echo "Closing PR #$PR_NUMBER"
+            gh pr close "$PR_NUMBER" --comment "🤖 Closing this PR as a new dependency update PR has been created: $NEW_PR_URL"
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Dependency Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check_changes.outputs.has_changes }}" = "true" ]; then
+            echo "✅ **Status:** Changes detected and PR created" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| **PR Number** | #${{ steps.create_pr.outputs.pull-request-number }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| **PR URL** | ${{ steps.create_pr.outputs.pull-request-url }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Branch** | \`${{ steps.create_pr.outputs.pull-request-head-sha }}\` |" >> $GITHUB_STEP_SUMMARY
+            
+            if [ -n "${{ steps.find_existing_pr.outputs.existing_prs }}" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "📝 **Note:** Closed old PR(s): ${{ steps.find_existing_pr.outputs.existing_prs }}" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "ℹ️ **Status:** No changes detected - dependencies are already up to date" >> $GITHUB_STEP_SUMMARY
+          fi
