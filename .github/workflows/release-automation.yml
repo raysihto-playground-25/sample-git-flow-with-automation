@@ -3,11 +3,11 @@ name: Release Branch Automation
 on:
   push:
     branches:
-      - 'release/**'
+      - "release/**"
   workflow_call:
     inputs:
       release_branch:
-        description: 'Release branch name (e.g., release/1.0.0)'
+        description: "Release branch name (e.g., release/1.0.0)"
         required: true
         type: string
 
@@ -49,21 +49,21 @@ jobs:
             BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           fi
           echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
-          
+
           # Extract version from release/X.Y.Z
           VERSION=$(echo "$BRANCH_NAME" | sed 's|release/||')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
+
           # Get the highest existing RC tag for this version (single line output)
           HIGHEST_RC_TAG=$(git tag -l "v${VERSION}-rc.*" | sort -V | tail -1)
-          
+
           if [ -z "$HIGHEST_RC_TAG" ]; then
             HIGHEST_RC=0
           else
             # Extract the RC number from the tag
             HIGHEST_RC=$(echo "$HIGHEST_RC_TAG" | sed "s/v${VERSION}-rc\.//")
           fi
-          
+
           echo "highest_rc=$HIGHEST_RC" >> $GITHUB_OUTPUT
           echo "Highest existing RC number: $HIGHEST_RC"
 
@@ -74,17 +74,17 @@ jobs:
           HIGHEST_RC="${{ steps.branch_info.outputs.highest_rc }}"
           NEXT_RC=$((HIGHEST_RC + 1))
           RC_TAG="v${VERSION}-rc.${NEXT_RC}"
-          
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           git tag "$RC_TAG"
-          
+
           if ! git push origin "$RC_TAG" 2>&1; then
             echo "Error: Failed to push RC tag '$RC_TAG'. It may already exist."
             exit 1
           fi
-          
+
           echo "rc_tag=$RC_TAG" >> $GITHUB_OUTPUT
           echo "Created and pushed RC tag: $RC_TAG"
 
@@ -93,7 +93,7 @@ jobs:
           VERSION="${{ steps.branch_info.outputs.version }}"
           RC_TAG="${{ steps.create_rc.outputs.rc_tag }}"
           BRANCH_NAME="${{ steps.branch_info.outputs.branch }}"
-          
+
           echo "## RC Tagging Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
@@ -129,13 +129,13 @@ jobs:
           RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
           RC_TAG="${{ needs.rc-tagging.outputs.rc_tag }}"
           SYNC_BRANCH="fix/sync/merge-release-${VERSION}-to-${{ env.DEVELOP_BRANCH }}"
-          
+
           echo "sync_branch=$SYNC_BRANCH" >> $GITHUB_OUTPUT
           echo "Sync branch: $SYNC_BRANCH"
-          
+
           # Check if sync PR already exists for this version
           EXISTING_PR=$(gh pr list --head "$SYNC_BRANCH" --base "${{ env.DEVELOP_BRANCH }}" --state open --json number,url --jq '.[0] // empty')
-          
+
           if [ -n "$EXISTING_PR" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "pr_number=$(echo "$EXISTING_PR" | jq -r '.number')" >> $GITHUB_OUTPUT
@@ -152,19 +152,19 @@ jobs:
           SYNC_BRANCH="${{ steps.sync_branch.outputs.sync_branch }}"
           RELEASE_BRANCH="${{ needs.rc-tagging.outputs.branch }}"
           PR_EXISTS="${{ steps.sync_branch.outputs.exists }}"
-          
+
           # Fetch develop and release branches
           git fetch origin "${{ env.DEVELOP_BRANCH }}"
           git fetch origin "$RELEASE_BRANCH"
-          
+
           # Fetch existing sync branch if it exists
           if [ "$PR_EXISTS" = "true" ]; then
             git fetch origin "$SYNC_BRANCH" || true
           fi
-          
+
           # Create or reset sync branch from develop
           git checkout -B "$SYNC_BRANCH" "origin/${{ env.DEVELOP_BRANCH }}"
-          
+
           # Try to merge release branch with --no-ff --no-edit
           if git merge --no-ff --no-edit "origin/$RELEASE_BRANCH" 2>&1; then
             echo "merge_success=true" >> $GITHUB_OUTPUT
@@ -179,13 +179,13 @@ jobs:
             # Create a dummy commit for PR creation
             git commit --allow-empty -m "chore(sync): Placeholder for back-merge - conflicts need manual resolution"
           fi
-          
+
           # Force push the sync branch (using --force-with-lease --force-if-includes for safer force push)
           if ! git push --force-with-lease --force-if-includes origin "$SYNC_BRANCH" 2>&1; then
             echo "Error: Failed to push sync branch '$SYNC_BRANCH'."
             exit 1
           fi
-          
+
           echo "Pushed sync branch: $SYNC_BRANCH"
 
       - name: Create or update back-merge PR
@@ -201,7 +201,7 @@ jobs:
           MERGE_SUCCESS="${{ steps.merge_result.outputs.merge_success }}"
           COMMIT_SHA="${{ github.sha }}"
           SHORT_SHA="${COMMIT_SHA:0:7}"
-          
+
           # Determine title and body based on merge success
           if [ "$MERGE_SUCCESS" = "true" ]; then
             PR_TITLE="fix(sync): Back-merge ${RELEASE_BRANCH} to ${{ env.DEVELOP_BRANCH }}"
@@ -245,7 +245,7 @@ jobs:
           ---
           _This PR was automatically created by the release branch automation workflow._"
           fi
-          
+
           if [ "$PR_EXISTS" = "true" ]; then
             # Update existing PR
             PR_NUMBER="${{ steps.sync_branch.outputs.pr_number }}"
@@ -295,7 +295,7 @@ jobs:
           PR_URL="${{ steps.create_pr.outputs.pr_url }}"
           PR_ACTION="${{ steps.create_pr.outputs.pr_action }}"
           MERGE_SUCCESS="${{ steps.merge_result.outputs.merge_success }}"
-          
+
           echo "## Back-merge Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
@@ -305,7 +305,7 @@ jobs:
           echo "| **Target Branch** | \`${{ env.DEVELOP_BRANCH }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **PR Action** | ${PR_ACTION} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Back-merge PR** | ${PR_URL} |" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "$MERGE_SUCCESS" = "false" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
