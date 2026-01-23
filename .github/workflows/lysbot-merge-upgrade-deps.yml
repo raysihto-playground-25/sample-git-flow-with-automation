@@ -8,7 +8,7 @@ name: lysbot-merge Dependency Update
 #
 # TRIGGERS:
 # - Manual trigger via workflow_dispatch
-# - Optional: Schedule trigger (commented out by default)
+# - Schedule trigger
 #
 # REQUIRED PERMISSIONS:
 # - contents: write    - To push changes to a new branch
@@ -46,15 +46,14 @@ name: lysbot-merge Dependency Update
 on:
   # Manual trigger
   workflow_dispatch:
-  
-  # Optional: Schedule trigger (uncomment to enable)
-  # Runs every Monday at 9:00 AM UTC
-  # schedule:
-  #   - cron: '0 9 * * 1'
+
+  # Schedule trigger: Runs every Saturday at 9:00 AM UTC
+  schedule:
+    - cron: '0 9 * * 6'
 
 # Ensure only one lysbot-merge dependency update workflow runs at a time
 concurrency:
-  group: lysbot-merge-dependency-update
+  group: lysbot-merge-upgrade-deps
   cancel-in-progress: false
 
 jobs:
@@ -74,9 +73,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: '.github/actions/lysbot-merge/package-lock.json'
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: ".github/actions/lysbot-merge/package-lock.json"
 
       - name: Configure git
         run: |
@@ -88,13 +87,8 @@ jobs:
         working-directory: .github/actions/lysbot-merge
         run: |
           # Run the full upgrade process
-          # This will:
-          # 1. Delete package-lock.json
-          # 2. Update all dependencies to latest
-          # 3. Run linting, formatting, and tests
-          # 4. Rebuild the dist bundle
           npm run all:full-upgrade
-          
+
           echo "✅ Dependency upgrade completed successfully"
 
       - name: Check for changes
@@ -124,7 +118,7 @@ jobs:
             --json number,title,headRefName \
             --jq '.[] | select(.headRefName | startswith("bot/lysbot-merge-deps-")) | .number' \
             | tr '\n' ' ')
-          
+
           if [ -n "$EXISTING_PRS" ]; then
             echo "existing_prs=$EXISTING_PRS" >> $GITHUB_OUTPUT
             echo "✅ Found existing PR(s): $EXISTING_PRS"
@@ -139,34 +133,17 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'fix(lysbot-merge): update dependencies'
-          title: 'fix(lysbot-merge): update dependencies'
+          commit-message: "ci(deps-lysbot-merge): update dependencies"
+          title: "ci(deps-lysbot-merge): update dependencies"
           body: |
-            ## 🤖 Automated Dependency Update
-            
+            ## Automated Dependency Update
+
             This PR updates npm dependencies in the lysbot-merge action to their latest versions.
-            
-            ### Changes
-            
-            - Ran `npm run all:full-upgrade` in `.github/actions/lysbot-merge`
-            - Updated `package.json` and `package-lock.json`
-            - Ran linting, formatting, and tests
-            - Rebuilt the action bundle (`dist/`)
-            
-            ### Review Checklist
-            
-            - [ ] Check the dependency changes in `package.json`
-            - [ ] Review breaking changes in updated packages
-            - [ ] Verify all tests pass in CI
-            - [ ] Ensure the action bundle is correctly updated
-            
+
             ---
-            
-            _This PR was automatically created by the [lysbot-merge-dependency-update workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-dependency-update.yml)._
-            
+            _This PR was automatically created by the [lysbot-merge-upgrade-deps workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-upgrade-deps.yml)._
             _Triggered by: @${{ github.actor }}_
           branch: bot/lysbot-merge-deps-${{ github.run_id }}
-          branch-suffix: timestamp
           delete-branch: true
           labels: dependencies
           # Use default branch as base
@@ -179,40 +156,17 @@ jobs:
         run: |
           NEW_PR_URL="${{ steps.create_pr.outputs.pull-request-url }}"
           EXISTING_PRS="${{ steps.find_existing_pr.outputs.existing_prs }}"
-          
+
           echo "Closing old dependency update PR(s): $EXISTING_PRS"
           echo "New PR: $NEW_PR_URL"
-          
+
           for PR_NUMBER in $EXISTING_PRS; do
             # Skip if this is the newly created PR
             if gh pr view "$PR_NUMBER" --json url --jq .url | grep -q "$NEW_PR_URL"; then
               echo "Skipping PR #$PR_NUMBER (this is the new PR)"
               continue
             fi
-            
-            echo "Closing PR #$PR_NUMBER"
-            gh pr close "$PR_NUMBER" --comment "🤖 Closing this PR as a new dependency update PR has been created: $NEW_PR_URL"
-          done
 
-      - name: Summary
-        if: always()
-        run: |
-          echo "## lysbot-merge Dependency Update Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ steps.check_changes.outputs.has_changes }}" = "true" ]; then
-            echo "✅ **Status:** Changes detected and PR created" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
-            echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| **PR Number** | #${{ steps.create_pr.outputs.pull-request-number }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| **PR URL** | ${{ steps.create_pr.outputs.pull-request-url }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| **Branch** | \`${{ steps.create_pr.outputs.pull-request-head-sha }}\` |" >> $GITHUB_STEP_SUMMARY
-            
-            if [ -n "${{ steps.find_existing_pr.outputs.existing_prs }}" ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "📝 **Note:** Closed old PR(s): ${{ steps.find_existing_pr.outputs.existing_prs }}" >> $GITHUB_STEP_SUMMARY
-            fi
-          else
-            echo "ℹ️ **Status:** No changes detected - dependencies are already up to date" >> $GITHUB_STEP_SUMMARY
-          fi
+            echo "Closing PR #$PR_NUMBER"
+            gh pr close "$PR_NUMBER" --comment "Closing this PR as a new dependency update PR has been created: $NEW_PR_URL"
+          done
