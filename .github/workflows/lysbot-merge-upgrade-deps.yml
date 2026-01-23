@@ -24,23 +24,11 @@ name: lysbot-merge Dependency Update
 # WORKFLOW BEHAVIOR:
 # 1. Checks out the repository
 # 2. Runs `npm run all:full-upgrade` in .github/actions/lysbot-merge directory
-#    - Deletes package-lock.json
-#    - Updates all dependencies to latest versions
-#    - Runs linting, formatting, and tests
-#    - Rebuilds the action bundle
 # 3. Creates or updates a PR with dependency updates:
-#    - Branch name is unique per base branch (e.g., bot/lysbot-merge-deps-develop)
+#    - Branch name is unique per base branch (e.g., bot/lysbot-merge-deps/develop)
 #    - If no existing PR exists for this base branch, creates a new one
 #    - If an existing PR exists for this base branch, updates it with the latest changes (force-push)
 #    - If no changes are detected, the action automatically skips PR creation
-#
-# BRANCH NAMING:
-# - Uses a unique branch name per base branch: bot/lysbot-merge-deps-<base-branch>
-# - Examples:
-#   - Running on 'develop': bot/lysbot-merge-deps-develop
-#   - Running on 'feature/xyz': bot/lysbot-merge-deps-feature-xyz
-# - This ensures each base branch has its own PR without mixing changes
-# - Existing PRs are updated (force-push) when running on the same base branch
 #
 # PR LABELING:
 # - Automatically adds 'dependencies' label to the PR
@@ -57,7 +45,7 @@ on:
 
 # Ensure only one lysbot-merge dependency update workflow runs at a time per base branch
 concurrency:
-  group: lysbot-merge-upgrade-deps-${{ github.ref_name }}
+  group: lysbot-merge-deps/${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -82,25 +70,9 @@ jobs:
         id: upgrade
         working-directory: .github/actions/lysbot-merge
         run: |
-          # Run the full upgrade process
+          set -euo pipefail && exec >& 2
           npm run all:full-upgrade
-
           echo "✅ Dependency upgrade completed successfully"
-
-      - name: Generate unique branch name
-        id: branch_name
-        run: |
-          # Get the base branch name (the branch where workflow is running)
-          BASE_BRANCH="${{ github.ref_name }}"
-          
-          # Sanitize branch name: replace / with -, preserve dots/underscores, replace other special chars with -
-          SANITIZED_BRANCH=$(echo "$BASE_BRANCH" | sed 's/\//-/g' | sed 's/[^a-zA-Z0-9._-]/-/g')
-          
-          # Generate unique branch name per base branch
-          BRANCH_NAME="bot/lysbot-merge-deps-${SANITIZED_BRANCH}"
-          
-          echo "branch-name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
-          echo "✅ Generated branch name: ${BRANCH_NAME}"
 
       - name: Create or Update Pull Request
         id: create_pr
@@ -117,8 +89,6 @@ jobs:
             ---
             _This PR was automatically created by the [lysbot-merge-upgrade-deps workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-upgrade-deps.yml)._
             _Triggered by: @${{ github.actor }}_
-          branch: ${{ steps.branch_name.outputs.branch-name }}
+          branch: bot/lysbot-merge-deps/develop${{ github.ref_name }}
           delete-branch: true
           labels: dependencies
-          # Use default branch as base
-          # base: develop
