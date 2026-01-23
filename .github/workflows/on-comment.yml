@@ -67,7 +67,14 @@ jobs:
             // GitHub's own validation ensures branch names are safe
             // This additional check provides defense in depth
             // Allow common characters in branch names: alphanumeric, /, _, -, .
-            if (!/^[a-zA-Z0-9/_.\-]+$/.test(headRef) || headRef.length > 255) {
+            // Disallow potentially dangerous sequences like '..'
+            if (
+              !/^[a-zA-Z0-9/_.\-]+$/.test(headRef) || 
+              headRef.length > 255 ||
+              headRef.includes('..') ||
+              headRef.startsWith('.') ||
+              headRef.endsWith('.')
+            ) {
               core.setFailed('Invalid branch name format detected');
               throw new Error('Invalid branch name format');
             }
@@ -107,9 +114,14 @@ jobs:
                 body: `✅ Successfully triggered \`lysbot-merge-upgrade-deps\` workflow for branch \`${escapedBranchName}\`.\n\nYou can monitor the workflow run [here](${context.payload.repository.html_url}/actions/workflows/lysbot-merge-upgrade-deps.yml).`
               });
             } catch (error) {
-              // Sanitize error message - only show safe parts
-              const errorType = error.status ? `HTTP ${error.status}` : 'Unknown error';
-              core.setFailed(`Failed to trigger workflow: ${errorType}`);
+              // Use predefined error messages to avoid any potential data leakage
+              // Only expose safe, known HTTP status codes
+              const knownStatusCodes = [400, 401, 403, 404, 422, 500, 502, 503];
+              const errorStatus = error.status && knownStatusCodes.includes(error.status) 
+                ? `HTTP ${error.status}` 
+                : 'Error occurred';
+              
+              core.setFailed(`Failed to trigger workflow: ${errorStatus}`);
               
               // Add failure reaction
               await github.rest.reactions.createForIssueComment({
@@ -119,12 +131,18 @@ jobs:
                 content: 'confused'
               });
               
-              // Post error comment with sanitized error info
+              // Post error comment with safe, predefined message
+              const userMessage = error.status === 404 
+                ? '❌ Failed to trigger workflow. The workflow file or branch may not exist.'
+                : error.status === 403 || error.status === 401
+                ? '❌ Failed to trigger workflow. Insufficient permissions to trigger workflows.'
+                : '❌ Failed to trigger workflow. Please check that the branch exists and you have permission to trigger workflows.';
+              
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: `❌ Failed to trigger \`lysbot-merge-upgrade-deps\` workflow. Error type: ${errorType}\n\nPlease check that the branch exists and you have permission to trigger workflows.`
+                body: userMessage
               });
               
               throw error;
