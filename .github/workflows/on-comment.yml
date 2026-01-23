@@ -37,28 +37,21 @@ jobs:
       issues: write
       actions: write
     steps:
-      - name: Handle /lysbot rebase command
+      - name: Handle `/lysbot rebase` command
         id: rebase
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Parse /lysbot rebase command (similar to /lysbot merge validation)
-            // Command regex: matches "/lysbot rebase" at the start of the comment
             const REBASE_COMMAND_REGEX = /^\s*\/lysbot\s+rebase\s*$/;
             const commentBody = context.payload.comment.body;
-            
-            // Check if this is a /lysbot rebase command
-            if (!REBASE_COMMAND_REGEX.test(commentBody)) {
-              core.info('Not a /lysbot rebase command, skipping');
-              core.setOutput('is_rebase_command', 'false');
+
+            if (REBASE_COMMAND_REGEX.test(commentBody)) {
+              core.setOutput('is_rebase_command', 'true');
+            } else {
               return;
             }
-            
-            // Set output to indicate this is a rebase command
-            // This prevents lysbot-merge action from running
-            core.setOutput('is_rebase_command', 'true');
-            
+
             // Add eyes reaction for acknowledgment
             await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
@@ -66,7 +59,7 @@ jobs:
               comment_id: context.payload.comment.id,
               content: 'eyes'
             });
-            
+
             // Get PR details to retrieve head ref
             const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
@@ -74,11 +67,9 @@ jobs:
               pull_number: context.issue.number
             });
             const headRef = pr.data.head.ref;
-            
-            core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${headRef}`);
-            
-            // Trigger the workflow
+
             try {
+              core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${headRef}`);
               await github.rest.actions.createWorkflowDispatch({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -90,7 +81,7 @@ jobs:
               throw error;
             }
 
-      - name: Run lysbot-merge action
+      - name: Run lysbot-merge action for handling `/lysbot merge` command
         if: steps.rebase.outputs.is_rebase_command != 'true'
         uses: raysihto-playground-25/sample-git-flow-with-automation/.github/actions/lysbot-merge@develop
         with:
