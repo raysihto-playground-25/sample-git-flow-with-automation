@@ -1,0 +1,104 @@
+name: lysbot-merge Dependency Update
+
+# =============================================================================
+# lysbot-merge Dependency Update Workflow
+# =============================================================================
+# This workflow automatically updates npm dependencies in the lysbot-merge
+# action by running `npm run all:full-upgrade` and creating a PR with changes.
+#
+# TRIGGERS:
+# - Manual trigger via workflow_dispatch
+# - Schedule trigger
+#
+# REQUIRED PERMISSIONS:
+# - contents: write    - To push changes to a new branch
+# - pull-requests: write - To create and manage PRs
+#
+# REQUIRED REPOSITORY SETTINGS:
+# 1. Under Settings > Actions > General > Workflow permissions:
+#    - Enable "Read and write permissions" OR
+#    - Use a PAT (Personal Access Token) with repo scope
+# 2. Allow GitHub Actions to create and approve pull requests (optional, for
+#    better automation experience)
+#
+# WORKFLOW BEHAVIOR:
+# 1. Checks out the repository
+# 2. Runs `npm run all:full-upgrade` in .github/actions/lysbot-merge directory
+#    - Deletes package-lock.json
+#    - Updates all dependencies to latest versions
+#    - Runs linting, formatting, and tests
+#    - Rebuilds the action bundle
+# 3. Creates or updates a PR with dependency updates:
+#    - If no existing PR exists, creates a new one
+#    - If an existing PR exists, updates it with the latest changes (force-push)
+#    - If no changes are detected, the action automatically skips PR creation
+#
+# BRANCH NAMING:
+# - Uses a fixed branch name: bot/lysbot-merge-deps
+# - This ensures the same PR is reused across workflow runs
+#
+# PR LABELING:
+# - Automatically adds 'dependencies' label to the PR
+# - You may customize labels by modifying the 'labels' input below
+# =============================================================================
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+
+  # Schedule trigger: Runs every Saturday at 9:00 AM UTC
+  schedule:
+    - cron: '0 9 * * 6'
+
+# Ensure only one lysbot-merge dependency update workflow runs at a time
+concurrency:
+  group: lysbot-merge-upgrade-deps
+  cancel-in-progress: false
+
+jobs:
+  update-dependencies:
+    name: Update lysbot-merge Dependencies
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: ".github/actions/lysbot-merge/package-lock.json"
+
+      - name: Run dependency upgrade
+        id: upgrade
+        working-directory: .github/actions/lysbot-merge
+        run: |
+          # Run the full upgrade process
+          npm run all:full-upgrade
+
+          echo "✅ Dependency upgrade completed successfully"
+
+      - name: Create or Update Pull Request
+        id: create_pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "ci(deps-lysbot-merge): update dependencies"
+          title: "ci(deps-lysbot-merge): update dependencies"
+          body: |
+            ## Automated Dependency Update
+
+            This PR updates npm dependencies in the lysbot-merge action to their latest versions.
+
+            ---
+            _This PR was automatically created by the [lysbot-merge-upgrade-deps workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-upgrade-deps.yml)._
+            _Triggered by: @${{ github.actor }}_
+          branch: bot/lysbot-merge-deps
+          delete-branch: true
+          labels: dependencies
+          # Use default branch as base
+          # base: develop
