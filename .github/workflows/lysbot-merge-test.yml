@@ -1,4 +1,4 @@
-name: lysbot-merge-action-test
+name: lysbot-merge Test
 
 # =============================================================================
 # Runs unit tests for the lysbot-merge TypeScript action
