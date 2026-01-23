@@ -26,35 +26,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  lysbot-rebase:
-    name: lysbot-rebase
-    # Only run if this is a PR comment with /lysbot rebase command
-    if: |
-      github.event.issue.pull_request &&
-      contains(github.event.comment.body, '/lysbot rebase')
+  lysbot-commands:
+    name: lysbot-commands
+    # Only run if this is a PR comment (not an issue)
+    if: github.event.issue.pull_request
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
+      issues: write
       actions: write
     steps:
-      - name: Add reaction to comment
+      - name: Handle /lysbot rebase command
+        id: rebase
+        if: contains(github.event.comment.body, '/lysbot rebase')
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            // Add eyes reaction for acknowledgment
             await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: context.payload.comment.id,
               content: 'eyes'
             });
-
-      - name: Trigger lysbot-merge-upgrade-deps workflow
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
+            
             // Get PR details to retrieve head ref
             const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
@@ -86,99 +83,19 @@ jobs:
               .replace(/[\u202A-\u202E\u2066-\u2069]/g, ''); // Directional overrides
             core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${sanitizedHeadRef}`);
             
-            try {
-              await github.rest.actions.createWorkflowDispatch({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: 'lysbot-merge-upgrade-deps.yml',
-                ref: headRef
-              });
-              
-              // Add success reaction
-              await github.rest.reactions.createForIssueComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: context.payload.comment.id,
-                content: 'rocket'
-              });
-              
-              // Helper function to escape branch name for GitHub markdown comments
-              // GitHub comments support both Markdown and HTML entities
-              const escapeBranchName = (name) => {
-                return name
-                  .replace(/&/g, '&amp;')      // Must be first to avoid double-escaping
-                  .replace(/\\/g, '\\\\')
-                  .replace(/`/g, '\\`')
-                  .replace(/\*/g, '\\*')
-                  .replace(/_/g, '\\_')
-                  .replace(/\[/g, '\\[')
-                  .replace(/\]/g, '\\]')
-                  .replace(/#/g, '\\#')
-                  .replace(/</g, '&lt;')
-                  .replace(/>/g, '&gt;')
-                  .replace(/\|/g, '\\|');
-              };
-              
-              const escapedBranchName = escapeBranchName(headRef);
-              
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: `✅ Successfully triggered \`lysbot-merge-upgrade-deps\` workflow for branch \`${escapedBranchName}\`.\n\nYou can monitor the workflow run [here](${context.payload.repository.html_url}/actions/workflows/lysbot-merge-upgrade-deps.yml).`
-              });
-            } catch (error) {
-              // Log with safe status code handling for debugging
-              // Exclude server error codes to avoid potential information disclosure
-              const safeStatusCodes = [400, 401, 403, 404, 409, 422, 429];
-              const statusCode = error.status && safeStatusCodes.includes(error.status) 
-                ? error.status 
-                : 'error';
-              core.setFailed(`Failed to trigger workflow. Status: ${statusCode}`);
-              
-              // Add failure reaction
-              await github.rest.reactions.createForIssueComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: context.payload.comment.id,
-                content: 'confused'
-              });
-              
-              // Use predefined messages based on status code for user feedback
-              let userMessage;
-              if (error.status === 404) {
-                userMessage = '❌ Failed to trigger workflow. The workflow file or branch may not exist.';
-              } else if (error.status === 403 || error.status === 401) {
-                userMessage = '❌ Failed to trigger workflow. Insufficient permissions to trigger workflows.';
-              } else if (error.status === 422) {
-                userMessage = '❌ Failed to trigger workflow. Invalid request parameters.';
-              } else if (error.status === 429) {
-                userMessage = '❌ Failed to trigger workflow. Rate limit exceeded. Please try again later.';
-              } else {
-                userMessage = '❌ Failed to trigger workflow. Please check that the branch exists and you have permission to trigger workflows.';
-              }
-              
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: userMessage
-              });
-              
-              throw error;
-            }
+            // Trigger the workflow
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'lysbot-merge-upgrade-deps.yml',
+              ref: headRef
+            });
+            
+            // Set output to indicate rebase was processed
+            core.setOutput('processed', 'true');
 
-  lysbot-merge:
-    name: lysbot-merge
-    # Only run if this is a PR comment (not an issue)
-    if: github.event.issue.pull_request
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-    steps:
       - name: Run lysbot-merge action
+        if: steps.rebase.outputs.processed != 'true'
         uses: raysihto-playground-25/sample-git-flow-with-automation/.github/actions/lysbot-merge@develop
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
