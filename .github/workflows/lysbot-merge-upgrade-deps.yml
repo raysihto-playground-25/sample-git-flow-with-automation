@@ -77,11 +77,6 @@ jobs:
           cache: "npm"
           cache-dependency-path: ".github/actions/lysbot-merge/package-lock.json"
 
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Run dependency upgrade
         id: upgrade
         working-directory: .github/actions/lysbot-merge
