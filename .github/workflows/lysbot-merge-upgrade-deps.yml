@@ -48,6 +48,12 @@ on:
     # Runs every Saturday at 9:00 AM UTC
     - cron: "0 9 * * 6"
 
+  # Repository dispatch trigger
+  # - Triggered via repository_dispatch API when /lysbot merge command is executed
+  # - Runs on the branch specified in the dispatch event (client_payload.ref)
+  repository_dispatch:
+    types: [lysbot-merge-trigger]
+
 # Ensure only one lysbot-merge dependency update workflow runs at a time per base branch
 concurrency:
   group: lysbot-merge-deps/${{ github.ref_name }}
@@ -63,6 +69,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          # For repository_dispatch events, check out the branch specified in client_payload.ref
+          # Otherwise, use the default behavior (github.ref_name for workflow_dispatch, default branch for schedule)
+          ref: ${{ github.event.client_payload.ref || github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

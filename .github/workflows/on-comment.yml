@@ -25,10 +25,52 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  trigger-deps-upgrade:
+    name: Trigger Dependency Upgrade
+    # Only run if this is a PR comment (not an issue) and contains /lysbot merge
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '/lysbot merge')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Get PR branch name
+        id: get-branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            core.setOutput('branch', pr.head.ref);
+            core.info(`PR branch: ${pr.head.ref}`);
+
+      - name: Trigger lysbot-merge-upgrade-deps workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = '${{ steps.get-branch.outputs.branch }}';
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'lysbot-merge-trigger',
+              client_payload: {
+                ref: branch,
+                triggered_by: context.actor,
+                pr_number: context.issue.number
+              }
+            });
+            core.info(`Triggered lysbot-merge-upgrade-deps workflow for branch: ${branch}`);
+
   lysbot-merge:
     name: lysbot-merge
     # Only run if this is a PR comment (not an issue)
-    if: github.event.issue.pull_request
+    if: |
+      always() &&
+      github.event.issue.pull_request &&
+      (needs.trigger-deps-upgrade.result == 'success' || needs.trigger-deps-upgrade.result == 'skipped')
+    needs: [trigger-deps-upgrade]
     runs-on: ubuntu-latest
     permissions:
       contents: write
