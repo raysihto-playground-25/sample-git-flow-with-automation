@@ -65,8 +65,9 @@ jobs:
             
             // Validate branch name to prevent injection
             // GitHub branch names follow specific rules - validate to ensure safety
-            if (!/^[a-zA-Z0-9/_.\-]+$/.test(headRef)) {
-              core.setFailed(`Invalid branch name format: ${headRef}`);
+            // Exclude dots to prevent potential directory traversal attempts
+            if (!/^[a-zA-Z0-9/_-]+$/.test(headRef)) {
+              core.setFailed('Invalid branch name format detected');
               throw new Error('Invalid branch name format');
             }
             
@@ -88,13 +89,21 @@ jobs:
                 content: 'rocket'
               });
               
-              // Post success comment with sanitized branch name
-              const sanitizedBranchName = headRef.replace(/[`]/g, '');
+              // Post success comment with properly encoded branch name for markdown
+              // Escape special markdown characters to prevent formatting issues
+              const escapedBranchName = headRef
+                .replace(/\\/g, '\\\\')
+                .replace(/`/g, '\\`')
+                .replace(/\*/g, '\\*')
+                .replace(/_/g, '\\_')
+                .replace(/\[/g, '\\[')
+                .replace(/\]/g, '\\]');
+              
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: `✅ Successfully triggered \`lysbot-merge-upgrade-deps\` workflow for branch \`${sanitizedBranchName}\`.\n\nYou can monitor the workflow run [here](${context.payload.repository.html_url}/actions/workflows/lysbot-merge-upgrade-deps.yml).`
+                body: `✅ Successfully triggered \`lysbot-merge-upgrade-deps\` workflow for branch \`${escapedBranchName}\`.\n\nYou can monitor the workflow run [here](${context.payload.repository.html_url}/actions/workflows/lysbot-merge-upgrade-deps.yml).`
               });
             } catch (error) {
               // Sanitize error message - only show safe parts
