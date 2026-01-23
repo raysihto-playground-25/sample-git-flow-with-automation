@@ -82,7 +82,6 @@ jobs:
         id: create_pr
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "ci(deps-lysbot-merge): update dependencies"
           title: "ci(deps-lysbot-merge): update dependencies"
           body: |
@@ -94,5 +93,4 @@ jobs:
             _This PR was automatically created by the [lysbot-merge-upgrade-deps workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-upgrade-deps.yml)._
             _Triggered by: @${{ github.actor }}_
           branch: bot/lysbot-merge-deps/${{ github.ref_name }}
-          delete-branch: true
           labels: dependencies
