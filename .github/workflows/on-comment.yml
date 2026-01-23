@@ -64,9 +64,10 @@ jobs:
             const headRef = pr.data.head.ref;
             
             // Validate branch name to prevent injection
-            // GitHub branch names follow specific rules - validate to ensure safety
-            // Exclude dots to prevent potential directory traversal attempts
-            if (!/^[a-zA-Z0-9/_-]+$/.test(headRef)) {
+            // GitHub's own validation ensures branch names are safe
+            // This additional check provides defense in depth
+            // Allow common characters in branch names: alphanumeric, /, _, -, .
+            if (!/^[a-zA-Z0-9/_.\-]+$/.test(headRef) || headRef.length > 255) {
               core.setFailed('Invalid branch name format detected');
               throw new Error('Invalid branch name format');
             }
