@@ -65,6 +65,7 @@ This decision framework requires understanding what constitutes the "primary out
 #### Primary Output Definition
 
 The **primary output** is what creates value for the repository's end users:
+
 - For application repositories: the deployed application or distributed package
 - For library repositories: the published library package
 - For tool repositories: the command-line tool or SDK
@@ -79,11 +80,13 @@ The **primary output** is what creates value for the repository's end users:
 #### Commit Type Selection Rules
 
 **Use `fix` or `feat` when:**
+
 - Dependency updates affect the primary output
 - Changes could alter end-user value (behavior, performance, security, features)
 - Examples in application repositories: runtime dependencies, bundled libraries, production packages
 
 **Use `build`, `ci`, `chore`, or `test` when:**
+
 - Dependency updates do NOT affect the primary output
 - Changes only affect development, build, testing, or CI/CD processes
 - Examples: build tools, test frameworks, linters, formatters, CI action dependencies
@@ -91,11 +94,11 @@ The **primary output** is what creates value for the repository's end users:
 #### This Repository's Dependency Update Policy
 
 In this repository:
+
 - **lysbot-merge action dependencies**: Use `ci` type
   - Rationale: These dependencies support the CI/CD action itself, not any end-user application
   - They do not affect the value delivered to developers using these workflows
   - Changes only impact the internal operation of the automation tooling
-  
 - **Workflow definition changes**: Use `ci` type
   - Rationale: Workflows are CI/CD automation components
   - While they affect repositories that adopt them, the dependencies within actions are implementation details
@@ -103,6 +106,7 @@ In this repository:
 > [!IMPORTANT]
 >
 > For repositories that DO have a primary output (applications, libraries, tools), dependency updates affecting that output should use `fix` or `feat` to ensure:
+>
 > 1. Security patches reach end users promptly (via semantic versioning patch increments)
 > 2. Behavioral changes are properly versioned
 > 3. Dependency updates with bug fixes are treated appropriately
