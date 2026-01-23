@@ -96,8 +96,9 @@ jobs:
 
           echo "✅ Dependency upgrade completed successfully"
 
-      - name: Create or Update Pull Request
-        id: create_pr
+      - name: Create or Update Pull Request (with target branch)
+        if: inputs.target_branch != ''
+        id: create_pr_with_base
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -108,7 +109,7 @@ jobs:
 
             This PR updates npm dependencies in the lysbot-merge action to their latest versions.
 
-            **Target Branch:** ${{ inputs.target_branch || github.event.repository.default_branch }}
+            **Target Branch:** ${{ inputs.target_branch }}
 
             ---
             _This PR was automatically created by the [lysbot-merge-upgrade-deps workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-upgrade-deps.yml)._
@@ -116,4 +117,26 @@ jobs:
           branch: bot/lysbot-merge-deps
           delete-branch: true
           labels: dependencies
-          base: ${{ inputs.target_branch || '' }}
+          base: ${{ inputs.target_branch }}
+
+      - name: Create or Update Pull Request (default branch)
+        if: inputs.target_branch == ''
+        id: create_pr_default
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "ci(deps-lysbot-merge): update dependencies"
+          title: "ci(deps-lysbot-merge): update dependencies"
+          body: |
+            ## Automated Dependency Update
+
+            This PR updates npm dependencies in the lysbot-merge action to their latest versions.
+
+            **Target Branch:** ${{ github.event.repository.default_branch }} (default)
+
+            ---
+            _This PR was automatically created by the [lysbot-merge-upgrade-deps workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-upgrade-deps.yml)._
+            _Triggered by: @${{ github.actor }}_
+          branch: bot/lysbot-merge-deps
+          delete-branch: true
+          labels: dependencies

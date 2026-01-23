@@ -36,6 +36,12 @@ jobs:
   test:
     name: Build and Test
     runs-on: ubuntu-latest
+    # Only run when triggered by pull_request or workflow_dispatch,
+    # or when workflow_run completes successfully
+    if: >
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     permissions:
       contents: read
     steps:
