@@ -39,11 +39,21 @@ jobs:
     steps:
       - name: Handle /lysbot rebase command
         id: rebase
-        if: contains(github.event.comment.body, '/lysbot rebase')
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            // Parse /lysbot rebase command (similar to /lysbot merge validation)
+            // Command regex: matches "/lysbot rebase" at the start of the comment
+            const REBASE_COMMAND_REGEX = /^\s*\/lysbot\s+rebase\s*$/;
+            const commentBody = context.payload.comment.body;
+            
+            // Check if this is a /lysbot rebase command
+            if (!REBASE_COMMAND_REGEX.test(commentBody)) {
+              core.info('Not a /lysbot rebase command, skipping');
+              return;
+            }
+            
             // Add eyes reaction for acknowledgment
             await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
