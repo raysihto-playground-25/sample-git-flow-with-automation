@@ -67,17 +67,19 @@ jobs:
             // GitHub's own validation ensures branch names are safe
             // This additional check provides defense in depth
             // Allow common characters in branch names: alphanumeric, /, _, -, .
-            // Disallow potentially dangerous sequences like '..' for path traversal
+            // Disallow multiple consecutive dots to prevent path traversal
             if (
               !/^[a-zA-Z0-9/_.-]+$/.test(headRef) || 
               headRef.length > 255 ||
-              headRef.includes('..')
+              /\.{2,}/.test(headRef)
             ) {
               core.setFailed('Invalid branch name format detected');
               throw new Error('Invalid branch name format');
             }
             
-            core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${headRef}`);
+            // Sanitize branch name for logging (remove control characters and newlines)
+            const sanitizedHeadRef = headRef.replace(/[\x00-\x1F\x7F]/g, '');
+            core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${sanitizedHeadRef}`);
             
             try {
               await github.rest.actions.createWorkflowDispatch({
@@ -95,21 +97,23 @@ jobs:
                 content: 'rocket'
               });
               
-              // Post success comment with properly encoded branch name for markdown
-              // Comprehensive escaping of markdown special characters
-              // Note: & must be replaced first to avoid double-escaping
-              const escapedBranchName = headRef
-                .replace(/&/g, '&amp;')
-                .replace(/\\/g, '\\\\')
-                .replace(/`/g, '\\`')
-                .replace(/\*/g, '\\*')
-                .replace(/_/g, '\\_')
-                .replace(/\[/g, '\\[')
-                .replace(/\]/g, '\\]')
-                .replace(/#/g, '\\#')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/\|/g, '\\|');
+              // Helper function to escape branch name for markdown/HTML
+              const escapeBranchName = (name) => {
+                return name
+                  .replace(/&/g, '&amp;')      // Must be first to avoid double-escaping
+                  .replace(/\\/g, '\\\\')
+                  .replace(/`/g, '\\`')
+                  .replace(/\*/g, '\\*')
+                  .replace(/_/g, '\\_')
+                  .replace(/\[/g, '\\[')
+                  .replace(/\]/g, '\\]')
+                  .replace(/#/g, '\\#')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/\|/g, '\\|');
+              };
+              
+              const escapedBranchName = escapeBranchName(headRef);
               
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
@@ -119,10 +123,11 @@ jobs:
               });
             } catch (error) {
               // Log with safe status code handling for debugging
-              const safeStatusCodes = [400, 401, 403, 404, 409, 422, 429, 500, 502, 503];
+              // Exclude server error codes to avoid potential information disclosure
+              const safeStatusCodes = [400, 401, 403, 404, 409, 422, 429];
               const statusCode = error.status && safeStatusCodes.includes(error.status) 
                 ? error.status 
-                : 'unknown';
+                : 'error';
               core.setFailed(`Failed to trigger workflow. Status: ${statusCode}`);
               
               // Add failure reaction
