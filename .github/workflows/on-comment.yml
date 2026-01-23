@@ -69,7 +69,7 @@ jobs:
             // Allow common characters in branch names: alphanumeric, /, _, -, .
             // Disallow potentially dangerous sequences like '..' for path traversal
             if (
-              !/^[a-zA-Z0-9/_.\-]+$/.test(headRef) || 
+              !/^[a-zA-Z0-9/_\.\-]+$/.test(headRef) || 
               headRef.length > 255 ||
               headRef.includes('..')
             ) {
@@ -96,14 +96,19 @@ jobs:
               });
               
               // Post success comment with properly encoded branch name for markdown
-              // Escape special markdown characters to prevent formatting issues
+              // Comprehensive escaping of markdown special characters
               const escapedBranchName = headRef
                 .replace(/\\/g, '\\\\')
                 .replace(/`/g, '\\`')
                 .replace(/\*/g, '\\*')
                 .replace(/_/g, '\\_')
                 .replace(/\[/g, '\\[')
-                .replace(/\]/g, '\\]');
+                .replace(/\]/g, '\\]')
+                .replace(/#/g, '\\#')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/&/g, '&amp;')
+                .replace(/\|/g, '\\|');
               
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
@@ -112,8 +117,11 @@ jobs:
                 body: `✅ Successfully triggered \`lysbot-merge-upgrade-deps\` workflow for branch \`${escapedBranchName}\`.\n\nYou can monitor the workflow run [here](${context.payload.repository.html_url}/actions/workflows/lysbot-merge-upgrade-deps.yml).`
               });
             } catch (error) {
-              // Log the actual error for debugging while using safe predefined messages for users
-              const statusCode = error.status || 'unknown';
+              // Log with safe status code handling for debugging
+              const safeStatusCodes = [400, 401, 403, 404, 409, 422, 429, 500, 502, 503];
+              const statusCode = error.status && safeStatusCodes.includes(error.status) 
+                ? error.status 
+                : 'unknown';
               core.setFailed(`Failed to trigger workflow. Status: ${statusCode}`);
               
               // Add failure reaction
