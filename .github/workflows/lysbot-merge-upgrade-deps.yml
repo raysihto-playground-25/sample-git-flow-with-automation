@@ -35,8 +35,7 @@ name: lysbot-merge Dependency Update
 # 4. If no changes are detected, skips PR creation
 #
 # BRANCH NAMING:
-# - Uses: bot/lysbot-merge-deps-{timestamp}
-# - Timestamp ensures each run creates a unique branch
+# - Uses: bot/lysbot-merge-deps-{run_id}
 #
 # PR LABELING:
 # - Automatically adds 'dependencies' label to the PR
@@ -66,9 +65,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          # Fetch all history for accurate diff detection
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
