@@ -50,26 +50,26 @@ jobs:
               content: 'eyes'
             });
 
-      - name: Get PR details
-        id: pr
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-            core.setOutput('head_ref', pr.data.head.ref);
-            return pr.data.head.ref;
-
       - name: Trigger lysbot-merge-upgrade-deps workflow
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const headRef = '${{ steps.pr.outputs.head_ref }}';
+            // Get PR details to retrieve head ref
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            const headRef = pr.data.head.ref;
+            
+            // Validate branch name to prevent injection
+            // GitHub branch names follow specific rules - validate to ensure safety
+            if (!/^[a-zA-Z0-9/_.\-]+$/.test(headRef)) {
+              core.setFailed(`Invalid branch name format: ${headRef}`);
+              throw new Error('Invalid branch name format');
+            }
+            
             core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${headRef}`);
             
             try {
@@ -88,15 +88,18 @@ jobs:
                 content: 'rocket'
               });
               
-              // Post success comment
+              // Post success comment with sanitized branch name
+              const sanitizedBranchName = headRef.replace(/[`]/g, '');
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: `✅ Successfully triggered \`lysbot-merge-upgrade-deps\` workflow for branch \`${headRef}\`.\n\nYou can monitor the workflow run [here](${context.payload.repository.html_url}/actions/workflows/lysbot-merge-upgrade-deps.yml).`
+                body: `✅ Successfully triggered \`lysbot-merge-upgrade-deps\` workflow for branch \`${sanitizedBranchName}\`.\n\nYou can monitor the workflow run [here](${context.payload.repository.html_url}/actions/workflows/lysbot-merge-upgrade-deps.yml).`
               });
             } catch (error) {
-              core.setFailed(`Failed to trigger workflow: ${error.message}`);
+              // Sanitize error message - only show safe parts
+              const errorType = error.status ? `HTTP ${error.status}` : 'Unknown error';
+              core.setFailed(`Failed to trigger workflow: ${errorType}`);
               
               // Add failure reaction
               await github.rest.reactions.createForIssueComment({
@@ -106,12 +109,12 @@ jobs:
                 content: 'confused'
               });
               
-              // Post error comment
+              // Post error comment with sanitized error info
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: `❌ Failed to trigger \`lysbot-merge-upgrade-deps\` workflow: ${error.message}`
+                body: `❌ Failed to trigger \`lysbot-merge-upgrade-deps\` workflow. Error type: ${errorType}\n\nPlease check that the branch exists and you have permission to trigger workflows.`
               });
               
               throw error;
