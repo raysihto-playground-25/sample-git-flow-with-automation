@@ -36,8 +36,10 @@ jobs:
   test:
     name: Build and Test
     runs-on: ubuntu-latest
-    # Only run when triggered by pull_request or workflow_dispatch,
-    # or when workflow_run completes successfully
+    # Run tests in these scenarios:
+    # 1. When triggered by a pull request modifying lysbot-merge files
+    # 2. When manually triggered via workflow_dispatch
+    # 3. When triggered by workflow_run AND the upstream workflow succeeded
     if: >
       github.event_name == 'pull_request' ||
       github.event_name == 'workflow_dispatch' ||

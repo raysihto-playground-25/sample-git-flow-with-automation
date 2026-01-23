@@ -96,6 +96,12 @@ jobs:
 
           echo "✅ Dependency upgrade completed successfully"
 
+      # Note: We use two separate steps instead of one because GitHub Actions
+      # doesn't support conditional parameters in the 'with' block. When the
+      # 'base' parameter is omitted entirely, create-pull-request uses the
+      # repository's default branch. We cannot achieve this with a single step
+      # using expressions like '${{ inputs.target_branch || '' }}' because
+      # passing an empty string is different from omitting the parameter.
       - name: Create or Update Pull Request (with target branch)
         if: inputs.target_branch != ''
         id: create_pr_with_base
