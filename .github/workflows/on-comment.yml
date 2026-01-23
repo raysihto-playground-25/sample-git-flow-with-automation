@@ -68,6 +68,21 @@ jobs:
             });
             const headRef = pr.data.head.ref;
 
+            // Check if this PR was created by lysbot-merge-upgrade-deps workflow
+            // Expected branch pattern: bot/lysbot-merge-deps/{base-branch}
+            const DEPS_BRANCH_PATTERN = /^bot\/lysbot-merge-deps\//;
+            if (!DEPS_BRANCH_PATTERN.test(headRef)) {
+              const message = `⚠️ This PR was not created by the \`lysbot-merge-upgrade-deps\` workflow.\n\nThe \`/lysbot rebase\` command can only be used on dependency update PRs (branch pattern: \`bot/lysbot-merge-deps/*\`).\n\nCurrent branch: \`${headRef}\``;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: message
+              });
+              core.setFailed('Not a lysbot-merge-upgrade-deps PR');
+              return;
+            }
+
             try {
               core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${headRef}`);
               await github.rest.actions.createWorkflowDispatch({
