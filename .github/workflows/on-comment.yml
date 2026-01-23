@@ -51,8 +51,13 @@ jobs:
             // Check if this is a /lysbot rebase command
             if (!REBASE_COMMAND_REGEX.test(commentBody)) {
               core.info('Not a /lysbot rebase command, skipping');
+              core.setOutput('is_rebase_command', 'false');
               return;
             }
+            
+            // Set output to indicate this is a rebase command
+            // This prevents lysbot-merge action from running
+            core.setOutput('is_rebase_command', 'true');
             
             // Add eyes reaction for acknowledgment
             await github.rest.reactions.createForIssueComment({
@@ -80,16 +85,13 @@ jobs:
                 workflow_id: 'lysbot-merge-upgrade-deps.yml',
                 ref: headRef
               });
-              
-              // Set output to indicate rebase was processed
-              core.setOutput('processed', 'true');
             } catch (error) {
               core.setFailed(`Failed to trigger workflow: ${error.message}`);
               throw error;
             }
 
       - name: Run lysbot-merge action
-        if: steps.rebase.outputs.processed != 'true'
+        if: steps.rebase.outputs.is_rebase_command != 'true'
         uses: raysihto-playground-25/sample-git-flow-with-automation/.github/actions/lysbot-merge@develop
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
