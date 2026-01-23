@@ -7,8 +7,8 @@ name: lysbot-merge Dependency Update
 # action by running `npm run all:full-upgrade` and creating a PR with changes.
 #
 # TRIGGERS:
-# - Manual trigger via workflow_dispatch
-# - Schedule trigger
+# - Manual trigger (`on.workflow_dispatch`)
+# - Scheduled trigger (`on.schedule`)
 #
 # REQUIRED PERMISSIONS:
 # - contents: write    - To push changes to a new branch
@@ -24,18 +24,11 @@ name: lysbot-merge Dependency Update
 # WORKFLOW BEHAVIOR:
 # 1. Checks out the repository
 # 2. Runs `npm run all:full-upgrade` in .github/actions/lysbot-merge directory
-#    - Deletes package-lock.json
-#    - Updates all dependencies to latest versions
-#    - Runs linting, formatting, and tests
-#    - Rebuilds the action bundle
 # 3. Creates or updates a PR with dependency updates:
-#    - If no existing PR exists, creates a new one
-#    - If an existing PR exists, updates it with the latest changes (force-push)
+#    - Branch name is unique per base branch (e.g., bot/lysbot-merge-deps/develop)
+#    - If no existing PR exists for this base branch, creates a new one
+#    - If an existing PR exists for this base branch, updates it with the latest changes (force-push)
 #    - If no changes are detected, the action automatically skips PR creation
-#
-# BRANCH NAMING:
-# - Uses a fixed branch name: bot/lysbot-merge-deps
-# - This ensures the same PR is reused across workflow runs
 #
 # PR LABELING:
 # - Automatically adds 'dependencies' label to the PR
@@ -44,16 +37,21 @@ name: lysbot-merge Dependency Update
 
 on:
   # Manual trigger
+  # - By default, this workflow runs on the repository's default branch if executed without changing any settings.
+  # - The target branch can be explicitly changed at execution time via the GitHub Actions UI.
   workflow_dispatch:
 
-  # Schedule trigger: Runs every Saturday at 9:00 AM UTC
+  # Scheduled trigger
+  # - This workflow runs on the repository's default branch only.
+  # - Branch selection is not supported for scheduled executions.
   schedule:
-    - cron: '0 9 * * 6'
+    # Runs every Saturday at 9:00 AM UTC
+    - cron: "0 9 * * 6"
 
-# Ensure only one lysbot-merge dependency update workflow runs at a time
+# Ensure only one lysbot-merge dependency update workflow runs at a time per base branch
 concurrency:
-  group: lysbot-merge-upgrade-deps
-  cancel-in-progress: false
+  group: lysbot-merge-deps/${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   update-dependencies:
@@ -77,9 +75,7 @@ jobs:
         id: upgrade
         working-directory: .github/actions/lysbot-merge
         run: |
-          # Run the full upgrade process
           npm run all:full-upgrade
-
           echo "✅ Dependency upgrade completed successfully"
 
       - name: Create or Update Pull Request
@@ -97,8 +93,6 @@ jobs:
             ---
             _This PR was automatically created by the [lysbot-merge-upgrade-deps workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-upgrade-deps.yml)._
             _Triggered by: @${{ github.actor }}_
-          branch: bot/lysbot-merge-deps
+          branch: bot/lysbot-merge-deps/${{ github.ref_name }}
           delete-branch: true
           labels: dependencies
-          # Use default branch as base
-          # base: develop
