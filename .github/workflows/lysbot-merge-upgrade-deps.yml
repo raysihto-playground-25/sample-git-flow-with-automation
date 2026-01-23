@@ -56,7 +56,7 @@ on:
 
 # Ensure only one lysbot-merge dependency update workflow runs at a time per base branch
 concurrency:
-  group: lysbot-merge-deps/${{ github.ref_name }}
+  group: lysbot-merge-deps/${{ github.event.client_payload.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
