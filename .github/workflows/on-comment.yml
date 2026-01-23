@@ -8,6 +8,7 @@ name: on-comment
 #
 # Currently supported commands:
 # - /lysbot merge - See .github/actions/lysbot-merge/action.yml for details
+# - /lysbot rebase - Triggers lysbot-merge-upgrade-deps workflow for the PR branch
 #
 # CUSTOMIZATION:
 # - Modify the `with` inputs below to match your project's branching strategy
@@ -25,6 +26,97 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  lysbot-rebase:
+    name: lysbot-rebase
+    # Only run if this is a PR comment with /lysbot rebase command
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/lysbot rebase')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: write
+    steps:
+      - name: Add reaction to comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes'
+            });
+
+      - name: Get PR details
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            core.setOutput('head_ref', pr.data.head.ref);
+            return pr.data.head.ref;
+
+      - name: Trigger lysbot-merge-upgrade-deps workflow
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const headRef = '${{ steps.pr.outputs.head_ref }}';
+            core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${headRef}`);
+            
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'lysbot-merge-upgrade-deps.yml',
+                ref: headRef
+              });
+              
+              // Add success reaction
+              await github.rest.reactions.createForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: context.payload.comment.id,
+                content: 'rocket'
+              });
+              
+              // Post success comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `✅ Successfully triggered \`lysbot-merge-upgrade-deps\` workflow for branch \`${headRef}\`.\n\nYou can monitor the workflow run [here](${context.payload.repository.html_url}/actions/workflows/lysbot-merge-upgrade-deps.yml).`
+              });
+            } catch (error) {
+              core.setFailed(`Failed to trigger workflow: ${error.message}`);
+              
+              // Add failure reaction
+              await github.rest.reactions.createForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: context.payload.comment.id,
+                content: 'confused'
+              });
+              
+              // Post error comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `❌ Failed to trigger \`lysbot-merge-upgrade-deps\` workflow: ${error.message}`
+              });
+              
+              throw error;
+            }
+
   lysbot-merge:
     name: lysbot-merge
     # Only run if this is a PR comment (not an issue)
