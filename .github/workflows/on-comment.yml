@@ -45,10 +45,23 @@ jobs:
           script: |
             const REBASE_COMMAND_REGEX = /^\s*\/lysbot\s+rebase\s*$/;
             const commentBody = context.payload.comment.body;
+            if (!REBASE_COMMAND_REGEX.test(commentBody)) {
+              core.setOutput('is_rebase_command', 'false');
+              return;
+            }
 
-            if (REBASE_COMMAND_REGEX.test(commentBody)) {
-              core.setOutput('is_rebase_command', 'true');
-            } else {
+            // Get PR details to retrieve head ref
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            const headRef = pr.data.head.ref;
+
+            // Check if this PR was created by lysbot-merge-upgrade-deps workflow
+            const DEPS_BRANCH_PATTERN = /^bot\/lysbot-merge-deps\//;
+            if (!DEPS_BRANCH_PATTERN.test(headRef)) {
+              core.setFailed('Not a lysbot-merge-upgrade-deps PR');
               return;
             }
 
@@ -60,44 +73,16 @@ jobs:
               content: 'eyes'
             });
 
-            // Get PR details to retrieve head ref
-            const pr = await github.rest.pulls.get({
+            core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${headRef}`);
+            await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.issue.number
+              workflow_id: 'lysbot-merge-upgrade-deps.yml',
+              ref: headRef
             });
-            const headRef = pr.data.head.ref;
-
-            // Check if this PR was created by lysbot-merge-upgrade-deps workflow
-            // Expected branch pattern: bot/lysbot-merge-deps/{base-branch}
-            const DEPS_BRANCH_PATTERN = /^bot\/lysbot-merge-deps\//;
-            if (!DEPS_BRANCH_PATTERN.test(headRef)) {
-              const message = `⚠️ This PR was not created by the \`lysbot-merge-upgrade-deps\` workflow.\n\nThe \`/lysbot rebase\` command can only be used on dependency update PRs (branch pattern: \`bot/lysbot-merge-deps/*\`).\n\nCurrent branch: \`${headRef}\``;
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: message
-              });
-              core.setFailed('Not a lysbot-merge-upgrade-deps PR');
-              return;
-            }
-
-            try {
-              core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${headRef}`);
-              await github.rest.actions.createWorkflowDispatch({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: 'lysbot-merge-upgrade-deps.yml',
-                ref: headRef
-              });
-            } catch (error) {
-              core.setFailed(`Failed to trigger workflow: ${error.message}`);
-              throw error;
-            }
 
       - name: Run lysbot-merge action for handling `/lysbot merge` command
-        if: steps.rebase.outputs.is_rebase_command != 'true'
+        if: steps.rebase.outputs.is_rebase_command == 'false'
         uses: raysihto-playground-25/sample-git-flow-with-automation/.github/actions/lysbot-merge@develop
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
