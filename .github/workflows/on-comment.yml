@@ -60,35 +60,9 @@ jobs:
             });
             const headRef = pr.data.head.ref;
             
-            // Validation constants
-            const BRANCH_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9/_.-]*$/;
-            const MAX_BRANCH_LENGTH = 255;
-            const CONSECUTIVE_DOTS_PATTERN = /\.{2,}/;
+            core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${headRef}`);
             
-            // Validate branch name to prevent injection
-            // GitHub's own validation ensures branch names are safe
-            // This additional check provides defense in depth
-            // - Must start with alphanumeric to avoid flag-like names
-            // - Allow common characters: alphanumeric, /, _, -, .
-            // - Block consecutive dots to prevent path traversal
-            if (
-              !BRANCH_NAME_PATTERN.test(headRef) || 
-              headRef.length > MAX_BRANCH_LENGTH ||
-              CONSECUTIVE_DOTS_PATTERN.test(headRef)
-            ) {
-              core.setFailed('Invalid branch name format detected');
-              throw new Error('Invalid branch name format');
-            }
-            
-            // Sanitize branch name for logging
-            // Remove control characters, zero-width spaces, and directional overrides
-            const sanitizedHeadRef = headRef
-              .replace(/[\x00-\x1F\x7F]/g, '')           // Control characters
-              .replace(/[\u200B-\u200D\uFEFF]/g, '')     // Zero-width spaces
-              .replace(/[\u202A-\u202E\u2066-\u2069]/g, ''); // Directional overrides
-            core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${sanitizedHeadRef}`);
-            
-            // Trigger the workflow with error handling
+            // Trigger the workflow
             try {
               await github.rest.actions.createWorkflowDispatch({
                 owner: context.repo.owner,
@@ -100,7 +74,6 @@ jobs:
               // Set output to indicate rebase was processed
               core.setOutput('processed', 'true');
             } catch (error) {
-              // Log error for debugging but fail the step
               core.setFailed(`Failed to trigger workflow: ${error.message}`);
               throw error;
             }
