@@ -17,7 +17,7 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 ### Types
 
 - `feat`: A new feature
-- `fix`: A bug fix (also used for runtime dependency updates; see below)
+- `fix`: A bug fix
 - `docs`: Documentation only changes
 - `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc.)
 - `refactor`: A code change that neither fixes a bug nor adds a feature
@@ -28,6 +28,10 @@ This project follows the [Conventional Commits](https://www.conventionalcommits.
 - `chore`: Other changes that don't modify src or test files
 - `revert`: Reverts a previous commit
 - `ux`: User experience improvements (project-specific additional custom type)
+
+> [!NOTE]
+>
+> For dependency updates, see the [Dependency Updates](#dependency-updates) section for commit type selection guidelines.
 
 ### Examples
 
@@ -52,19 +56,58 @@ docs(contributing): add commit message guidelines
 
 ### Dependency Updates
 
-Runtime (production) dependency updates use the `fix` type rather than `build` or `chore`. This is a deliberate design choice for the following reasons:
+#### Decision Criteria: End-User Value Impact
+
+The commit type for dependency updates is determined by a single criterion: **Does the dependency update affect the value delivered to end users?**
+
+This decision framework requires understanding what constitutes the "primary output" of a repository and who the end users are.
+
+#### Primary Output Definition
+
+The **primary output** is what creates value for the repository's end users:
+- For application repositories: the deployed application or distributed package
+- For library repositories: the published library package
+- For tool repositories: the command-line tool or SDK
+- **For this repository**: This repository has **no primary output** in the traditional sense
+
+> [!NOTE]
+>
+> This repository provides reusable workflows and actions for Git Flow automation. The end users of this repository are **developers who adopt these workflows**, not the end users of applications built in repositories that use these workflows.
+>
+> The "primary output" concept applies to **target repositories** where these workflows are adopted. Each target repository should clearly define what constitutes its primary output and apply these guidelines accordingly.
+
+#### Commit Type Selection Rules
+
+**Use `fix` or `feat` when:**
+- Dependency updates affect the primary output
+- Changes could alter end-user value (behavior, performance, security, features)
+- Examples in application repositories: runtime dependencies, bundled libraries, production packages
+
+**Use `build`, `ci`, `chore`, or `test` when:**
+- Dependency updates do NOT affect the primary output
+- Changes only affect development, build, testing, or CI/CD processes
+- Examples: build tools, test frameworks, linters, formatters, CI action dependencies
+
+#### This Repository's Dependency Update Policy
+
+In this repository:
+- **lysbot-merge action dependencies**: Use `ci` type
+  - Rationale: These dependencies support the CI/CD action itself, not any end-user application
+  - They do not affect the value delivered to developers using these workflows
+  - Changes only impact the internal operation of the automation tooling
+  
+- **Workflow definition changes**: Use `ci` type
+  - Rationale: Workflows are CI/CD automation components
+  - While they affect repositories that adopt them, the dependencies within actions are implementation details
 
 > [!IMPORTANT]
 >
-> This project uses `fix` for runtime dependency updates instead of the more common `build` or `chore` types.
-
-1. **Treating dependency updates as potential bug fixes**: Runtime dependency updates may contain implicit bug fixes or security patches that are not always explicitly documented. By treating them as `fix`, we err on the safe side.
-
-2. **Ensuring security fixes reach users promptly**: Using `fix` ensures that vulnerability patches trigger patch version increments, making it easier to release security updates to users.
-
-3. **Enabling fine-grained patch releases**: This approach allows for more granular patch releases, ensuring that any behavioral changes or fixes in dependencies are properly versioned.
-
-The Conventional Commits specification only mandates `feat` and `fix` types; other types such as `build`, `chore`, and `ci` are conventions adopted from sources like the Angular convention, not requirements of the specification itself. This project chooses to use `fix` for runtime dependency updates because these updates can directly affect application behavior and stability. Treating them as potential bug fixes is a pragmatic choice that prioritizes safety and proper versioning.
+> For repositories that DO have a primary output (applications, libraries, tools), dependency updates affecting that output should use `fix` or `feat` to ensure:
+> 1. Security patches reach end users promptly (via semantic versioning patch increments)
+> 2. Behavioral changes are properly versioned
+> 3. Dependency updates with bug fixes are treated appropriately
+>
+> The `fix` type for runtime dependencies is a pragmatic choice that prioritizes safety and proper versioning when changes could affect end-user value.
 
 ## Documentation and PR Guidelines
 
