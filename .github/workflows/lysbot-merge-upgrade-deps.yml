@@ -93,7 +93,7 @@ jobs:
           # Get the base branch name (the branch where workflow is running)
           BASE_BRANCH="${{ github.ref_name }}"
           
-          # Sanitize branch name: replace / with - and remove special characters
+          # Sanitize branch name: replace / with -, preserve dots/underscores, replace other special chars with -
           SANITIZED_BRANCH=$(echo "$BASE_BRANCH" | sed 's/\//-/g' | sed 's/[^a-zA-Z0-9._-]/-/g')
           
           # Generate unique branch name per base branch
