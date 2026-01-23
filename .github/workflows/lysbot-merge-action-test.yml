@@ -24,6 +24,9 @@ on:
       - ".github/actions/lysbot-merge/**"
       - ".github/workflows/lysbot-merge-action-test.yml"
   workflow_run:
+    # NOTE: This workflow name must match the 'name' field in
+    # lysbot-merge-upgrade-deps.yml. If that workflow is renamed,
+    # this trigger must be updated accordingly.
     workflows: ["lysbot-merge Dependency Update"]
     types: [completed]
   workflow_dispatch:
