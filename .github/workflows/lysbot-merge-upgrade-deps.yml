@@ -100,5 +100,4 @@ jobs:
           branch: bot/lysbot-merge-deps
           delete-branch: true
           labels: dependencies
-          # Use default branch as base
-          # base: develop
+          base: develop
