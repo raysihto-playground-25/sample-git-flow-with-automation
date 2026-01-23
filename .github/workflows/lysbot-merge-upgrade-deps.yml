@@ -7,8 +7,8 @@ name: lysbot-merge Dependency Update
 # action by running `npm run all:full-upgrade` and creating a PR with changes.
 #
 # TRIGGERS:
-# - Manual trigger via workflow_dispatch
-# - Schedule trigger
+# - Manual trigger via workflow_dispatch (runs on the selected branch)
+# - Schedule trigger (runs on the default branch, typically 'main' or 'develop')
 #
 # REQUIRED PERMISSIONS:
 # - contents: write    - To push changes to a new branch
