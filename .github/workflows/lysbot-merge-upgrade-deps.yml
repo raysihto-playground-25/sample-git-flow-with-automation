@@ -41,7 +41,7 @@ on:
 
   # Schedule trigger: Runs every Saturday at 9:00 AM UTC
   schedule:
-    - cron: '0 9 * * 6'
+    - cron: "0 9 * * 6"
 
 # Ensure only one lysbot-merge dependency update workflow runs at a time per base branch
 concurrency:
@@ -70,7 +70,6 @@ jobs:
         id: upgrade
         working-directory: .github/actions/lysbot-merge
         run: |
-          set -euo pipefail && exec >& 2
           npm run all:full-upgrade
           echo "✅ Dependency upgrade completed successfully"
 
@@ -89,6 +88,6 @@ jobs:
             ---
             _This PR was automatically created by the [lysbot-merge-upgrade-deps workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-upgrade-deps.yml)._
             _Triggered by: @${{ github.actor }}_
-          branch: bot/lysbot-merge-deps/develop${{ github.ref_name }}
+          branch: bot/lysbot-merge-deps/${{ github.ref_name }}
           delete-branch: true
           labels: dependencies
