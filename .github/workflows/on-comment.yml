@@ -66,10 +66,11 @@ jobs:
             // Validate branch name to prevent injection
             // GitHub's own validation ensures branch names are safe
             // This additional check provides defense in depth
-            // Allow common characters in branch names: alphanumeric, /, _, -, .
-            // Disallow multiple consecutive dots to prevent path traversal
+            // - Must start with alphanumeric to avoid flag-like names
+            // - Allow common characters: alphanumeric, /, _, -, .
+            // - Block consecutive dots to prevent path traversal
             if (
-              !/^[a-zA-Z0-9/_.-]+$/.test(headRef) || 
+              !/^[a-zA-Z0-9][a-zA-Z0-9/_.-]*$/.test(headRef) || 
               headRef.length > 255 ||
               /\.{2,}/.test(headRef)
             ) {
@@ -77,8 +78,12 @@ jobs:
               throw new Error('Invalid branch name format');
             }
             
-            // Sanitize branch name for logging (remove control characters and newlines)
-            const sanitizedHeadRef = headRef.replace(/[\x00-\x1F\x7F]/g, '');
+            // Sanitize branch name for logging
+            // Remove control characters, zero-width spaces, and directional overrides
+            const sanitizedHeadRef = headRef
+              .replace(/[\x00-\x1F\x7F]/g, '')           // Control characters
+              .replace(/[\u200B-\u200D\uFEFF]/g, '')     // Zero-width spaces
+              .replace(/[\u202A-\u202E\u2066-\u2069]/g, ''); // Directional overrides
             core.info(`Triggering lysbot-merge-upgrade-deps workflow for branch: ${sanitizedHeadRef}`);
             
             try {
@@ -97,7 +102,8 @@ jobs:
                 content: 'rocket'
               });
               
-              // Helper function to escape branch name for markdown/HTML
+              // Helper function to escape branch name for GitHub markdown comments
+              // GitHub comments support both Markdown and HTML entities
               const escapeBranchName = (name) => {
                 return name
                   .replace(/&/g, '&amp;')      // Must be first to avoid double-escaping
