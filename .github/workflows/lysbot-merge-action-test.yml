@@ -7,6 +7,15 @@ name: lysbot-merge-action-test
 # 1. The TypeScript action compiles successfully
 # 2. All unit tests pass
 # 3. The action is ready for use
+#
+# TRIGGERS:
+# - pull_request: Automatically runs when PRs modify lysbot-merge action files
+# - workflow_run: Automatically runs after lysbot-merge-upgrade-deps completes
+# - workflow_dispatch: Manual trigger for on-demand testing
+#
+# The workflow_run trigger ensures tests run even if a PR is not immediately
+# created (e.g., if there are no dependency changes). The pull_request trigger
+# ensures tests run on any PR touching the action code.
 # =============================================================================
 
 on:
@@ -14,6 +23,9 @@ on:
     paths:
       - ".github/actions/lysbot-merge/**"
       - ".github/workflows/lysbot-merge-action-test.yml"
+  workflow_run:
+    workflows: ["lysbot-merge Dependency Update"]
+    types: [completed]
   workflow_dispatch:
 
 defaults:
