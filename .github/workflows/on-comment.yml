@@ -69,7 +69,7 @@ jobs:
             // Allow common characters in branch names: alphanumeric, /, _, -, .
             // Disallow potentially dangerous sequences like '..' for path traversal
             if (
-              !/^[a-zA-Z0-9/_\.\-]+$/.test(headRef) || 
+              !/^[a-zA-Z0-9/_.-]+$/.test(headRef) || 
               headRef.length > 255 ||
               headRef.includes('..')
             ) {
@@ -97,7 +97,9 @@ jobs:
               
               // Post success comment with properly encoded branch name for markdown
               // Comprehensive escaping of markdown special characters
+              // Note: & must be replaced first to avoid double-escaping
               const escapedBranchName = headRef
+                .replace(/&/g, '&amp;')
                 .replace(/\\/g, '\\\\')
                 .replace(/`/g, '\\`')
                 .replace(/\*/g, '\\*')
@@ -107,7 +109,6 @@ jobs:
                 .replace(/#/g, '\\#')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
-                .replace(/&/g, '&amp;')
                 .replace(/\|/g, '\\|');
               
               await github.rest.issues.createComment({
