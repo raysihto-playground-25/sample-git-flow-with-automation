@@ -24,7 +24,7 @@ When working on TypeScript/JavaScript code (especially in `.github/actions/`):
 
 **Example workflow for lysbot-merge action**:
 
-For changes to `.github/actions/lysbot-merge/`, ensure you pass all checks that run in the CI workflow (`.github/workflows/lysbot-merge-action-test.yml`):
+For changes to `.github/actions/lysbot-merge/`, ensure you pass all checks that run in the CI workflow (`.github/workflows/lysbot-merge-test.yml`):
 
 ```bash
 cd .github/actions/lysbot-merge
@@ -54,7 +54,7 @@ npm run all     # Run all fix, check, and package steps
 **Production Runtime**: This action runs on Node.js 24 in production:
 
 - `action.yml` specifies `runs.using: 'node24'`
-- CI workflow (`.github/workflows/lysbot-merge-action-test.yml`) uses `node-version: '24'`
+- CI workflow (`.github/workflows/lysbot-merge-test.yml`) uses `node-version: '24'`
 
 ### Supported Node.js Versions
 
@@ -86,7 +86,7 @@ npm run all     # Run all fix, check, and package steps
 This project is designed for and runs on Node.js 24 in production:
 
 - **Production runtime**: `action.yml` specifies `runs.using: 'node24'`
-- **CI environment**: `.github/workflows/lysbot-merge-action-test.yml` uses `node-version: '24'`
+- **CI environment**: `.github/workflows/lysbot-merge-test.yml` uses `node-version: '24'`
 - **Target runtime behavior**: Node.js 24+ features and capabilities
 - **Native ESM handling**: Modern ES module support
 - **Modern tooling ecosystem**: Latest JavaScript tooling and best practices
