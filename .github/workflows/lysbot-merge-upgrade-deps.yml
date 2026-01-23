@@ -1,9 +1,9 @@
-name: lysbot-merge Dependency Update
+name: lysbot-merge Dependency Upgrade
 
 # =============================================================================
-# lysbot-merge Dependency Update Workflow
+# lysbot-merge Dependency Upgrade Workflow
 # =============================================================================
-# This workflow automatically updates npm dependencies in the lysbot-merge
+# This workflow automatically upgrades npm dependencies in the lysbot-merge
 # action by running `npm run all:full-upgrade` and creating a PR with changes.
 #
 # TRIGGERS:
@@ -24,7 +24,7 @@ name: lysbot-merge Dependency Update
 # WORKFLOW BEHAVIOR:
 # 1. Checks out the repository
 # 2. Runs `npm run all:full-upgrade` in .github/actions/lysbot-merge directory
-# 3. Creates or updates a PR with dependency updates:
+# 3. Creates or updates a PR with dependency upgrades:
 #    - Branch name is unique per base branch (e.g., bot/lysbot-merge-deps/develop)
 #    - If no existing PR exists for this base branch, creates a new one
 #    - If an existing PR exists for this base branch, updates it with the latest changes (force-push)
@@ -48,14 +48,14 @@ on:
     # Runs every Saturday at 9:00 AM UTC
     - cron: "0 9 * * 6"
 
-# Ensure only one lysbot-merge dependency update workflow runs at a time per base branch
+# Ensure only one lysbot-merge dependency upgrade workflow runs at a time per base branch
 concurrency:
   group: lysbot-merge-deps/${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
-  update-dependencies:
-    name: Update lysbot-merge Dependencies
+  upgrade-dependencies:
+    name: Upgrade lysbot-merge Dependencies
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -82,12 +82,12 @@ jobs:
         id: create_pr
         uses: peter-evans/create-pull-request@v7
         with:
-          commit-message: "ci(deps-lysbot-merge): update dependencies"
-          title: "ci(deps-lysbot-merge): update dependencies"
+          commit-message: "ci(deps-lysbot-merge): upgrade dependencies"
+          title: "ci(deps-lysbot-merge): upgrade dependencies"
           body: |
-            ## Automated Dependency Update
+            ## Automated Dependency Upgrade
 
-            This PR updates npm dependencies in the lysbot-merge action to their latest versions.
+            This PR upgrades npm dependencies in the lysbot-merge action to their latest versions.
 
             ---
             _This PR was automatically created by the [lysbot-merge-upgrade-deps workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/lysbot-merge-upgrade-deps.yml)._
