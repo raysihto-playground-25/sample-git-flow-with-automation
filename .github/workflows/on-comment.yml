@@ -45,10 +45,8 @@ jobs:
           script: |
             const REBASE_COMMAND_REGEX = /^\s*\/lysbot\s+rebase\s*$/;
             const commentBody = context.payload.comment.body;
-            if (!REBASE_COMMAND_REGEX.test(commentBody)) {
-              core.setOutput('is_rebase_command', 'false');
-              return;
-            }
+            if (!REBASE_COMMAND_REGEX.test(commentBody)) { return; }
+            core.setOutput('is_rebase_command', 'true');
 
             // Get PR details to retrieve head ref
             const pr = await github.rest.pulls.get({
@@ -82,7 +80,7 @@ jobs:
             });
 
       - name: Run lysbot-merge action for handling `/lysbot merge` command
-        if: steps.rebase.outputs.is_rebase_command == 'false'
+        if: steps.rebase.outputs.is_rebase_command != 'true'
         uses: raysihto-playground-25/sample-git-flow-with-automation/.github/actions/lysbot-merge@develop
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
