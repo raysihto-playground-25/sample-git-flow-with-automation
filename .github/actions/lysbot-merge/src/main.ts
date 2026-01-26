@@ -55,6 +55,33 @@ function createProductionDependencies(): RunDependencies {
 }
 
 /**
+ * Validates an integer input parameter and ensures it's within specified bounds.
+ *
+ * @param value - The parsed integer value to validate
+ * @param inputString - The original input string (for error messages)
+ * @param parameterName - The name of the parameter (for error messages)
+ * @param min - Minimum allowed value (inclusive)
+ * @param max - Maximum allowed value (inclusive)
+ * @throws Error if value is NaN or outside the specified range
+ */
+function validateIntegerParameter(
+  value: number,
+  inputString: string,
+  parameterName: string,
+  min: number,
+  max: number,
+): void {
+  if (Number.isNaN(value)) {
+    throw new Error(
+      `Invalid ${parameterName}: "${inputString}" is not a valid integer. Must be between ${min} and ${max}.`,
+    );
+  }
+  if (value < min || value > max) {
+    throw new Error(`Invalid ${parameterName}: ${value} is out of range. Must be between ${min} and ${max}.`);
+  }
+}
+
+/**
  * Parses and validates action configuration from inputs.
  * Ensures integer values are valid and within acceptable bounds.
  * Throws an error if validation fails.
@@ -71,26 +98,10 @@ function parseConfig(core: ActionsCore): ActionConfig {
   const mergeableRetryInterval = parseInt(retryIntervalInput, 10);
 
   // Validate retry count: must be integer between 1 and 20
-  if (Number.isNaN(mergeableRetryCount)) {
-    throw new Error(
-      `Invalid mergeable_retry_count: "${retryCountInput}" is not a valid integer. Must be between 1 and 20.`,
-    );
-  }
-  if (mergeableRetryCount < 1 || mergeableRetryCount > 20) {
-    throw new Error(`Invalid mergeable_retry_count: ${mergeableRetryCount} is out of range. Must be between 1 and 20.`);
-  }
+  validateIntegerParameter(mergeableRetryCount, retryCountInput, 'mergeable_retry_count', 1, 20);
 
   // Validate retry interval: must be integer between 1 and 60
-  if (Number.isNaN(mergeableRetryInterval)) {
-    throw new Error(
-      `Invalid mergeable_retry_interval: "${retryIntervalInput}" is not a valid integer. Must be between 1 and 60.`,
-    );
-  }
-  if (mergeableRetryInterval < 1 || mergeableRetryInterval > 60) {
-    throw new Error(
-      `Invalid mergeable_retry_interval: ${mergeableRetryInterval} is out of range. Must be between 1 and 60.`,
-    );
-  }
+  validateIntegerParameter(mergeableRetryInterval, retryIntervalInput, 'mergeable_retry_interval', 1, 60);
 
   return {
     releaseBranchPrefix: core.getInput('release_branch_prefix') || 'release/',
