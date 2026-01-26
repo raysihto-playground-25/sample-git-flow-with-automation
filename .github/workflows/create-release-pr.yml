@@ -1,0 +1,53 @@
+name: Create Release PR from RC Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      rc-tag:
+        description: "Existing RC tag (vX.Y.Z-rc.N)"
+        required: true
+        type: string
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ inputs['rc-tag'] }}
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RC_TAG: ${{ inputs['rc-tag'] }}
+          BASE_BRANCH: master
+        run: |
+          set -euo pipefail
+
+          TAG="${RC_TAG%%-*}"
+          RELEASE_BRANCH="release/${TAG#v}"
+          git push origin "refs/tags/${RC_TAG}:refs/heads/${RELEASE_BRANCH}"
+
+          TITLE="chore(release): Release ${TAG}"
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "${BODY_FILE}"' EXIT
+          cat > "${BODY_FILE}" << EOF
+          * Release ${TAG}
+
+          > [!CAUTION]
+          > ※ この PR は "Merge コミットを作る" でマージしてください。 (Squash マージは NG)
+          EOF
+
+          # Create PR
+          gh pr create \
+            --head "${RELEASE_BRANCH}" \
+            --base "${BASE_BRANCH}" \
+            --title "${TITLE}" \
+            --body-file "${BODY_FILE}"
