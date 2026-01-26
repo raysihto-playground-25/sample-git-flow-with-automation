@@ -1,0 +1,40 @@
+name: Create Release PR from RC Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      rc-tag:
+        description: "Existing RC tag (vX.Y.Z-rc.N)"
+        required: true
+        type: string
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs['rc-tag'] }}
+
+      - name: Derive release branch
+        id: prep
+        env:
+          RC_TAG: ${{ inputs['rc-tag'] }}
+        run: echo "release_tag=${RC_TAG%%-*}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create or update PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: release/${{ steps.prep.outputs.release_tag }}
+          base: master
+          title: "chore(release): Release ${{ steps.prep.outputs.release_tag }}"
+          body: |
+            * Release ${{ steps.prep.outputs.release_tag }}
+
+            > [!CAUTION]
+            > ※ この PR は "Merge コミットを作る" でマージしてください。 (Squash マージは NG)
