@@ -16,9 +16,15 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/create-github-app-token@v2
+        id: app-token
         with:
+          app_id: ${{ vars.GHT_APP_ID }}
+          private_key: ${{ secrets.GHT_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
           fetch-tags: true
           ref: ${{ inputs['rc-tag'] }}
