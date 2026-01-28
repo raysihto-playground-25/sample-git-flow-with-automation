@@ -8,6 +8,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: create-release-pr
+  cancel-in-progress: false
+
 jobs:
   create-release-pr:
     runs-on: ubuntu-latest
@@ -16,6 +20,19 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Validate RC tag format
+        run: |
+          RC_TAG="${{ inputs['rc-tag'] }}"
+          
+          # Validate RC tag format: vX.Y.Z-rc.N
+          if ! echo "$RC_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$'; then
+            echo "Error: Invalid RC tag format: $RC_TAG"
+            echo "Expected format: vX.Y.Z-rc.N (e.g., v1.2.3-rc.1)"
+            exit 1
+          fi
+          
+          echo "RC tag format is valid: $RC_TAG"
+
       - uses: actions/create-github-app-token@v2
         id: app-token
         with:
@@ -29,7 +46,20 @@ jobs:
           fetch-tags: true
           ref: ${{ inputs['rc-tag'] }}
 
+      - name: Verify RC tag exists
+        run: |
+          RC_TAG="${{ inputs['rc-tag'] }}"
+          
+          # Check if the RC tag exists
+          if ! git rev-parse "refs/tags/$RC_TAG" >/dev/null 2>&1; then
+            echo "Error: RC tag '$RC_TAG' does not exist"
+            exit 1
+          fi
+          
+          echo "RC tag exists: $RC_TAG"
+
       - name: Create PR
+        id: create_pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RC_TAG: ${{ inputs['rc-tag'] }}
@@ -52,8 +82,29 @@ jobs:
           EOF
 
           # Create PR
-          gh pr create \
+          PR_URL=$(gh pr create \
             --head "${RELEASE_BRANCH}" \
             --base "${BASE_BRANCH}" \
             --title "${TITLE}" \
-            --body-file "${BODY_FILE}"
+            --body-file "${BODY_FILE}")
+          
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "release_branch=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
+          echo "version=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Workflow Summary
+        run: |
+          RC_TAG="${{ inputs['rc-tag'] }}"
+          VERSION="${{ steps.create_pr.outputs.version }}"
+          RELEASE_BRANCH="${{ steps.create_pr.outputs.release_branch }}"
+          PR_URL="${{ steps.create_pr.outputs.pr_url }}"
+
+          echo "## Create Release PR Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **RC Tag** | \`${RC_TAG}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Release Branch** | \`${RELEASE_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Base Branch** | \`master\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Pull Request** | ${PR_URL} |" >> $GITHUB_STEP_SUMMARY
