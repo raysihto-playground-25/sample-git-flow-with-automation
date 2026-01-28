@@ -95,4 +95,4 @@ jobs:
           echo "| **Version** | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Release Branch** | \`${RELEASE_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Base Branch** | \`master\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Pull Request** | [${PR_URL}](${PR_URL}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Pull Request** | ${PR_URL} |" >> $GITHUB_STEP_SUMMARY
