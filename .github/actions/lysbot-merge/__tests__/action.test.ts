@@ -314,7 +314,7 @@ describe('executeAction', () => {
 
       // Verify the cross icon is used for approval check
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
-      const mergeCheckComment = commentCalls.find((call) => {
+      const mergeCheckComment = commentCalls.find((call: unknown[]) => {
         const body = call[0]?.body;
         return body?.includes('Merge checks failed');
       });
@@ -340,7 +340,7 @@ describe('executeAction', () => {
 
       // Verify the warning icon is used for approval check
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
-      const mergeCheckComment = commentCalls.find((call) => {
+      const mergeCheckComment = commentCalls.find((call: unknown[]) => {
         const body = call[0]?.body;
         return body?.includes('Merge checks passed');
       });
@@ -380,7 +380,7 @@ describe('executeAction', () => {
 
       // Verify the threads check failed with cross icon
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
-      const mergeCheckComment = commentCalls.find((call) => {
+      const mergeCheckComment = commentCalls.find((call: unknown[]) => {
         const body = call[0]?.body;
         return body?.includes('Merge checks failed');
       });
@@ -444,7 +444,7 @@ describe('executeAction', () => {
 
       // Verify the warning icon was used for conventional commits check
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
-      const hasConventionalCommitsWarning = commentCalls.some((call) => {
+      const hasConventionalCommitsWarning = commentCalls.some((call: unknown[]) => {
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes('⚠️');
       });
@@ -498,7 +498,7 @@ describe('executeAction', () => {
       // Should NOT post "Stale approvals dismissed" comment (redundant with GitHub's native notification)
       // But SHOULD post "Merge checks failed" comment
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
-      const hasStaleSuccessComment = commentCalls.some((call) => {
+      const hasStaleSuccessComment = commentCalls.some((call: unknown[]) => {
         const body = call[0]?.body;
         return body?.includes('Stale approvals dismissed');
       });
@@ -555,7 +555,7 @@ describe('executeAction', () => {
       // Should post comment about dismiss failure
       expect(octokit.rest.issues.createComment).toHaveBeenCalled();
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
-      const hasFailureComment = commentCalls.some((call) => {
+      const hasFailureComment = commentCalls.some((call: unknown[]) => {
         const body = call[0]?.body;
         return body?.includes('Failed to dismiss') || body?.includes('Dismiss failures');
       });
@@ -620,7 +620,7 @@ describe('executeAction', () => {
 
       // Verify the warning icon was used in the comment
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
-      const hasConventionalCommitsCheck = commentCalls.some((call) => {
+      const hasConventionalCommitsCheck = commentCalls.some((call: unknown[]) => {
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes('⚠️');
       });
@@ -658,7 +658,7 @@ describe('executeAction', () => {
 
       // Verify the check icon was used for conventional commits
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
-      const hasConventionalCommitsCheck = commentCalls.some((call) => {
+      const hasConventionalCommitsCheck = commentCalls.some((call: unknown[]) => {
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes('✅');
       });

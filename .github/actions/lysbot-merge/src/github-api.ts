@@ -5,6 +5,8 @@
  * These functions handle API calls, data fetching, and mutations.
  */
 
+import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
+
 import type { Octokit, PullRequestData, ReviewsArray } from './types.js';
 
 /**
@@ -75,11 +77,12 @@ export async function getCollaboratorPermission(
   username: string,
 ): Promise<string> {
   try {
-    const response = await octokit.rest.repos.getCollaboratorPermissionLevel({
-      owner,
-      repo,
-      username,
-    });
+    const response: RestEndpointMethodTypes['repos']['getCollaboratorPermissionLevel']['response'] =
+      await octokit.rest.repos.getCollaboratorPermissionLevel({
+        owner,
+        repo,
+        username,
+      });
     return response.data.permission;
   } catch {
     return 'none';
@@ -101,7 +104,7 @@ export async function fetchPullRequestData(
   repo: string,
   prNumber: number,
 ): Promise<PullRequestData> {
-  const response = await octokit.rest.pulls.get({
+  const response: RestEndpointMethodTypes['pulls']['get']['response'] = await octokit.rest.pulls.get({
     owner,
     repo,
     pull_number: prNumber,
@@ -143,7 +146,7 @@ export async function fetchApprovedReviews(
   repo: string,
   prNumber: number,
 ): Promise<ReviewsArray> {
-  const reviews = await octokit.paginate(octokit.rest.pulls.listReviews, {
+  const reviews: ReviewsArray = await octokit.paginate(octokit.rest.pulls.listReviews, {
     owner,
     repo,
     pull_number: prNumber,
@@ -266,12 +269,15 @@ export async function fetchPullRequestCommits(
   repo: string,
   prNumber: number,
 ): Promise<Array<{ commit: { message: string; author?: { name?: string; email?: string } | null } }>> {
-  const commits = await octokit.paginate(octokit.rest.pulls.listCommits, {
-    owner,
-    repo,
-    pull_number: prNumber,
-    per_page: 100,
-  });
+  const commits: RestEndpointMethodTypes['pulls']['listCommits']['response']['data'] = await octokit.paginate(
+    octokit.rest.pulls.listCommits,
+    {
+      owner,
+      repo,
+      pull_number: prNumber,
+      per_page: 100,
+    },
+  );
   return commits;
 }
 
@@ -299,7 +305,7 @@ export async function mergePullRequest(
   commitMessage: string,
 ): Promise<{ success: boolean; error?: string; mergeCommitSha?: string }> {
   try {
-    const response = await octokit.rest.pulls.merge({
+    const response: RestEndpointMethodTypes['pulls']['merge']['response'] = await octokit.rest.pulls.merge({
       owner,
       repo,
       pull_number: prNumber,

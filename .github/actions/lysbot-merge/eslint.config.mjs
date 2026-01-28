@@ -79,6 +79,14 @@ const config = tseslint.config(
     rules: {
       // Allow async functions without await in test files for mock implementations
       '@typescript-eslint/require-await': 'off',
+      // Disable unsafe type checking rules in test files for mocking purposes
+      // Test files use `as unknown` type casts for creating mock objects
+      // which are necessary for dependency injection and testing patterns
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
     },
   },
 

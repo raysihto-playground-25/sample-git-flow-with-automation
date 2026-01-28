@@ -16,7 +16,7 @@
  * - Fields are readonly to prevent mutation after construction
  */
 
-import type { GitHub } from '@actions/github/lib/utils.js';
+import type { GitHub } from '@actions/github/lib/utils';
 import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 
 /**
@@ -126,7 +126,8 @@ export interface MergeOptions {
   overrideApprovalRequirement: boolean;
 }
 
-// Type alias for Octokit instance
+// Type alias for Octokit instance - using the original GitHub type
+// which includes all necessary typing from @actions/github
 export type Octokit = InstanceType<typeof GitHub>;
 
 // Type aliases for GitHub API response types

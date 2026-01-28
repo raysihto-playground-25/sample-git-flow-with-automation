@@ -30,7 +30,7 @@ import type { Octokit } from '../src/types.js';
  * Creates a mock Octokit instance for tests.
  */
 function createMockOctokit(): Octokit {
-  return {
+  const mock = {
     rest: {
       reactions: {
         createForIssueComment: vi.fn().mockResolvedValue({}),
@@ -70,6 +70,7 @@ function createMockOctokit(): Octokit {
         merge: vi.fn().mockResolvedValue({
           data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' },
         }),
+        listCommits: vi.fn().mockResolvedValue({ data: [] }),
       },
     },
     paginate: vi.fn().mockResolvedValue([]),
@@ -83,7 +84,8 @@ function createMockOctokit(): Octokit {
         },
       },
     }),
-  } as unknown as Octokit;
+  };
+  return mock as Octokit;
 }
 
 // =============================================================================

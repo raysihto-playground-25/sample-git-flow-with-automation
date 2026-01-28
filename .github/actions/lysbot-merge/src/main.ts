@@ -26,6 +26,7 @@ import type {
   RuntimeEnvironment,
   ActionsCore,
   GitHubContext,
+  Octokit,
 } from './types.js';
 
 /**
@@ -138,7 +139,7 @@ export async function run(deps: RunDependencies = createProductionDependencies()
     const token = deps.core.getInput('github-token', { required: true });
     const config = parseConfig(deps.core);
     const context = buildEventContext(deps.context, deps.env);
-    const octokit = deps.getOctokit(token);
+    const octokit: Octokit = deps.getOctokit(token);
 
     const result = await executeAction(octokit, context, config);
 
