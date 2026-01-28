@@ -20,19 +20,6 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Validate RC tag format
-        run: |
-          RC_TAG="${{ inputs['rc-tag'] }}"
-          
-          # Validate RC tag format: vX.Y.Z-rc.N
-          if ! echo "$RC_TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$'; then
-            echo "Error: Invalid RC tag format: $RC_TAG"
-            echo "Expected format: vX.Y.Z-rc.N (e.g., v1.2.3-rc.1)"
-            exit 1
-          fi
-          
-          echo "RC tag format is valid: $RC_TAG"
-
       - uses: actions/create-github-app-token@v2
         id: app-token
         with:
