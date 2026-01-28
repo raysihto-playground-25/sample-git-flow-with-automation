@@ -105,11 +105,7 @@ describe('addReaction', () => {
 
   it('should not throw on error', async () => {
     const octokit = createMockOctokit();
-    (
-      octokit.rest.reactions.createForIssueComment as MockedFunction<
-        typeof octokit.rest.reactions.createForIssueComment
-      >
-    ).mockRejectedValue(new Error('Already exists'));
+    octokit.rest.reactions.createForIssueComment.mockRejectedValue(new Error('Already exists'));
 
     // Should not throw
     await expect(addReaction(octokit, 'owner', 'repo', 123, 'eyes')).resolves.toBeUndefined();
@@ -140,11 +136,7 @@ describe('getCollaboratorPermission', () => {
 
   it('should return none on error', async () => {
     const octokit = createMockOctokit();
-    (
-      octokit.rest.repos.getCollaboratorPermissionLevel as MockedFunction<
-        typeof octokit.rest.repos.getCollaboratorPermissionLevel
-      >
-    ).mockRejectedValue(new Error('Not found'));
+    octokit.rest.repos.getCollaboratorPermissionLevel.mockRejectedValue(new Error('Not found'));
 
     const permission = await getCollaboratorPermission(octokit, 'owner', 'repo', 'user');
     expect(permission).toBe('none');
@@ -168,7 +160,7 @@ describe('fetchPullRequestData', () => {
 
   it('should detect fork PRs correctly', async () => {
     const octokit = createMockOctokit();
-    (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+    octokit.rest.pulls.get.mockResolvedValue({
       data: {
         state: 'open',
         locked: false,
@@ -205,9 +197,7 @@ describe('dismissReview', () => {
 
   it('should return false on error', async () => {
     const octokit = createMockOctokit();
-    (octokit.rest.pulls.dismissReview as MockedFunction<typeof octokit.rest.pulls.dismissReview>).mockRejectedValue(
-      new Error('Forbidden'),
-    );
+    octokit.rest.pulls.dismissReview.mockRejectedValue(new Error('Forbidden'));
 
     const result = await dismissReview(octokit, 'owner', 'repo', 1, 123, 'Stale');
     expect(result).toBe(false);
@@ -292,9 +282,7 @@ describe('mergePullRequest', () => {
 
   it('should return error message on failure', async () => {
     const octokit = createMockOctokit();
-    (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mockRejectedValue(
-      new Error('Merge conflict'),
-    );
+    octokit.rest.pulls.merge.mockRejectedValue(new Error('Merge conflict'));
 
     const result = await mergePullRequest(
       octokit,
