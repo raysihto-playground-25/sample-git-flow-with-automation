@@ -46,18 +46,6 @@ jobs:
           fetch-tags: true
           ref: ${{ inputs['rc-tag'] }}
 
-      - name: Verify RC tag exists
-        run: |
-          RC_TAG="${{ inputs['rc-tag'] }}"
-          
-          # Check if the RC tag exists
-          if ! git rev-parse "refs/tags/$RC_TAG" >/dev/null 2>&1; then
-            echo "Error: RC tag '$RC_TAG' does not exist"
-            exit 1
-          fi
-          
-          echo "RC tag exists: $RC_TAG"
-
       - name: Create PR
         id: create_pr
         env:
@@ -107,4 +95,4 @@ jobs:
           echo "| **Version** | \`${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Release Branch** | \`${RELEASE_BRANCH}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Base Branch** | \`master\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Pull Request** | ${PR_URL} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Pull Request** | [${PR_URL}](${PR_URL}) |" >> $GITHUB_STEP_SUMMARY
