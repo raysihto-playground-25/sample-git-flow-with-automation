@@ -85,7 +85,8 @@ function createMockOctokit(): Octokit {
       },
     }),
   };
-  return mock as Octokit;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Test mock requires type assertion
+  return mock as any as Octokit;
 }
 
 // =============================================================================
@@ -107,6 +108,8 @@ describe('addReaction', () => {
 
   it('should not throw on error', async () => {
     const octokit = createMockOctokit();
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+    // @ts-ignore -- Vitest mock method
     octokit.rest.reactions.createForIssueComment.mockRejectedValue(new Error('Already exists'));
 
     // Should not throw
@@ -138,6 +141,8 @@ describe('getCollaboratorPermission', () => {
 
   it('should return none on error', async () => {
     const octokit = createMockOctokit();
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+    // @ts-ignore -- Vitest mock method
     octokit.rest.repos.getCollaboratorPermissionLevel.mockRejectedValue(new Error('Not found'));
 
     const permission = await getCollaboratorPermission(octokit, 'owner', 'repo', 'user');
@@ -162,6 +167,8 @@ describe('fetchPullRequestData', () => {
 
   it('should detect fork PRs correctly', async () => {
     const octokit = createMockOctokit();
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+    // @ts-ignore -- Vitest mock method
     octokit.rest.pulls.get.mockResolvedValue({
       data: {
         state: 'open',
@@ -199,6 +206,8 @@ describe('dismissReview', () => {
 
   it('should return false on error', async () => {
     const octokit = createMockOctokit();
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+    // @ts-ignore -- Vitest mock method
     octokit.rest.pulls.dismissReview.mockRejectedValue(new Error('Forbidden'));
 
     const result = await dismissReview(octokit, 'owner', 'repo', 1, 123, 'Stale');
@@ -284,6 +293,8 @@ describe('mergePullRequest', () => {
 
   it('should return error message on failure', async () => {
     const octokit = createMockOctokit();
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+    // @ts-ignore -- Vitest mock method
     octokit.rest.pulls.merge.mockRejectedValue(new Error('Merge conflict'));
 
     const result = await mergePullRequest(
