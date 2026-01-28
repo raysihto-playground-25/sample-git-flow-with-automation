@@ -36,17 +36,25 @@ function createMockOctokit(): Octokit {
   return {
     rest: {
       reactions: {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock method
         createForIssueComment: vi.fn().mockResolvedValue({}),
       },
       issues: {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock method
         createComment: vi.fn().mockResolvedValue({}),
       },
       repos: {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock method
         getCollaboratorPermissionLevel: vi.fn().mockResolvedValue({
           data: { permission: 'write' },
         }),
       },
       pulls: {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock method
         get: vi.fn().mockResolvedValue({
           data: {
             state: 'open',
@@ -68,15 +76,27 @@ function createMockOctokit(): Octokit {
             title: 'feat: test pull request',
           },
         }),
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock method
         listReviews: vi.fn().mockResolvedValue({ data: [] }),
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock method
         listCommits: vi.fn().mockResolvedValue({ data: [] }),
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock method
         dismissReview: vi.fn().mockResolvedValue({}),
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock method
         merge: vi.fn().mockResolvedValue({
           data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' },
         }),
       },
     },
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+    // @ts-ignore -- Vitest mock method
     paginate: vi.fn().mockResolvedValue([]),
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+    // @ts-ignore -- Vitest mock method
     graphql: vi.fn().mockResolvedValue({
       repository: {
         pullRequest: {
@@ -172,6 +192,8 @@ describe('executeAction', () => {
 
     it('fails for users without write permission', async () => {
       const octokit = createMockOctokit();
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.repos.getCollaboratorPermissionLevel.mockResolvedValue({
         data: { permission: 'read' },
       } as Awaited<ReturnType<typeof octokit.rest.repos.getCollaboratorPermissionLevel>>);
@@ -188,6 +210,8 @@ describe('executeAction', () => {
   describe('PR state validation', () => {
     it('fails for PRs from forked repositories', async () => {
       const octokit = createMockOctokit();
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
@@ -220,6 +244,8 @@ describe('executeAction', () => {
 
     it('returns already_merged for previously merged PRs', async () => {
       const octokit = createMockOctokit();
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'closed',
@@ -256,6 +282,8 @@ describe('executeAction', () => {
 
       // Mock approved review from another user and commits
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -287,6 +315,8 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // No approved reviews
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
 
       const context = createEventContext();
@@ -302,6 +332,8 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // No approved reviews
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
 
       const context = createEventContext({ commentBody: '/lysbot merge' });
@@ -313,12 +345,18 @@ describe('executeAction', () => {
       expect(result.message).toContain('checks failed');
 
       // Verify the cross icon is used for approval check
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const mergeCheckComment = commentCalls.find((call: unknown[]) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock call arguments
         const body = call[0]?.body;
         return body?.includes('Merge checks failed');
       });
       expect(mergeCheckComment).toBeDefined();
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock call arguments
       const commentBody = mergeCheckComment?.[0]?.body ?? '';
       expect(commentBody).toContain('❌');
       expect(commentBody).toContain('At least one valid approval');
@@ -329,6 +367,8 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // No approved reviews
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
 
       const context = createEventContext({ commentBody: '/lysbot merge --override-approval-requirement' });
@@ -339,12 +379,18 @@ describe('executeAction', () => {
       expect(result.status).toBe('merged');
 
       // Verify the warning icon is used for approval check
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const mergeCheckComment = commentCalls.find((call: unknown[]) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock call arguments
         const body = call[0]?.body;
         return body?.includes('Merge checks passed');
       });
       expect(mergeCheckComment).toBeDefined();
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock call arguments
       const commentBody = mergeCheckComment?.[0]?.body ?? '';
       expect(commentBody).toContain('⚠️');
       expect(commentBody).toContain('At least one valid approval');
@@ -356,9 +402,13 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // No approved reviews
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([]);
 
       // Mock unresolved threads
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.graphql as unknown as MockedFunction<typeof octokit.graphql>).mockResolvedValue({
         repository: {
           pullRequest: {
@@ -379,12 +429,18 @@ describe('executeAction', () => {
       expect(result.message).toContain('checks failed');
 
       // Verify the threads check failed with cross icon
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const mergeCheckComment = commentCalls.find((call: unknown[]) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock call arguments
         const body = call[0]?.body;
         return body?.includes('Merge checks failed');
       });
       expect(mergeCheckComment).toBeDefined();
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock call arguments
       const commentBody = mergeCheckComment?.[0]?.body ?? '';
       expect(commentBody).toContain('review conversations are resolved');
       expect(commentBody).toContain('❌');
@@ -394,6 +450,8 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // Mock PR with non-conventional title
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
@@ -418,6 +476,8 @@ describe('executeAction', () => {
 
       // Mock approved review from another user and commits
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -443,8 +503,12 @@ describe('executeAction', () => {
       expect(result.status).toBe('merged');
 
       // Verify the warning icon was used for conventional commits check
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const hasConventionalCommitsWarning = commentCalls.some((call: unknown[]) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock call arguments
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes('⚠️');
       });
@@ -455,6 +519,8 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // Mock PR with current HEAD
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
@@ -478,6 +544,8 @@ describe('executeAction', () => {
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock approved review on OLD commit (stale)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -497,8 +565,12 @@ describe('executeAction', () => {
 
       // Should NOT post "Stale approvals dismissed" comment (redundant with GitHub's native notification)
       // But SHOULD post "Merge checks failed" comment
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const hasStaleSuccessComment = commentCalls.some((call: unknown[]) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock call arguments
         const body = call[0]?.body;
         return body?.includes('Stale approvals dismissed');
       });
@@ -512,6 +584,8 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // Mock PR with current HEAD
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
@@ -535,6 +609,8 @@ describe('executeAction', () => {
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock approved review on OLD commit (stale)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -545,6 +621,8 @@ describe('executeAction', () => {
       ]);
 
       // Mock dismissReview to fail
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.dismissReview.mockRejectedValue(new Error('Forbidden'));
 
       const context = createEventContext();
@@ -554,8 +632,12 @@ describe('executeAction', () => {
 
       // Should post comment about dismiss failure
       expect(octokit.rest.issues.createComment).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const hasFailureComment = commentCalls.some((call: unknown[]) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock call arguments
         const body = call[0]?.body;
         return body?.includes('Failed to dismiss') || body?.includes('Dismiss failures');
       });
@@ -569,6 +651,8 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // Mock PR with non-conventional title
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
@@ -593,6 +677,8 @@ describe('executeAction', () => {
 
       // Mock approved review from another user and commits
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -619,8 +705,12 @@ describe('executeAction', () => {
       expect(result.mergeMethod).toBe('squash');
 
       // Verify the warning icon was used in the comment
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const hasConventionalCommitsCheck = commentCalls.some((call: unknown[]) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock call arguments
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes('⚠️');
       });
@@ -632,6 +722,8 @@ describe('executeAction', () => {
 
       // Mock approved review from another user and commits
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -657,8 +749,12 @@ describe('executeAction', () => {
       expect(result.status).toBe('merged');
 
       // Verify the check icon was used for conventional commits
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const hasConventionalCommitsCheck = commentCalls.some((call: unknown[]) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+        // @ts-ignore -- Vitest mock call arguments
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes('✅');
       });
@@ -672,6 +768,8 @@ describe('executeAction', () => {
       let callCount = 0;
 
       // First call returns original HEAD, second call returns different HEAD
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockImplementation(async () => {
         callCount++;
         return {
@@ -698,6 +796,8 @@ describe('executeAction', () => {
       });
 
       // Mock valid approval
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -722,6 +822,8 @@ describe('executeAction', () => {
 
       // First call returns clean state to pass initial checks
       // Subsequent calls during TOCTOU/retry phase simulate null -> true transition
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockImplementation(async () => {
         callCount++;
         // First call: pass initial checks with clean state
@@ -753,6 +855,8 @@ describe('executeAction', () => {
 
       // Mock valid approval and commits
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -786,6 +890,8 @@ describe('executeAction', () => {
 
       // First call returns clean to pass initial checks
       // Subsequent calls return null to test retry failure
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockImplementation(async () => {
         callCount++;
         const isInitialCheck = callCount === 1;
@@ -813,6 +919,8 @@ describe('executeAction', () => {
       });
 
       // Mock valid approval
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -837,6 +945,8 @@ describe('executeAction', () => {
     it('fails when PR has dirty mergeable state (conflicts)', async () => {
       const octokit = createMockOctokit();
 
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
@@ -860,6 +970,8 @@ describe('executeAction', () => {
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock valid approval
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -882,6 +994,8 @@ describe('executeAction', () => {
 
       // Mock valid approval and commits
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -899,6 +1013,8 @@ describe('executeAction', () => {
       });
 
       // Mock merge to fail
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.merge.mockRejectedValue(new Error('Merge conflict'));
 
       const context = createEventContext();
@@ -915,6 +1031,8 @@ describe('executeAction', () => {
 
       // No approved reviews (override will take effect) but with commits for squash
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -932,6 +1050,8 @@ describe('executeAction', () => {
       expect(result.status).toBe('merged');
 
       // Verify the merge was called with the exceptional merge marker
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       expect(mergeCalls.length).toBe(1);
       const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
@@ -948,6 +1068,8 @@ describe('executeAction', () => {
 
       // Mock valid approval (override will NOT take effect) and commits
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -972,6 +1094,8 @@ describe('executeAction', () => {
       expect(result.status).toBe('merged');
 
       // Verify the merge was called WITHOUT the exceptional merge marker
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       expect(mergeCalls.length).toBe(1);
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
@@ -983,6 +1107,8 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // Mock for release branch (uses merge commit)
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
@@ -1006,6 +1132,8 @@ describe('executeAction', () => {
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock approved review
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue([
         {
           id: 1,
@@ -1024,6 +1152,8 @@ describe('executeAction', () => {
       expect(result.mergeMethod).toBe('merge'); // release branch uses merge
 
       // Verify commit message format for merge commits
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       expect(mergeCalls.length).toBe(1);
 
@@ -1064,6 +1194,8 @@ describe('executeAction', () => {
       ];
 
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         // First call is for approved reviews, second is for commits
@@ -1090,6 +1222,8 @@ describe('executeAction', () => {
       expect(result.mergeMethod).toBe('squash'); // develop base uses squash
 
       // Verify commit message format for squash commits
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       expect(mergeCalls.length).toBe(1);
 
@@ -1116,6 +1250,8 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -1138,6 +1274,8 @@ describe('executeAction', () => {
       const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('merged');
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
@@ -1157,6 +1295,8 @@ describe('executeAction', () => {
       ];
 
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -1180,6 +1320,8 @@ describe('executeAction', () => {
 
       expect(result.status).toBe('merged');
 
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
@@ -1222,6 +1364,8 @@ describe('executeAction', () => {
       ];
 
       let paginateCalls = 0;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockImplementation(async () => {
         paginateCalls++;
         if (paginateCalls === 1) {
@@ -1245,6 +1389,8 @@ describe('executeAction', () => {
 
       expect(result.status).toBe('merged');
 
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Mocking Vitest methods on Octokit types
+      // @ts-ignore -- Vitest mock method
       const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
