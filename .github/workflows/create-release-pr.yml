@@ -14,7 +14,7 @@ on:
         required: true
         type: string
 
-permissions: all-read
+permissions: read-all
 
 jobs:
   create-release-pr:
