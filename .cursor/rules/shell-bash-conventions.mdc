@@ -1,0 +1,76 @@
+---
+description: Shell and Bash coding conventions (workflows and standalone scripts)
+alwaysApply: false
+---
+## Standard Rule for Rules (ルールファイル標準規定, See meta-rule.rule-for-rules.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+
+
+# Shell and Bash Coding Conventions
+
+This rule defines coding conventions for **shell scripts**, especially **Bash**, whether they appear inside GitHub Actions workflows (`run: |`), in standalone `.sh` files, or in other script contexts in this repository.
+
+## Variable reference
+
+- **Always** use the **braced form** `${var}` when referencing variables. Do **not** use the bare form `$var`.
+  - ✅ `${VAR}`, `${name}`, `${count}`
+  - ❌ `$VAR`, `$name`, `$count`
+- This applies everywhere: in commands, in string concatenation, in conditionals, and in arithmetic.
+
+## Quoting
+
+- **Strings that contain variables**: **MUST** be double-quoted in normal usage (e.g. `"${var}"`, `"${dir}/file"`), so that word splitting and globbing are suppressed and empty or unset variables are handled predictably.
+- **Strings that contain no variables**: Use **single quotes** so that the content is literal and no expansion occurs.
+  - ✅ `'literal string'`, `'v1.2.3-rc.*'`
+  - ✅ `"${VAR} something"`, `"${PATH}/file"`
+  - ❌ `"literal"` when no variable is needed (prefer `'literal'`)
+  - ❌ Unquoted `${var}` in contexts where it could be split or globbed (e.g. in arguments).
+
+## Command substitution `$(...)`
+
+- **Command substitution** **MUST** be wrapped in **double quotes**: use `"$(command)"`, not unquoted `$(command)`, so that the output is not word-split or globbed.
+  - ✅ `"$(git tag -l "${PATTERN}")"`, `"$(mktemp)"`
+  - ❌ `$(command)` without surrounding double quotes (unless the result is intentionally subject to word splitting).
+- **Inside the parentheses**: Use **explicit double or single quotes** for arguments and literals, so that nesting and boundaries are clear.
+  - ✅ `"$(command "arg")"`, `"$(command 'literal')"`, `"$(command "${VAR}" 'literal')"`
+  - ❌ `"$(command arg)"` when the argument contains spaces or should be a single word (quote it: `"arg"` or `'arg'`).
+- Apply the same quoting rules inside `$(...)` as elsewhere: shell variables in braced form and double-quoted when used as arguments; literals single-quoted.
+
+## Workflow / template expressions (e.g. `${{ ... }}`)
+
+In GitHub Actions and similar environments, expressions such as `${{ github.event.inputs.version }}` or `${{ steps.rc-tag.outputs.tag }}` are **expanded by the workflow engine before the shell runs**. The shell never performs expansion on them; it receives the resulting literal string.
+
+- Treat such expressions as **constant strings** from the shell’s point of view: they are not shell variables.
+- If the string contains **only** such expressions (or other non-shell constructs) and **no** shell variables, **MUST** wrap it in **single quotes** so that the shell treats it as a literal and does not perform word splitting or pathname expansion on the result.
+  - ✅ `'${{ github.event.inputs.version }}'`, `'release/${{ inputs.version }}'`
+  - ❌ Unquoted or double-quoted when there are no shell variables (prefer single quotes for constants).
+- If the string mixes a workflow expression and a shell variable, use double quotes and keep the shell variable in braced form: `"${SHELL_VAR}/${{ inputs.version }}"`.
+
+## Conditional expressions: `[[ ]]` and variable quoting
+
+- Prefer **`[[` … `]]`** over **`[` … `]`** and over the **`test`** command for conditionals in Bash.
+- **Inside `[[` … `]]`**: Do **not** quote the variable in the usual way. Use **`[[ ${var} … ]]`**, not `[[ "${var}" … ]]`.
+  - ✅ `[[ ${VAR} =~ ^[0-9]+$ ]]`, `[[ -z ${TAG} ]]`, `[[ -n ${TAG} ]]`
+  - ❌ `[[ "${VAR}" =~ ... ]]`, `[[ -z "${TAG}" ]]` (avoid in `[[`; use unquoted `${var}`)
+- Rationale: inside `[[ ]]`, word splitting and pathname expansion do not occur, so quoting is unnecessary and omitting it keeps the convention consistent with the “no quotes in `[[`” rule above.
+
+## Summary table
+
+| Context                              | Variable form | Quoting of string / variable |
+|--------------------------------------|---------------|-------------------------------|
+| Normal string with shell variable    | `${var}`      | Double-quote: `"${var}"`      |
+| Literal string (no variable)        | —             | Single-quote: `'literal'`     |
+| Only workflow expression (e.g. `${{ ... }}`), no shell var | — | Single-quote: `'${{ ... }}'` |
+| Command substitution `$(command)`    | —             | Double-quote: `"$(...)"`; inside `(...)` use explicit `"..."` / `'...'` for args |
+| Inside `[[` … `]]`                   | `${var}`      | Do **not** quote: `[[ ${var} ]]` |
+| Prefer for conditionals              | —             | Use `[[` … `]]`, not `[` or `test` |
+
+## Scope
+
+- These conventions apply when writing or modifying:
+  - Shell snippets in GitHub Actions workflows (e.g. `run: |`).
+  - Standalone shell scripts (e.g. `*.sh`) in this repository.
+- They apply to Bash in particular; for other shells, follow the same spirit where the syntax allows.

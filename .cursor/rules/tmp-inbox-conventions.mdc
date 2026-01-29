@@ -1,0 +1,47 @@
+---
+description: Conventions for storing temporary AI-generated outputs under docs/.tmp
+alwaysApply: true
+---
+## Standard Rule for Rules (ルールファイル標準規定, See meta-rule.rule-for-rules.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+
+
+# `docs/.tmp` Temporary Output Conventions
+
+This rule defines how the AI should store **temporary, non-committed outputs** (e.g. draft PR descriptions, draft comments, exploratory text) in this repository.
+
+## Directory
+
+- **Base directory**: `docs/.tmp/` at the repository root (`{PROJECT_ROOT}/docs/.tmp`).
+- The AI **may create this directory if it does not exist** when it needs to store a temporary output.
+
+## File Naming Convention
+
+- All temporary files under `docs/.tmp/` **must** follow this pattern:
+  - `yyyymmddHHMM_xxx.xxx`
+  - `yyyy`: 4-digit year
+  - `mm`: 2-digit month
+  - `dd`: 2-digit day
+  - `HH`: 2-digit hour (00–23)
+  - `MM`: 2-digit minute
+  - `xxx.xxx`: short, descriptive suffix chosen by the AI or user (e.g. `pr-description.md`, `review-note.txt`).
+- Example: `202601291430_pr-description.md`
+- The timestamp **must** be the **current** time in **JST (Japan Standard Time)** at the moment the file is created. Obtain it at that time (e.g. using the `date` command or equivalent) rather than using a fixed or past value.
+
+## When to Use `docs/.tmp`
+
+- The AI **should store outputs as files under `docs/.tmp/`** when:
+  - The user explicitly requests a **temporary or draft artifact** (e.g. "draft PR description", "draft review comment body").
+  - The output is intended to be **copied elsewhere** (PR body, issue description, chat, etc.) rather than committed directly into the repository.
+- The AI **should not** store artifacts here when:
+  - The user clearly wants the content **directly edited into tracked project files** (source code, docs, configs).
+
+## Content Guidelines
+
+- Files in `docs/.tmp/` are treated as **ephemeral** and may be safely deleted or ignored by tooling.
+- The AI should:
+  - Write **exactly the text** the user is expected to copy/paste (e.g. full PR description body), without additional meta commentary.
+  - Prefer simple text formats (`.md`, `.txt`) unless the user requests a specific format.

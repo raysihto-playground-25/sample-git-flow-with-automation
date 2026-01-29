@@ -1,0 +1,62 @@
+---
+description: Japanese documentation style (half-width parentheses)
+alwaysApply: true
+---
+## Standard Rule for Rules (ルールファイル標準規定, See meta-rule.rule-for-rules.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+
+
+# Japanese Documentation Style Rules
+
+This rule defines style conventions for **Japanese documentation and comments** in this repository.
+
+## CRITICAL — Full-width parentheses (全角括弧) are forbidden
+
+- **You MUST NOT use full-width parentheses** `（` (U+FF08) or `）` (U+FF09) in Japanese text in this repository. Use only half-width `(` `)`.
+- **You MUST run the post-edit verification** (search for U+FF08 / U+FF09 in edited files) **after every edit** that adds or changes Japanese in Markdown, comments, or other tracked docs. No exception for "small edits" or "I was careful."
+- These requirements apply to all AI-generated or AI-modified Japanese in this repo.
+
+## Parentheses / Brackets
+
+- Always use **half-width parentheses** `(` `)` in Japanese text.
+  - **MUST NOT** use full-width parentheses: `（` `）`
+  - ❌ Avoid mixed-width patterns: `サーバ（Rust）側`
+  - ✅ Use: `サーバ (Rust) 側`
+- **Spacing around parentheses**: When parentheses appear before or after other text, include a **half-width space (whitespace)** between the text and the parentheses.
+  - ❌ Avoid: `コンテンツ(動画)を` or `コンテンツ (動画)を` (no space after closing paren in the second)
+  - ✅ Correct: `コンテンツ (動画) を` (space before opening paren and after closing paren)
+  - ✅ Correct: `(動画)` (parentheses with no surrounding text - no spaces needed)
+- When converting or editing existing Japanese text, normalize any full-width parentheses to half-width, **unless**:
+  - They are part of an external spec, API payload, or literal sample that must remain exact.
+
+## Post-edit verification step (MANDATORY)
+
+**You MUST perform this step after every edit that adds or changes Japanese text** in Markdown, comments, or other tracked documentation. Not optional.
+
+1. **Check for full-width parentheses**: Search the edited file(s) for full-width parentheses (U+FF08 `（`, U+FF09 `）`) and replace any with half-width `(` `)` and correct spacing, unless they are part of an external spec or literal sample that must stay exact.
+2. **How to verify**:
+   - In the editor: search for the characters U+FF08 and U+FF09, or for `（` and `）` if your environment allows.
+   - From the shell: e.g. `grep -n -P '\uFF08|\uFF09' <file>` (or the equivalent in your locale) to list lines containing full-width parentheses.
+3. Apply this step **whenever** you add or change Japanese text in tracked documentation or comments.
+
+## Foreign Word Katakana Notation / Long Vowel Marks
+
+- Follow the **"外来語の表記" (Foreign Word Notation)** guidelines and Microsoft's Japanese Style Guide for katakana notation.
+- **Do not omit final long vowel marks (長音符号) as a general rule**.
+  - ❌ Avoid: `コンピュータ`, `サーバ`, `ユーザ`, `フォルダ`, `ディレクトリ`
+  - ✅ Correct: `コンピューター`, `サーバー`, `ユーザー`, `フォルダー`, `ディレクトリー`
+- **Exceptions**: Some words have established usage without final long vowels and may be used as-is:
+  - `データ` (data), `メモ` (memo), `パソコン` (personal computer - abbreviated form)
+  - When in doubt, prefer the form with the long vowel mark.
+
+## General Guidance
+
+- These rules apply when generating or modifying:
+  - README and other Markdown documents
+  - Code comments
+  - User-facing Japanese text in examples or documentation
+- Prefer clear and simple Japanese that is easy to understand for engineers.
+

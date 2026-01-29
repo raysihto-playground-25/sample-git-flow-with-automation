@@ -1,0 +1,43 @@
+---
+description: Logic First — For non-trivial changes, analyze and plan before coding; skip or abbreviate for small tasks. Explicit user instructions (e.g. "plan" vs "skip planning") take precedence and apply regardless of task complexity.
+alwaysApply: false
+---
+## Standard Rule for Rules (ルールファイル標準規定, See meta-rule.rule-for-rules.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+
+
+# Logic First Rule
+
+This rule is **not** always applied. **Explicit user instructions take precedence and apply regardless of task complexity.** If the user asks to plan (e.g. "plan" or "planning only"), use stepwise thinking (analysis → strategy → confirmation). If the user asks to skip planning (e.g. "skip planning" or "no plan"), use direct thinking and omit planning steps. When no such instruction is given, use the guidance below.
+
+Use this rule when a change is non-trivial (e.g. multi-file, unclear scope, or high regression risk). For small or trivial tasks (e.g. a single clear fix, typo, or config tweak), you **may** skip or abbreviate the steps below and proceed in a lightweight way — unless the user has explicitly asked for planning, in which case follow the stepwise process regardless of complexity.
+
+## When to Apply
+
+- **SHOULD** apply (or proactively suggest applying) this rule when:
+  - The change touches multiple files or modules.
+  - The requirement or impact is unclear.
+  - The change has non-obvious edge cases or regression risk.
+- **MAY** skip or shorten the process when:
+  - The task is a single-file, clear-cut fix (e.g. typo, one-line logic, config).
+  - The user explicitly asks to proceed without a plan or to skip planning (e.g. "skip planning" or equivalent).
+
+## 1. Analysis Before Action
+
+- When applying this rule, do **not** provide code immediately.
+- Briefly state your understanding of the requirement.
+- Identify potential edge cases, constraints, or dependencies.
+
+## 2. Implementation Strategy
+
+- Outline the proposed changes in a short bulleted list.
+- If the change affects multiple files, explain how they relate.
+- If there are multiple solutions, briefly note trade-offs and justify your recommendation.
+
+## 3. Confirmation
+
+- For complex changes, after presenting the strategy, wait for user confirmation before generating the full code.
+- For moderate changes, you **may** combine a short strategy note with the first batch of code, unless the user prefers confirmation first.

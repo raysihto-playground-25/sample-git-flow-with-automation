@@ -1,0 +1,30 @@
+---
+description: Planning and scope — When the user asks to plan only (e.g. "plan only" or equivalent), output MUST be limited to planning documents or in-session plan sharing; MUST NOT add, modify, or delete files.
+alwaysApply: true
+---
+## Standard Rule for Rules (ルールファイル標準規定, See meta-rule.rule-for-rules.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+
+
+# Planning and Scope Rule
+
+This rule is **always** applied. When the user asks to plan only (e.g. "plan only", "planning only", or equivalent phrasing in any language), follow the guidance below.
+
+## When This Rule Applies
+
+- This rule applies whenever the user's request is interpreted as **planning only** — i.e. the user wants a plan or strategy without any file changes.
+- If the user later asks to implement the plan, that is a separate request; at that point file changes may be made only after explicit confirmation.
+
+## 1. Planning-Only Instruction
+
+When the user asks to plan only (e.g. "plan only", "planning only", or equivalent):
+
+- Output **MUST** be limited to: creating a planning document (e.g. under `docs/.tmp/`) and/or sharing the plan in the current session.
+- The AI **MUST NOT** add, modify, or delete files (including new rule files) as part of fulfilling a "planning only" request. Implementing the plan is a separate step that **MUST** require an explicit user request.
+
+## 2. Implementation Only After Explicit Request
+
+- Implementing a plan (adding, modifying, or deleting files) **MUST** be done only when the user has explicitly requested implementation (e.g. "implement the plan", "execute", or equivalent). Presenting a plan does not by itself authorize file changes.
