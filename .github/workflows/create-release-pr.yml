@@ -1,15 +1,22 @@
-name: Create Release PR from RC Tag
+# Create release PR from RC tag (workflow_dispatch)
+#
+# 1. Input: version (X.Y.Z). Find tag vX.Y.Z-rc.N with largest N.
+# 2. Branch release/X.Y.Z from that tag, push, and open a PR to master.
+# 3. If release/X.Y.Z already exists, push fails (treated as existence check; no separate branch check).
+
+name: Create release PR from RC tag
 
 on:
   workflow_dispatch:
     inputs:
-      rc-tag:
-        description: "Existing RC tag (vX.Y.Z-rc.N)"
+      version:
+        description: 'Version X.Y.Z (e.g. 1.2.3)'
         required: true
         type: string
 
 jobs:
   create-release-pr:
+    name: Create release branch and PR
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -22,28 +29,44 @@ jobs:
           app-id: ${{ vars.GHT_APP_ID }}
           private-key: ${{ secrets.GHT_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v6
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          fetch-depth: 0
-          fetch-tags: true
-          ref: ${{ inputs['rc-tag'] }}
-
-      - name: Create PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RC_TAG: ${{ inputs['rc-tag'] }}
-          BASE_BRANCH: master
+      - name: Validate version format
         run: |
           set -euo pipefail
 
-          TAG="${RC_TAG%%-*}"
-          RELEASE_BRANCH="release/${TAG#v}"
+          VERSION='${{ inputs.version }}'
+          if ! [[ ${VERSION} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid format: expected X.Y.Z (e.g. 1.2.3), got: ${VERSION}"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          VERSION='${{ inputs.version }}'
+          PATTERN="v${VERSION}-rc.*"
+          RELEASE_BRANCH='release/${{ inputs.version }}'
+
+          # Push branch from the latest RC tag
+          RC_TAG="$(git tag -l "${PATTERN}" | sort -Vr | head -1)"
+          if [[ -z ${RC_TAG} ]]; then
+            echo "::error::No tags found for ${PATTERN}."
+            exit 1
+          fi
           git push origin "refs/tags/${RC_TAG}:refs/heads/${RELEASE_BRANCH}"
 
-          TITLE="chore(release): Release ${TAG}"
+          TITLE="chore(release): Release v${VERSION}"
           BODY_FILE="$(mktemp)"
-          trap 'rm -f "${BODY_FILE}"' EXIT
+          trap "rm -f '${BODY_FILE}'" EXIT
           cat > "${BODY_FILE}" << EOF
           * Release ${TAG}
 
@@ -51,9 +74,8 @@ jobs:
           > ※ この PR は "Merge コミットを作る" でマージしてください。 (Squash マージは NG)
           EOF
 
-          # Create PR
           gh pr create \
+            --base master \
             --head "${RELEASE_BRANCH}" \
-            --base "${BASE_BRANCH}" \
             --title "${TITLE}" \
             --body-file "${BODY_FILE}"
