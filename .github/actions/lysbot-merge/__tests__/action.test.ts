@@ -172,11 +172,7 @@ describe('executeAction', () => {
 
     it('fails for users without write permission', async () => {
       const octokit = createMockOctokit();
-      (
-        octokit.rest.repos.getCollaboratorPermissionLevel as MockedFunction<
-          typeof octokit.rest.repos.getCollaboratorPermissionLevel
-        >
-      ).mockResolvedValue({
+      octokit.rest.repos.getCollaboratorPermissionLevel.mockResolvedValue({
         data: { permission: 'read' },
       } as Awaited<ReturnType<typeof octokit.rest.repos.getCollaboratorPermissionLevel>>);
       const context = createEventContext();
@@ -192,7 +188,7 @@ describe('executeAction', () => {
   describe('PR state validation', () => {
     it('fails for PRs from forked repositories', async () => {
       const octokit = createMockOctokit();
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+      octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
           locked: false,
@@ -224,7 +220,7 @@ describe('executeAction', () => {
 
     it('returns already_merged for previously merged PRs', async () => {
       const octokit = createMockOctokit();
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+      octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'closed',
           locked: false,
@@ -317,9 +313,7 @@ describe('executeAction', () => {
       expect(result.message).toContain('checks failed');
 
       // Verify the cross icon is used for approval check
-      const commentCalls = (
-        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
-      ).mock.calls;
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const mergeCheckComment = commentCalls.find((call) => {
         const body = call[0]?.body;
         return body?.includes('Merge checks failed');
@@ -345,9 +339,7 @@ describe('executeAction', () => {
       expect(result.status).toBe('merged');
 
       // Verify the warning icon is used for approval check
-      const commentCalls = (
-        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
-      ).mock.calls;
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const mergeCheckComment = commentCalls.find((call) => {
         const body = call[0]?.body;
         return body?.includes('Merge checks passed');
@@ -387,9 +379,7 @@ describe('executeAction', () => {
       expect(result.message).toContain('checks failed');
 
       // Verify the threads check failed with cross icon
-      const commentCalls = (
-        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
-      ).mock.calls;
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const mergeCheckComment = commentCalls.find((call) => {
         const body = call[0]?.body;
         return body?.includes('Merge checks failed');
@@ -404,7 +394,7 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // Mock PR with non-conventional title
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+      octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
           locked: false,
@@ -453,9 +443,7 @@ describe('executeAction', () => {
       expect(result.status).toBe('merged');
 
       // Verify the warning icon was used for conventional commits check
-      const commentCalls = (
-        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
-      ).mock.calls;
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const hasConventionalCommitsWarning = commentCalls.some((call) => {
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes('⚠️');
@@ -467,7 +455,7 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // Mock PR with current HEAD
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+      octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
           locked: false,
@@ -509,9 +497,7 @@ describe('executeAction', () => {
 
       // Should NOT post "Stale approvals dismissed" comment (redundant with GitHub's native notification)
       // But SHOULD post "Merge checks failed" comment
-      const commentCalls = (
-        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
-      ).mock.calls;
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const hasStaleSuccessComment = commentCalls.some((call) => {
         const body = call[0]?.body;
         return body?.includes('Stale approvals dismissed');
@@ -526,7 +512,7 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // Mock PR with current HEAD
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+      octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
           locked: false,
@@ -559,9 +545,7 @@ describe('executeAction', () => {
       ]);
 
       // Mock dismissReview to fail
-      (octokit.rest.pulls.dismissReview as MockedFunction<typeof octokit.rest.pulls.dismissReview>).mockRejectedValue(
-        new Error('Forbidden'),
-      );
+      octokit.rest.pulls.dismissReview.mockRejectedValue(new Error('Forbidden'));
 
       const context = createEventContext();
       const config = createConfig();
@@ -570,9 +554,7 @@ describe('executeAction', () => {
 
       // Should post comment about dismiss failure
       expect(octokit.rest.issues.createComment).toHaveBeenCalled();
-      const commentCalls = (
-        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
-      ).mock.calls;
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const hasFailureComment = commentCalls.some((call) => {
         const body = call[0]?.body;
         return body?.includes('Failed to dismiss') || body?.includes('Dismiss failures');
@@ -587,7 +569,7 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // Mock PR with non-conventional title
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+      octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
           locked: false,
@@ -637,9 +619,7 @@ describe('executeAction', () => {
       expect(result.mergeMethod).toBe('squash');
 
       // Verify the warning icon was used in the comment
-      const commentCalls = (
-        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
-      ).mock.calls;
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const hasConventionalCommitsCheck = commentCalls.some((call) => {
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes('⚠️');
@@ -677,9 +657,7 @@ describe('executeAction', () => {
       expect(result.status).toBe('merged');
 
       // Verify the check icon was used for conventional commits
-      const commentCalls = (
-        octokit.rest.issues.createComment as MockedFunction<typeof octokit.rest.issues.createComment>
-      ).mock.calls;
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
       const hasConventionalCommitsCheck = commentCalls.some((call) => {
         const body = call[0]?.body;
         return body?.includes('Conventional Commits') && body?.includes('✅');
@@ -694,7 +672,7 @@ describe('executeAction', () => {
       let callCount = 0;
 
       // First call returns original HEAD, second call returns different HEAD
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockImplementation(async () => {
+      octokit.rest.pulls.get.mockImplementation(async () => {
         callCount++;
         return {
           data: {
@@ -744,7 +722,7 @@ describe('executeAction', () => {
 
       // First call returns clean state to pass initial checks
       // Subsequent calls during TOCTOU/retry phase simulate null -> true transition
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockImplementation(async () => {
+      octokit.rest.pulls.get.mockImplementation(async () => {
         callCount++;
         // First call: pass initial checks with clean state
         // Later calls (for TOCTOU + retry): transition from null to true
@@ -808,7 +786,7 @@ describe('executeAction', () => {
 
       // First call returns clean to pass initial checks
       // Subsequent calls return null to test retry failure
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockImplementation(async () => {
+      octokit.rest.pulls.get.mockImplementation(async () => {
         callCount++;
         const isInitialCheck = callCount === 1;
         return {
@@ -859,7 +837,7 @@ describe('executeAction', () => {
     it('fails when PR has dirty mergeable state (conflicts)', async () => {
       const octokit = createMockOctokit();
 
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+      octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
           locked: false,
@@ -921,9 +899,7 @@ describe('executeAction', () => {
       });
 
       // Mock merge to fail
-      (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mockRejectedValue(
-        new Error('Merge conflict'),
-      );
+      octokit.rest.pulls.merge.mockRejectedValue(new Error('Merge conflict'));
 
       const context = createEventContext();
       const config = createConfig();
@@ -956,7 +932,7 @@ describe('executeAction', () => {
       expect(result.status).toBe('merged');
 
       // Verify the merge was called with the exceptional merge marker
-      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       expect(mergeCalls.length).toBe(1);
       const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
@@ -996,7 +972,7 @@ describe('executeAction', () => {
       expect(result.status).toBe('merged');
 
       // Verify the merge was called WITHOUT the exceptional merge marker
-      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       expect(mergeCalls.length).toBe(1);
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
       expect(commitMessage).toContain('Merged-by: lysbot-merge');
@@ -1007,7 +983,7 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       // Mock for release branch (uses merge commit)
-      (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+      octokit.rest.pulls.get.mockResolvedValue({
         data: {
           state: 'open',
           locked: false,
@@ -1048,7 +1024,7 @@ describe('executeAction', () => {
       expect(result.mergeMethod).toBe('merge'); // release branch uses merge
 
       // Verify commit message format for merge commits
-      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       expect(mergeCalls.length).toBe(1);
 
       const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
@@ -1114,7 +1090,7 @@ describe('executeAction', () => {
       expect(result.mergeMethod).toBe('squash'); // develop base uses squash
 
       // Verify commit message format for squash commits
-      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       expect(mergeCalls.length).toBe(1);
 
       const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
@@ -1162,7 +1138,7 @@ describe('executeAction', () => {
       const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('merged');
-      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
       // Should only contain additional messages, no commit list
@@ -1204,7 +1180,7 @@ describe('executeAction', () => {
 
       expect(result.status).toBe('merged');
 
-      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
       // Verify only valid commit titles are included
@@ -1269,7 +1245,7 @@ describe('executeAction', () => {
 
       expect(result.status).toBe('merged');
 
-      const mergeCalls = (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mock.calls;
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
       // Verify Co-authored-by entries are present and deduplicated
