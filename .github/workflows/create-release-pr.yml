@@ -20,6 +20,8 @@ jobs:
   create-release-pr:
     name: Create release branch and PR
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
 
     steps:
       - uses: actions/create-github-app-token@v2
@@ -48,8 +50,6 @@ jobs:
       - name: Create PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        permissions:
-          pull-requests: write
         run: |
           set -euo pipefail
 
