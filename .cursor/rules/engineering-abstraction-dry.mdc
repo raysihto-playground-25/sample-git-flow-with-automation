@@ -1,0 +1,19 @@
+---
+description: Pragmatic abstraction and DRY principles
+alwaysApply: true
+---
+## Standard Rule for Rules (ルールファイル標準規定, See meta-rule.rule-for-rules.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+
+
+# Engineering Principles — Abstraction and DRY
+
+## Abstraction and DRY (Pragmatic Approach)
+
+- **Rule of Three**: Only abstract or extract shared code **once a third occurrence exists** (i.e. take action when the third instance appears).
+- **Avoid over-DRY**:
+  - Do not abstract prematurely.
+  - Accept some code duplication when it improves locality of reference or when contexts are likely to diverge over time.

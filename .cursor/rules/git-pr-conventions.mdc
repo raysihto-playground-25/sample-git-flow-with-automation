@@ -1,0 +1,47 @@
+---
+description: Git commit and PR communication conventions
+alwaysApply: true
+---
+## Standard Rule for Rules (ルールファイル標準規定, See meta-rule.rule-for-rules.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+
+
+# Git and PR Rules
+
+## Commit Messages and PR Titles
+
+- Follow the **Conventional Commits** specification for commit messages and (where applicable) PR titles.
+- **Allowed commit types**:
+  - `feat`: New features.
+  - `fix`: Bug fixes.
+  - `docs`: Documentation changes.
+  - `style`: Formatting / whitespace only (no logic change).
+  - `refactor`: Code changes that are neither a bug fix nor a new feature.
+  - `perf`: Performance improvements.
+  - `test`: Adding or correcting tests.
+  - `build` / `ci` / `chore`: Build, CI, or tooling updates.
+- **Dependency update policy**:
+  - Use `fix` or `feat` **only** when the dependency update affects the **primary output** (the value delivered to end-users).
+  - Use `build`, `ci`, or `chore` when the update only affects development, build, or testing environments.
+
+## PR Description (When Proposing)
+
+When proposing or drafting a PR description, follow these guidelines:
+
+- PR descriptions **should** be written in **Japanese** in principle.
+- **Structure** (in order):
+  1. **概要 (Summary)**: A brief, concise overview of the PR. Write in **present or future tense** (e.g. する), **not** in past tense (e.g. した). Describe **what this PR is about to do** relative to the current state — i.e. what change is being proposed — not what was already done on the topic branch.
+  2. **変更の意図・動機 (Intent / Motivation)**: The "why" — intent, motivation, goals, or the problem being solved.
+  3. **主な変更点 (Key Changes)**: An outline of the main code and other changes.
+
+After these three required sections, additional sections **may** be added as appropriate for the PR. For example, the author **may** add sections such as **影響範囲**, **方針**, **注意事項**, **関連情報**, **テスト (変更の妥当性の検証方法)**, or any other headings that help reviewers and stakeholders understand the change.
+
+- **No discussion-only concepts**: Do **not** use concepts that emerged only during internal discussion (e.g. "方針 A", "方針 B", or other shorthand from planning) in the PR description. Readers of the PR do not have that context and will not understand them. Describe the behaviour or decision in plain terms so that the description is self-contained for its audience.
+
+## PR Communication
+
+- **Review traceability**: When addressing review comments, always reference the specific **commit hash** (e.g., `abc1234`) in your reply.
+- Do **not** resolve a review thread until the reviewer has confirmed the fix or the discussion is clearly concluded.
