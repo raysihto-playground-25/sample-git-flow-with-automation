@@ -1,10 +1,10 @@
 # Create release PR from RC tag (workflow_dispatch)
 #
-# 1. Input: version (X.Y.Z). Find tag vX.Y.Z-rc.N with largest N.
+# 1. Input: version (X.Y.Z). Find later tag vX.Y.Z-rc.N.
 # 2. Branch release/X.Y.Z from that tag, push, and open a PR to master.
 # 3. If release/X.Y.Z already exists, push fails (treated as existence check; no separate branch check).
 
-name: Create release PR from RC tag
+name: Create Release PR
 
 on:
   workflow_dispatch:
