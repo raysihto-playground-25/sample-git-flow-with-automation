@@ -68,7 +68,7 @@ jobs:
           BODY_FILE="$(mktemp)"
           trap "rm -f '${BODY_FILE}'" EXIT
           cat > "${BODY_FILE}" << EOF
-          * Release ${TAG}
+          * Release v${VERSION}
 
           > [!CAUTION]
           > ※ この PR は "Merge コミットを作る" でマージしてください。 (Squash マージは NG)
