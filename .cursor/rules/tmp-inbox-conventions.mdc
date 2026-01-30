@@ -1,8 +1,8 @@
 ---
-description: Conventions for storing temporary AI-generated outputs under docs/.tmp
+description: Conventions for docs/.tmp (naming, when to use) and for plan files (MUST include original prompt).
 alwaysApply: true
 ---
-## Standard Rule for Rules (ルールファイル標準規定, See meta-rule.rule-for-rules.mdc)
+## Standard Rule for AI Guidances (AI ガイダンス規定, See meta-rule.rule-for-ai-guidances.mdc)
 - **Language**: English (required for AI cognitive load reduction).
 - **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
 - **Persistence**: This preamble MUST be preserved at the top of the rule body.
@@ -21,14 +21,15 @@ This rule defines how the AI should store **temporary, non-committed outputs** (
 ## File Naming Convention
 
 - All temporary files under `docs/.tmp/` **must** follow this pattern:
-  - `yyyymmddHHMM_xxx.xxx`
-  - `yyyy`: 4-digit year
-  - `mm`: 2-digit month
-  - `dd`: 2-digit day
+  - `YYYYMMDDHHmmTZ_xxx.xxx`
+  - `YYYY`: 4-digit year
+  - `MM`: 2-digit month
+  - `DD`: 2-digit day
   - `HH`: 2-digit hour (00–23)
-  - `MM`: 2-digit minute
+  - `mm`: 2-digit minute
+  - `TZ`: timezone abbreviation (always `JST` for Japan Standard Time)
   - `xxx.xxx`: short, descriptive suffix chosen by the AI or user (e.g. `pr-description.md`, `review-note.txt`).
-- Example: `202601291430_pr-description.md`
+- Example: `202512312359JST_pr-description.md`
 - The timestamp **must** be the **current** time in **JST (Japan Standard Time)** at the moment the file is created. Obtain it at that time (e.g. using the `date` command or equivalent) rather than using a fixed or past value.
 
 ## When to Use `docs/.tmp`
@@ -45,3 +46,33 @@ This rule defines how the AI should store **temporary, non-committed outputs** (
 - The AI should:
   - Write **exactly the text** the user is expected to copy/paste (e.g. full PR description body), without additional meta commentary.
   - Prefer simple text formats (`.md`, `.txt`) unless the user requests a specific format.
+
+## Plan Files and Similar Artifacts — Include Original Instruction
+
+When creating a **plan file** or **similar artifact** (e.g. planning documents, strategy docs, or other outputs that capture a plan or design derived from the user's request), the document **MUST** include the **original instruction or prompt** from the user that led to that plan.
+
+- The document **MUST** contain a dedicated section (or equivalent) that records this original instruction. The section **MUST** be clearly identifiable (e.g. **"Original prompt"**, **"Original instruction"**, or equivalent heading).
+- The content of that section **MUST** reflect the user's actual request or instruction as given in the conversation, so that the plan remains traceable to its source.
+- The original prompt MUST be included verbatim, exactly as provided by the user, without any modification, rephrasing, normalization, formatting adjustment, or stylistic change of any kind.
+
+**In scope**: Planning documents, strategy notes, design docs, and any artifact created under `docs/.tmp/` or elsewhere that represents a plan or response to a user request and is intended to be read or reused later.
+
+**Out of scope**: Direct edits to existing tracked files (e.g. code, configs), or outputs that are clearly one-off replies with no expectation of being stored as a standalone document.
+
+**Example**: A plan file **MUST** include something like:
+
+```markdown
+## Original prompt
+
+(Include here the user's instruction, e.g.: "〇〇を実装するプランを作成してほしい")
+```
+
+or:
+
+```markdown
+## Original instruction
+
+User request: ...
+```
+
+Including the original prompt in the plan file preserves traceability, avoids ambiguity when the plan is read later, and makes it clear what the plan was meant to address.

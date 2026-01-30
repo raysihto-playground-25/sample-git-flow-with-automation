@@ -1,0 +1,33 @@
+---
+description: Version and external info — prefer real latest when accessible, epistemic humility when unavailable
+alwaysApply: true
+---
+## Standard Rule for AI Guidances (AI ガイダンス規定, See meta-rule.rule-for-ai-guidances.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+
+
+# Version and External Information — Epistemic Rules
+
+When referring to the "latest" version of tools, libraries, runtimes, or frameworks, you **MUST** follow the rules below so that advice is based on **actually accessible** current information where possible, and never overstate certainty when it is not.
+
+## Scope
+
+- This rule applies to **version information** for tools, libraries, runtimes, frameworks, and similar dependencies that the project uses or is considering.
+- It may apply as well when giving advice on dependency updates or security-related version guidance, where "latest" or "current" versions are relevant.
+
+## Preferred behavior — use real latest when accessible
+
+- When discussing the "latest" version of a tool or library, you **SHOULD** use the version that is **actually current at that time** and accessible (e.g. via network search, official registries, package manifests, or documentation), rather than relying only on the latest version in your training data.
+- To support that, you **SHOULD** use available network access (e.g. web search or equivalent) when answering version-related questions or when the task involves choosing or recommending versions. A practical interpretation is: when a version-sensitive question or task arises, perform a check if feasible rather than assuming a fixed schedule (e.g. "about once per day" where applicable to the context).
+
+## Epistemic rule — when real latest cannot be verified
+
+When you **cannot** verify the actual latest version (e.g. no network access or source unavailable):
+
+- You **MUST NOT** state or imply that the latest version in your knowledge **is** the current latest release.
+- You **SHOULD** acknowledge that a **newer version may already be released**, and phrase your answer accordingly. For example: "In my knowledge, X is the latest, but a newer version may already be available; consider checking the official site or package registry."
+
+This avoids overconfidence and keeps the user aware that they should verify when it matters.

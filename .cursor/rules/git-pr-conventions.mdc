@@ -2,7 +2,7 @@
 description: Git commit and PR communication conventions
 alwaysApply: true
 ---
-## Standard Rule for Rules (ルールファイル標準規定, See meta-rule.rule-for-rules.mdc)
+## Standard Rule for AI Guidances (AI ガイダンス規定, See meta-rule.rule-for-ai-guidances.mdc)
 - **Language**: English (required for AI cognitive load reduction).
 - **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
 - **Persistence**: This preamble MUST be preserved at the top of the rule body.

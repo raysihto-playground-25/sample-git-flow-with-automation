@@ -1,0 +1,68 @@
+---
+description: Re-check all rules at end of processing and set post-process when possible to prevent rule application omissions
+alwaysApply: true
+---
+## Standard Rule for AI Guidances (AI ガイダンス規定, See meta-rule.rule-for-ai-guidances.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+
+
+# Rule Application Re-check — Preventing Omissions
+
+This rule requires the agent to **re-check the application status of all applicable rules** at the end of each processing and to **apply any rules that were not applied**. It also requires registering a post-process when the execution environment allows it.
+
+## Scope
+
+- This rule applies to **every agent** that operates in this repository.
+- "Processing" means a logical unit of work (e.g. fulfilling a user request, completing a task, or finishing a turn or response).
+- "All applicable rules" means all rules under `.cursor/rules/` (and any other AI guidance in scope) that apply to the current context (e.g. always-applied rules and any file- or context-specific rules that are in effect).
+
+## When Re-check Is Required
+
+- The re-check **applies only to substantive work**, such as code changes, document edits, file creation or deletion, or other outputs that materially alter the repository or deliverables.
+- The agent **MUST NOT** perform this re-check for **every** small discussion response (e.g. answering a clarifying question, explaining a concept, or exchanging opinions without making edits). Fine-grained discussion replies do **not** require the full rule-application re-check described in this rule.
+
+## Scope of Re-check — Added and Modified Portions Only
+
+- The re-check **MUST** be limited to **added** and **modified** portions (e.g. newly added or edited lines, files, or segments).
+- Portions that were **not** added or modified **MUST NOT** be re-checked. Re-check is **not required** and **must not be performed** for unchanged areas; only the added and modified portions are in scope.
+
+## Re-check at End of Processing (MANDATORY)
+
+- **At the end of each processing** (when it included substantive work), the agent **MUST**:
+  1. Re-check the application status of **each applicable rule** with respect to the **added and modified portions only** (see "Scope of Re-check" above).
+  2. For any rule that was **not** fully applied to those portions, **apply it at that point** (e.g. fix outputs, add missing checks, or correct behaviour so that the rule is satisfied).
+  3. Not consider the processing complete until this re-check has been performed and any omissions have been corrected.
+
+- The agent **MUST NOT** skip this re-check for reasons such as "the task was small", "I was careful", or "the rule seemed irrelevant" when the processing included substantive work. Re-check is required for every processing that included such work.
+
+## Post-process Registration When Supported (SHOULD)
+
+- **When the execution environment allows** the agent to register a **post-process** (e.g. via a hook or trap) **at the start of processing**, the agent **SHOULD**:
+  1. At the **start** of processing, register a post-process that runs a **full rule-application check** (equivalent to the re-check described above).
+  2. Ensure that this post-process runs **after** the main processing and before the response or turn is considered complete, so that any rule that was not applied during the main processing is applied there.
+
+- If the environment does **not** support such hooks or traps, the agent **MUST** still perform the mandatory re-check at the end of processing as described in the previous section.
+
+- This section is intentionally redundant with the mandatory re-check: the hook/trap, when available, is an additional safeguard to reduce the risk of forgetting the re-check.
+
+## Relation to Other Rules
+
+- Some rules (e.g. Japanese documentation style) already require **post-edit verification** or **re-check after specific actions**. Those requirements remain in effect and **MUST** be followed.
+- **Duplication is allowed**: important rules may repeat re-check or verification requirements. This rule does not replace or override rule-specific re-checks; it adds a **global** re-check at the end of processing. The agent **MUST** comply with both this rule and any rule-specific re-check requirements.
+
+## Check Report — Listing Rules Checked
+
+- **After performing the re-check**, the agent **MUST** report the result by **listing the names of all rules that were re-checked** at the end of the response (e.g. in a short "Rules re-checked" section).
+- The report **MUST** list **all rules** that were re-checked in that turn (i.e. the full set of applicable rules that were checked), not a subset. Use rule file names or short identifiers. This serves as a trace that the re-check was performed and which rules were in scope.
+
+## Summary
+
+- **When**: Re-check applies only to substantive work (e.g. code changes, document edits); not to every small discussion response.
+- **Scope**: Re-check only added and modified portions; do not re-check unchanged areas.
+- **End of processing**: Re-check applicable rules for those portions and apply any that were missed.
+- **Start of processing (if supported)**: Register a post-process (hook/trap) that runs the full rule-application check.
+- **Report**: After the check, list the names of all rules that were re-checked (full set) at the end of the response.
+- **Other rules**: Keep following their own re-check or verification steps; duplication with this rule is intentional.

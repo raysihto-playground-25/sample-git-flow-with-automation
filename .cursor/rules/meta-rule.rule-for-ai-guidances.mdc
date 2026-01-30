@@ -1,0 +1,71 @@
+---
+description: Rule for AI Guidances — language, normative terms, AI involvement, and standard preamble
+alwaysApply: true
+---
+
+# IMPORTANT — Standard Rule for AI Guidances
+# 重要 — AI ガイダンス規定
+
+## Scope
+
+- This rule applies to **all AI guidance files that Cursor reads**, including but not limited to files under `.cursor/rules/`, `.cursor/agents/`, `.cursor/skills/`, and other directories containing files that guide AI behavior in this repository.
+- All such files are understood as **regulating the behavior of the AI assistant** that operates in this repository.
+
+## Language and Conventions
+
+- AI guidance files **MUST be written in English**.
+- Writing AI guidances in English is intended to reduce the cognitive load on AI systems (including Cursor) and to minimize the risk of misinterpretation or misunderstanding.
+- These documents are not intended solely for human readers. Their primary purpose is to ensure that AI systems can correctly and consistently understand the author's intent. Authors **SHOULD** use normative terms such as **MUST**, **SHOULD**, and **MAY** (as defined in the Normative terms (interpretation) section below) proactively and explicitly, in order to reduce ambiguity and prevent misinterpretation.
+
+## Normative terms (interpretation)
+
+- Normative terms such as **MUST**, **MUST NOT**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** used in any AI guidance file within the scope defined above **MUST** be interpreted in accordance with the meanings defined in:
+  - [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)
+  - [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174)
+- This interpretation **MUST** be applied consistently and without exception when reading or applying any AI guidance file within the scope defined above.
+
+## AI Collaboration
+
+- To maintain this quality, it is **strongly recommended** that AI systems (including Cursor itself, when appropriate) participate in the creation, review, and revision of these AI guidance files. Involving the AI in refining the wording helps ensure that the guidances are expressed in a form that the AI can accurately interpret and follow.
+
+## Standard Preamble
+
+- Each applicable file **MUST** place the standard preamble shown in the next section at the beginning of the file body (i.e. immediately after any YAML frontmatter).
+
+---
+
+## 日本語訳 (Japanese Translation)
+
+## スコープ
+
+- 本ルールは、**Cursor が読み込む AI ガイダンス系のファイル全般**に適用されます。これには、`.cursor/rules/`、`.cursor/agents/`、`.cursor/skills/` およびその他のディレクトリ配下にある、本リポジトリにおいて AI の動作を規定するファイルが含まれます (これに限定されません)。
+- これらのファイルはすべて、**本リポジトリで動作する AI アシスタントの動作を規定するもの**として理解されます。
+
+## 使用言語および記述規則
+
+- AI ガイダンスファイルは **必ず英語で記述すること**。
+- AI ガイダンスを英語で記述することは、AI (Cursor を含む) の認知負荷を下げ、誤読や誤解のリスクを最小化することを目的としています。
+- 本ドキュメントは、人間向けの資料に限定されたものではありません。主たる目的は、AI が作成者の意図を正確かつ一貫して理解できるようにすることです。作成者は、曖昧さを減らし誤解を防ぐため、規範的用語 (**MUST**, **SHOULD**, **MAY** など。本ルールの「Normative terms (interpretation)」節で定義) を積極的かつ明示的に用いること (**SHOULD**)。
+
+## 規範的用語 (解釈)
+
+- 上記のスコープに含まれる AI ガイダンスファイル内で用いられる **MUST**、**MUST NOT**、**SHALL**、**SHALL NOT**、**SHOULD**、**SHOULD NOT**、**MAY** などの規範的用語は、[RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) および [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174) で定義される意味に従って解釈すること。
+- この解釈は、上記スコープ内のいずれの AI ガイダンスファイルを読む場合も適用する場合も、例外なく一貫して適用すること。
+
+## AI コラボレーション
+
+- この品質を担保するため、これらの AI ガイダンスファイルの作成・レビュー・修正には、**可能な限り AI (適切な場合には Cursor 自身) を関与させることを強く推奨します**。AI が文言調整に関与することで、AI が正確に解釈し遵守できる形でガイダンスが表現されることを確保できます。
+
+## 標準前文 (Standard Preamble)
+
+- 適用対象となる各ファイルは、次の節に示す standard preamble を、ファイル本文の冒頭 (YAML frontmatter の直後) に **必ず** 配置すること。
+
+---
+
+```
+## Standard Rule for AI Guidances (AI ガイダンス規定, See meta-rule.rule-for-ai-guidances.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+```

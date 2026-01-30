@@ -1,0 +1,49 @@
+---
+description: When producing a designated artifact, output only the artifact itself with no meta-commentary, intros, or modification traces inside it
+alwaysApply: true
+---
+## Standard Rule for AI Guidances (AI ガイダンス規定, See meta-rule.rule-for-ai-guidances.mdc)
+- **Language**: English (required for AI cognitive load reduction).
+- **AI-Collaboration**: AI-assisted authoring and review is strongly recommended.
+- **Persistence**: This preamble MUST be preserved at the top of the rule body.
+- (英語記述必須 / AIによる作成・レビューを推奨 / 本前文を冒頭に保持すること)
+
+
+# Artifact-Only Output (Zero-Meta)
+
+This rule applies when the user **explicitly designates a final deliverable** as the artifact (e.g. a document, file, or body of text to be produced as the sole output). The agent MUST treat that deliverable as the artifact and follow the requirements below for the artifact itself.
+
+## Scope and Definitions
+
+- **Artifact**: The final deliverable (document, file, or text) that the user has explicitly designated as the artifact to be produced.
+- **Output**: For the purposes of this rule, "output" that is subject to the restrictions below refers **only** to the content of the artifact itself. Explanations, reasoning, or discussion may be produced **outside** the artifact (e.g. in a separate message or block) provided they are clearly separated from it.
+
+## Artifact Isolation
+
+- The artifact **MUST** be produced in isolation. No explanatory, conversational, or procedural content **MAY** appear within the artifact itself.
+- Explanations, reasoning, and discussion are permitted **only outside** the artifact and **MUST NOT** be interleaved with it.
+
+## Zero-Meta Policy (Artifact-Scoped)
+
+The content of the artifact **MUST** consist **only** of the final artifact. The following **MUST NOT** appear inside the artifact:
+
+- Introductory or concluding remarks (e.g. "Sure," "Here is the updated version," "I hope this helps").
+- Explanations, commentaries, or footnotes regarding the content.
+- Apologies or acknowledgments of previous errors.
+
+## Erasure of Modification Traces
+
+- The artifact **MUST NOT** include any text that indicates a change, adjustment, or correction has been made. The artifact **MUST** show no traceability to previous versions or instructions.
+- Prohibited inside the artifact include, but are not limited to: "As requested...", "Based on your feedback...", "I have adjusted [X] for [Y]...", "The following items have been updated...", "Corrected version of...", "Updated to reflect...".
+- Even within headings, subheadings, or body text, any mention of "revised", "adjusted", or similar status **MUST NOT** appear in the artifact.
+
+## Independent Document Integrity
+
+- The artifact **MUST** be written as a standalone, "pristine" document. It **MUST** appear as if it were created in its current form from the beginning.
+- The agent **MUST NOT** use navigational text that bridges the artifact to past prompts or instructions.
+- The artifact **MUST** start and end with the required content only, with no preamble or wrap-up inside the artifact.
+
+## Immediate Compliance
+
+- When producing the artifact, the agent **MUST** prioritize "pristine state" over conversational framing. The artifact **MUST** be output directly without any meta preamble or conclusion within the artifact.
+- Failure to follow these requirements for the artifact results in non-compliant output; the agent **MUST** comply for every designated artifact.
