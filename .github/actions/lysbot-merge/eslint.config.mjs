@@ -82,6 +82,9 @@ const config = tseslint.config(
     },
   },
 
+  // The following configuration is commented out because console statements are generally not allowed.
+  // { files: ['*.config.mjs'], languageOptions: { globals: { console: 'readonly' } }, rules: { 'no-console': 'off' } },
+
   {
     files: ['.ncurc.cjs'],
     languageOptions: { sourceType: 'commonjs', globals: { module: 'readonly' } },
