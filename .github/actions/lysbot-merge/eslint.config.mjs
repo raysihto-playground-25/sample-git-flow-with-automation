@@ -82,6 +82,11 @@ const config = tseslint.config(
     },
   },
 
+  // Debug helper for config files:
+  // Uncomment temporarily when inspecting config behavior with console.
+  // Revert after use.
+  // { files: ['*.config.mjs'], languageOptions: { globals: { console: 'readonly' } }, rules: { 'no-console': 'off' } },
+
   {
     files: ['.ncurc.cjs'],
     languageOptions: { sourceType: 'commonjs', globals: { module: 'readonly' } },

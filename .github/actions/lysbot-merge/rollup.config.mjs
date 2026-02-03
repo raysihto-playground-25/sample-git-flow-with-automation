@@ -19,9 +19,10 @@ const config = defineConfig({
 
   onwarn(warning, defaultHandler) {
     // Warnings originating entirely from node_modules may be candidates for suppression until upstream issues are resolved.
-    if (warning.ids?.every((id) => id.includes('/node_modules/'))) {
-      // Suppress circular dependency warnings from node_modules; this may become unnecessary once the upstream dependencies are fixed.
-      if (warning.code === 'CIRCULAR_DEPENDENCY') {
+    const ids = warning.ids ?? (warning.id ? [warning.id] : []);
+    if (0 < ids.length && ids.every((id) => id.includes('/node_modules/'))) {
+      // Suppress some warnings from node_modules; this may become unnecessary once the upstream dependencies are fixed.
+      if (warning.code === 'CIRCULAR_DEPENDENCY' || warning.code === 'THIS_IS_UNDEFINED') {
         return;
       }
     }
