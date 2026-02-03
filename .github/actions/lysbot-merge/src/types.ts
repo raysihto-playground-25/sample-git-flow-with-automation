@@ -16,7 +16,7 @@
  * - Fields are readonly to prevent mutation after construction
  */
 
-import type { GitHub } from '@actions/github/lib/utils.js';
+import type { getOctokit } from '@actions/github';
 import type { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods';
 
 /**
@@ -126,8 +126,8 @@ export interface MergeOptions {
   overrideApprovalRequirement: boolean;
 }
 
-// Type alias for Octokit instance
-export type Octokit = InstanceType<typeof GitHub>;
+// Type alias for Octokit instance (return type of getOctokit for reliable type resolution)
+export type Octokit = ReturnType<typeof getOctokit>;
 
 // Type aliases for GitHub API response types
 export type ReviewsArray = RestEndpointMethodTypes['pulls']['listReviews']['response']['data'];

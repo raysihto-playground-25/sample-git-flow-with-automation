@@ -50,9 +50,12 @@
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^3.0.0",
-    "@actions/github": "^7.0.0"
+    "@actions/github": "^9.0.0"
   },
   "devDependencies": {
+    "@octokit/core": "^7.0.6",
+    "@octokit/plugin-paginate-rest": "^14.0.0",
+    "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@rollup/plugin-commonjs": "^29.0.0",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-terser": "^0.4.4",
