@@ -8,7 +8,7 @@
  * - Error handling for API failures
  */
 
-import { describe, it, expect, vi, type MockedFunction } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import {
   addReaction,
@@ -20,71 +20,8 @@ import {
   mergePullRequest,
   fetchPullRequestCommits,
 } from '../src/github-api.js';
-import type { Octokit } from '../src/types.js';
 
-// =============================================================================
-// Test Utilities
-// =============================================================================
-
-/**
- * Creates a mock Octokit instance for tests.
- */
-function createMockOctokit(): Octokit {
-  return {
-    rest: {
-      reactions: {
-        createForIssueComment: vi.fn().mockResolvedValue({}),
-      },
-      issues: {
-        createComment: vi.fn().mockResolvedValue({}),
-      },
-      repos: {
-        getCollaboratorPermissionLevel: vi.fn().mockResolvedValue({
-          data: { permission: 'write' },
-        }),
-      },
-      pulls: {
-        get: vi.fn().mockResolvedValue({
-          data: {
-            state: 'open',
-            locked: false,
-            draft: false,
-            merged: false,
-            mergeable: true,
-            mergeable_state: 'clean',
-            head: {
-              sha: 'abc1234567890',
-              ref: 'feature/test',
-              repo: { fork: false, owner: { id: 1 } },
-            },
-            base: {
-              ref: 'develop',
-              repo: { owner: { id: 1 } },
-            },
-            user: { login: 'testuser' },
-            title: 'feat: test pull request',
-          },
-        }),
-        listReviews: vi.fn().mockResolvedValue({ data: [] }),
-        dismissReview: vi.fn().mockResolvedValue({}),
-        merge: vi.fn().mockResolvedValue({
-          data: { sha: 'merge123456789', merged: true, message: 'Pull request successfully merged' },
-        }),
-      },
-    },
-    paginate: vi.fn().mockResolvedValue([]),
-    graphql: vi.fn().mockResolvedValue({
-      repository: {
-        pullRequest: {
-          reviewThreads: {
-            pageInfo: { hasNextPage: false, endCursor: null },
-            nodes: [],
-          },
-        },
-      },
-    }),
-  } as unknown as Octokit;
-}
+import { createMockOctokit } from './helpers/octokit.mock.js';
 
 // =============================================================================
 // Tests for GitHub API Functions (with mocks)
@@ -105,11 +42,7 @@ describe('addReaction', () => {
 
   it('should not throw on error', async () => {
     const octokit = createMockOctokit();
-    (
-      octokit.rest.reactions.createForIssueComment as MockedFunction<
-        typeof octokit.rest.reactions.createForIssueComment
-      >
-    ).mockRejectedValue(new Error('Already exists'));
+    octokit.rest.reactions.createForIssueComment.mockRejectedValue(new Error('Already exists'));
 
     // Should not throw
     await expect(addReaction(octokit, 'owner', 'repo', 123, 'eyes')).resolves.toBeUndefined();
@@ -140,11 +73,7 @@ describe('getCollaboratorPermission', () => {
 
   it('should return none on error', async () => {
     const octokit = createMockOctokit();
-    (
-      octokit.rest.repos.getCollaboratorPermissionLevel as MockedFunction<
-        typeof octokit.rest.repos.getCollaboratorPermissionLevel
-      >
-    ).mockRejectedValue(new Error('Not found'));
+    octokit.rest.repos.getCollaboratorPermissionLevel.mockRejectedValue(new Error('Not found'));
 
     const permission = await getCollaboratorPermission(octokit, 'owner', 'repo', 'user');
     expect(permission).toBe('none');
@@ -168,7 +97,7 @@ describe('fetchPullRequestData', () => {
 
   it('should detect fork PRs correctly', async () => {
     const octokit = createMockOctokit();
-    (octokit.rest.pulls.get as MockedFunction<typeof octokit.rest.pulls.get>).mockResolvedValue({
+    octokit.rest.pulls.get.mockResolvedValue({
       data: {
         state: 'open',
         locked: false,
@@ -205,9 +134,7 @@ describe('dismissReview', () => {
 
   it('should return false on error', async () => {
     const octokit = createMockOctokit();
-    (octokit.rest.pulls.dismissReview as MockedFunction<typeof octokit.rest.pulls.dismissReview>).mockRejectedValue(
-      new Error('Forbidden'),
-    );
+    octokit.rest.pulls.dismissReview.mockRejectedValue(new Error('Forbidden'));
 
     const result = await dismissReview(octokit, 'owner', 'repo', 1, 123, 'Stale');
     expect(result).toBe(false);
@@ -218,7 +145,7 @@ describe('countUnresolvedThreads', () => {
   it('should count unresolved threads across pages', async () => {
     const octokit = createMockOctokit();
     let callCount = 0;
-    (octokit.graphql as unknown as MockedFunction<typeof octokit.graphql>).mockImplementation(async () => {
+    octokit.graphql.mockImplementation(async () => {
       callCount++;
       if (callCount === 1) {
         return {
@@ -259,7 +186,7 @@ describe('fetchPullRequestCommits', () => {
       },
       { commit: { message: 'docs: update readme' } },
     ];
-    (octokit.paginate as unknown as MockedFunction<typeof octokit.paginate>).mockResolvedValue(mockCommits);
+    octokit.paginate.mockResolvedValue(mockCommits);
 
     const commits = await fetchPullRequestCommits(octokit, 'owner', 'repo', 1);
 
@@ -292,9 +219,7 @@ describe('mergePullRequest', () => {
 
   it('should return error message on failure', async () => {
     const octokit = createMockOctokit();
-    (octokit.rest.pulls.merge as MockedFunction<typeof octokit.rest.pulls.merge>).mockRejectedValue(
-      new Error('Merge conflict'),
-    );
+    octokit.rest.pulls.merge.mockRejectedValue(new Error('Merge conflict'));
 
     const result = await mergePullRequest(
       octokit,

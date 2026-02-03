@@ -31,6 +31,8 @@ import type {
   EventContext,
 } from '../src/types.js';
 
+import { createMockOctokit } from './helpers/octokit.mock.js';
+
 /**
  * Creates a mock ActionsCore implementation for testing.
  * Only includes the methods actually used by the code.
@@ -73,32 +75,6 @@ function createMockContext(overrides: Partial<GitHubContext> = {}): GitHubContex
     },
     ...overrides,
   };
-}
-
-/**
- * Creates a mock Octokit instance for testing.
- */
-function createMockOctokit(): Octokit {
-  return {
-    rest: {
-      pulls: {
-        get: vi.fn(),
-        merge: vi.fn(),
-      },
-      issues: {
-        listComments: vi.fn(),
-        createComment: vi.fn(),
-      },
-      reactions: {
-        createForIssueComment: vi.fn(),
-      },
-      repos: {
-        getCollaboratorPermissionLevel: vi.fn(),
-      },
-    },
-    paginate: vi.fn(),
-    graphql: vi.fn(),
-  } as unknown as Octokit;
 }
 
 /**
