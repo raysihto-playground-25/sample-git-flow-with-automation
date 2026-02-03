@@ -82,7 +82,9 @@ const config = tseslint.config(
     },
   },
 
-  // The following configuration is commented out because console statements are generally not allowed.
+  // Debug helper for config files:
+  // Uncomment temporarily when inspecting config behavior with console/process.
+  // Revert after use.
   // { files: ['*.config.mjs'], languageOptions: { globals: { console: 'readonly' } }, rules: { 'no-console': 'off' } },
 
   {
