@@ -78,6 +78,27 @@ jobs:
           npm run all:full-upgrade
           echo "✅ Dependency upgrade completed successfully"
 
+      - name: Check and revert package-lock.json if package.json unchanged
+        id: check_changes
+        working-directory: .github/actions/lysbot-merge
+        run: |
+          # Check if package.json was changed
+          if git diff --quiet HEAD -- package.json; then
+            echo "ℹ️ package.json was not changed"
+
+            # Check if package-lock.json was changed
+            if ! git diff --quiet HEAD -- package-lock.json; then
+              echo "⚠️ Only package-lock.json changed (likely due to environment differences)"
+              echo "🔄 Reverting package-lock.json changes"
+              git checkout HEAD -- package-lock.json
+              echo "✅ package-lock.json reverted successfully"
+            else
+              echo "ℹ️ No changes to package-lock.json"
+            fi
+          else
+            echo "✅ package.json was changed, keeping all changes including package-lock.json"
+          fi
+
       - name: Create or Update Pull Request
         id: create_pr
         uses: peter-evans/create-pull-request@v7
