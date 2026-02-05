@@ -24,7 +24,9 @@ name: lysbot-merge Dependency Upgrade
 # WORKFLOW BEHAVIOR:
 # 1. Checks out the repository
 # 2. Runs `npm run all:full-upgrade` in .github/actions/lysbot-merge directory
-# 3. Creates or updates a PR with dependency upgrades:
+# 3. Reverts package-lock.json if package.json is unchanged
+#    (package-lock.json-only changes are due to environment differences)
+# 4. Creates or updates a PR with dependency upgrades:
 #    - Branch name is unique per base branch (e.g., bot/lysbot-merge-deps/develop)
 #    - If no existing PR exists for this base branch, creates a new one
 #    - If an existing PR exists for this base branch, updates it with the latest changes (force-push)
@@ -77,6 +79,13 @@ jobs:
         run: |
           npm run all:full-upgrade
           echo "✅ Dependency upgrade completed successfully"
+
+          # Revert package-lock.json if package.json was not changed
+          # (package-lock.json-only changes are due to environment differences)
+          if git diff --quiet HEAD -- package.json
+          then
+            git checkout HEAD -- package-lock.json
+          fi
 
       - name: Create or Update Pull Request
         id: create_pr
