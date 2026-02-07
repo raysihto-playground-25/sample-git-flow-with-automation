@@ -97,7 +97,7 @@ describe('executeAction', () => {
       const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('skipped');
-      expect(result.message).toContain('not matched');
+      expect(result.message).toContain('No bot mention detected');
     });
 
     it('adds eyes reaction and posts error comment for invalid bot command', async () => {
@@ -181,7 +181,7 @@ describe('executeAction', () => {
       expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
 
       expect(result.status).toBe('skipped');
-      expect(result.message).toContain('not matched');
+      expect(result.message).toContain('No bot mention detected');
     });
 
     it('fails for users without valid author association', async () => {

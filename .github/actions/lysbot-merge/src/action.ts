@@ -89,18 +89,21 @@ export async function executeAction(
     return { status: 'skipped', message: 'Comment is from a bot' };
   }
 
-  // Check for bot mention pattern first (e.g., "/lysbot ", "/mybot ", etc.)
-  const mentionsBotPattern = hasBotMention(commentBody);
+  // (1) Check for bot mention pattern first (e.g., "/lysbot ", "/mybot ", etc.)
+  // If no bot mention, skip early without any reaction
+  if (!hasBotMention(commentBody)) {
+    return { status: 'skipped', message: 'No bot mention detected' };
+  }
 
-  // Parse and validate the merge command
+  // (2) Add eyes reaction - bot was mentioned
+  await addReaction(octokit, owner, repo, commentId, 'eyes');
+
+  // (3) Parse and validate the merge command
   // parseCommand() returns null if the command format is invalid
   const mergeOptions = parseCommand(commentBody);
 
-  // If bot mention detected but command is invalid, notify user with comment URL
-  if (mentionsBotPattern && !mergeOptions) {
-    // Add eyes reaction to show we detected the mention
-    await addReaction(octokit, owner, repo, commentId, 'eyes');
-
+  // If command is invalid, notify user with comment URL and return
+  if (!mergeOptions) {
     // Build the URL to the invalid command comment
     // Note: GitHub's issue_comment API is used for both issues and PRs, but the URL format
     // uses /pull/ for PR comments and /issues/ for issue comments. Since we already validated
@@ -126,14 +129,7 @@ export async function executeAction(
     return { status: 'failed', message: 'Invalid command syntax' };
   }
 
-  // If no bot mention pattern matched at all, skip
-  if (!mergeOptions) {
-    return { status: 'skipped', message: 'Command not matched' };
-  }
-
-  // Add eyes reaction for immediate feedback
-  // This happens as soon as we know it's a valid merge command
-  await addReaction(octokit, owner, repo, commentId, 'eyes');
+  // Valid command detected - continue with permission checks and merge processing
 
   // Check author association
   if (!hasValidAuthorAssociation(authorAssociation)) {
