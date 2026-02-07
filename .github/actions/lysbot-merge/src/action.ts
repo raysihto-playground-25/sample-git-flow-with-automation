@@ -102,16 +102,27 @@ export async function executeAction(
     await addReaction(octokit, owner, repo, commentId, 'eyes');
 
     // Build the URL to the invalid command comment
+    // Note: GitHub's issue_comment API is used for both issues and PRs, but the URL format
+    // uses /pull/ for PR comments and /issues/ for issue comments. Since we already validated
+    // isPullRequest earlier, we use the /pull/ URL format here.
     const commentUrl = `${context.serverUrl}/${owner}/${repo}/pull/${prNumber}#issuecomment-${commentId}`;
 
+    // Build error message for invalid command
+    const errorMessage = [
+      '## Invalid command',
+      '',
+      '> [!WARNING]',
+      `> The command in [this comment](${commentUrl}) is not a valid \`/lysbot merge\` command.`,
+      '>',
+      '> **Valid command format:**',
+      '> - `/lysbot merge` - Merge the PR with standard approval requirements',
+      '> - `/lysbot merge --override-approval-requirement` - Merge without approval requirement',
+      '>',
+      '> **Invalid flags or command syntax detected.** Please check your command and try again.',
+    ].join('\n');
+
     // Post error comment with link to the invalid command
-    await postComment(
-      octokit,
-      owner,
-      repo,
-      prNumber,
-      `## Invalid command\n\n> [!WARNING]\n> The command in [this comment](${commentUrl}) is not a valid \`/lysbot merge\` command.\n>\n> **Valid command format:**\n> - \`/lysbot merge\` - Merge the PR with standard approval requirements\n> - \`/lysbot merge --override-approval-requirement\` - Merge without approval requirement\n>\n> **Invalid flags or command syntax detected.** Please check your command and try again.`,
-    );
+    await postComment(octokit, owner, repo, prNumber, errorMessage);
     return { status: 'failed', message: 'Invalid command syntax' };
   }
 
