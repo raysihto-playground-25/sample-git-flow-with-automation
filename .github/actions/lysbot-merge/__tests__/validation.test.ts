@@ -17,6 +17,7 @@ import type { ActionConfig, PullRequestData, CheckResult } from '../src/types.js
 import {
   parseCommand,
   isBot,
+  hasBotMention,
   hasValidAuthorAssociation,
   hasValidPermission,
   determineMergeMethod,
@@ -156,6 +157,73 @@ describe('isBot', () => {
     expect(isBot('Organization')).toBe(false);
     expect(isBot('Mannequin')).toBe(false);
     expect(isBot('')).toBe(false);
+  });
+});
+
+// =============================================================================
+// Tests for hasBotMention
+// =============================================================================
+
+describe('hasBotMention', () => {
+  describe('valid bot mention patterns', () => {
+    it('matches /lysbot with space', () => {
+      expect(hasBotMention('/lysbot merge')).toBe(true);
+      expect(hasBotMention('/lysbot help')).toBe(true);
+      expect(hasBotMention('/lysbot test')).toBe(true);
+    });
+
+    it('matches other bot names with 2-5 chars before "bot"', () => {
+      expect(hasBotMention('/mybot command')).toBe(true);
+      expect(hasBotMention('/aibot help')).toBe(true);
+      expect(hasBotMention('/ghbot test')).toBe(true);
+      expect(hasBotMention('/xyzbot merge')).toBe(true);
+      expect(hasBotMention('/abcdebot test')).toBe(true);
+    });
+
+    it('matches bot mention anywhere in text', () => {
+      expect(hasBotMention('Some text /lysbot merge more text')).toBe(true);
+      expect(hasBotMention('prefix /mybot command suffix')).toBe(true);
+    });
+
+    it('matches with various command formats', () => {
+      expect(hasBotMention('/lysbot merge --flag')).toBe(true);
+      expect(hasBotMention('/lysbot invalid-command')).toBe(true);
+      expect(hasBotMention('/lysbot ')).toBe(true);
+    });
+  });
+
+  describe('invalid bot mention patterns', () => {
+    it('rejects bot name without slash', () => {
+      expect(hasBotMention('lysbot merge')).toBe(false);
+      expect(hasBotMention('mybot command')).toBe(false);
+    });
+
+    it('rejects bot name without space after', () => {
+      expect(hasBotMention('/lysbotmerge')).toBe(false);
+      expect(hasBotMention('/lysbot-merge')).toBe(false);
+    });
+
+    it('rejects too short prefix (less than 2 chars)', () => {
+      expect(hasBotMention('/bot command')).toBe(false);
+      expect(hasBotMention('/xbot test')).toBe(false);
+    });
+
+    it('rejects too long prefix (more than 5 chars)', () => {
+      expect(hasBotMention('/toolongbot command')).toBe(false);
+      expect(hasBotMention('/verylongbot test')).toBe(false);
+      expect(hasBotMention('/abcdefbot merge')).toBe(false);
+    });
+
+    it('rejects text without bot mention', () => {
+      expect(hasBotMention('hello world')).toBe(false);
+      expect(hasBotMention('some random text')).toBe(false);
+      expect(hasBotMention('/command test')).toBe(false);
+    });
+
+    it('rejects pattern without space after bot', () => {
+      expect(hasBotMention('/lysbot')).toBe(false);
+      expect(hasBotMention('/mybot')).toBe(false);
+    });
   });
 });
 

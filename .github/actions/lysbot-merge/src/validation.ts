@@ -7,6 +7,7 @@
  */
 
 import {
+  BOT_MENTION_REGEX,
   COMMAND_REGEX,
   VALID_FLAGS,
   VALID_AUTHOR_ASSOCIATIONS,
@@ -28,6 +29,24 @@ import type { ActionConfig, PullRequestData, CheckResult, MergeMethodResult, Mer
  */
 export function isConventionalCommitTitle(title: string): boolean {
   return CONVENTIONAL_COMMIT_REGEX.test(title);
+}
+
+/**
+ * Checks if a comment contains a bot mention pattern.
+ * Bot mention pattern: /.{2,5}bot<space>
+ *
+ * @param commentBody - The body of the comment to check
+ * @returns true if the comment contains a bot mention pattern
+ *
+ * @example
+ * hasBotMention('/lysbot merge')      // true
+ * hasBotMention('/mybot help')        // true
+ * hasBotMention('hello world')        // false
+ * hasBotMention('/bot command')       // false (too short)
+ * hasBotMention('/toolongbot test')   // false (too long)
+ */
+export function hasBotMention(commentBody: string): boolean {
+  return BOT_MENTION_REGEX.test(commentBody);
 }
 
 /**

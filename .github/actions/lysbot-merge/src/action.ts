@@ -24,6 +24,7 @@ import {
 import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types.js';
 import {
   isBot,
+  hasBotMention,
   parseCommand,
   hasValidAuthorAssociation,
   hasValidPermission,
@@ -88,9 +89,33 @@ export async function executeAction(
     return { status: 'skipped', message: 'Comment is from a bot' };
   }
 
+  // Check for bot mention pattern first (e.g., "/lysbot ", "/mybot ", etc.)
+  const mentionsBotPattern = hasBotMention(commentBody);
+
   // Parse and validate the merge command
   // parseCommand() returns null if the command format is invalid
   const mergeOptions = parseCommand(commentBody);
+
+  // If bot mention detected but command is invalid, notify user with comment URL
+  if (mentionsBotPattern && !mergeOptions) {
+    // Add eyes reaction to show we detected the mention
+    await addReaction(octokit, owner, repo, commentId, 'eyes');
+
+    // Build the URL to the invalid command comment
+    const commentUrl = `${context.serverUrl}/${owner}/${repo}/pull/${prNumber}#issuecomment-${commentId}`;
+
+    // Post error comment with link to the invalid command
+    await postComment(
+      octokit,
+      owner,
+      repo,
+      prNumber,
+      `## Invalid command\n\n> [!WARNING]\n> The command in [this comment](${commentUrl}) is not a valid \`/lysbot merge\` command.\n>\n> **Valid command format:**\n> - \`/lysbot merge\` - Merge the PR with standard approval requirements\n> - \`/lysbot merge --override-approval-requirement\` - Merge without approval requirement\n>\n> **Invalid flags or command syntax detected.** Please check your command and try again.`,
+    );
+    return { status: 'failed', message: 'Invalid command syntax' };
+  }
+
+  // If no bot mention pattern matched at all, skip
   if (!mergeOptions) {
     return { status: 'skipped', message: 'Command not matched' };
   }

@@ -100,6 +100,90 @@ describe('executeAction', () => {
       expect(result.message).toContain('not matched');
     });
 
+    it('adds eyes reaction and posts error comment for invalid bot command', async () => {
+      const octokit = createMockOctokit();
+      const context = createEventContext({ commentBody: '/lysbot invalid' });
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      // Should add eyes reaction to show we detected the bot mention
+      expect(octokit.rest.reactions.createForIssueComment).toHaveBeenCalledWith({
+        owner: 'testowner',
+        repo: 'testrepo',
+        comment_id: 123,
+        content: 'eyes',
+      });
+
+      // Should post error comment with URL
+      expect(octokit.rest.issues.createComment).toHaveBeenCalledWith({
+        owner: 'testowner',
+        repo: 'testrepo',
+        issue_number: 1,
+        body: expect.stringContaining('Invalid command') as string,
+      });
+
+      // Should include the comment URL in the error message
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
+      expect(commentCalls).toHaveLength(1);
+      const firstCall = commentCalls[0];
+      expect(firstCall).toBeDefined();
+      const callArgs = firstCall?.[0];
+      expect(callArgs).toBeDefined();
+      if (callArgs && typeof callArgs === 'object' && 'body' in callArgs) {
+        expect(callArgs.body).toContain('https://github.com/testowner/testrepo/pull/1#issuecomment-123');
+      }
+
+      expect(result.status).toBe('failed');
+      expect(result.message).toContain('Invalid command syntax');
+    });
+
+    it('adds eyes reaction and posts error comment for bot command with invalid flags', async () => {
+      const octokit = createMockOctokit();
+      const context = createEventContext({ commentBody: '/lysbot merge --unknown-flag' });
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      // Should add eyes reaction
+      expect(octokit.rest.reactions.createForIssueComment).toHaveBeenCalledWith({
+        owner: 'testowner',
+        repo: 'testrepo',
+        comment_id: 123,
+        content: 'eyes',
+      });
+
+      // Should post error comment
+      expect(octokit.rest.issues.createComment).toHaveBeenCalled();
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
+      expect(commentCalls).toHaveLength(1);
+      const firstCall = commentCalls[0];
+      expect(firstCall).toBeDefined();
+      const callArgs = firstCall?.[0];
+      expect(callArgs).toBeDefined();
+      if (callArgs && typeof callArgs === 'object' && 'body' in callArgs) {
+        expect(callArgs.body).toContain('Invalid command');
+      }
+
+      expect(result.status).toBe('failed');
+      expect(result.message).toContain('Invalid command syntax');
+    });
+
+    it('does not react or comment for non-bot-mention text', async () => {
+      const octokit = createMockOctokit();
+      const context = createEventContext({ commentBody: 'Just a regular comment' });
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      // Should not add any reaction or comment
+      expect(octokit.rest.reactions.createForIssueComment).not.toHaveBeenCalled();
+      expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+
+      expect(result.status).toBe('skipped');
+      expect(result.message).toContain('not matched');
+    });
+
     it('fails for users without valid author association', async () => {
       const octokit = createMockOctokit();
       const context = createEventContext({ authorAssociation: 'NONE' });

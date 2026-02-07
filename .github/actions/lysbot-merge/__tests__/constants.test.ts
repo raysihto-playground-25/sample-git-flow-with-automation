@@ -10,7 +10,70 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { CONVENTIONAL_COMMIT_TYPES, CONVENTIONAL_COMMIT_REGEX, COMMAND_REGEX } from '../src/constants.js';
+import {
+  BOT_MENTION_REGEX,
+  CONVENTIONAL_COMMIT_TYPES,
+  CONVENTIONAL_COMMIT_REGEX,
+  COMMAND_REGEX,
+} from '../src/constants.js';
+
+// =============================================================================
+// Tests for BOT_MENTION_REGEX constant
+// =============================================================================
+
+describe('BOT_MENTION_REGEX', () => {
+  it('should be a valid regex pattern', () => {
+    expect(BOT_MENTION_REGEX).toBeInstanceOf(RegExp);
+  });
+
+  it('should match bot mentions with 2-5 chars before "bot" and a space after', () => {
+    const validPatterns = [
+      '/lysbot merge',
+      '/mybot command',
+      '/aibot help',
+      '/ghbot test',
+      '/xyzbot merge',
+      '/abcdebot test',
+      'Some text /lysbot merge more text',
+    ];
+
+    for (const pattern of validPatterns) {
+      expect(BOT_MENTION_REGEX.test(pattern)).toBe(true);
+    }
+  });
+
+  it('should not match patterns with too short prefix (less than 2 chars)', () => {
+    const invalidPatterns = ['/bot command', '/xbot test'];
+
+    for (const pattern of invalidPatterns) {
+      expect(BOT_MENTION_REGEX.test(pattern)).toBe(false);
+    }
+  });
+
+  it('should not match patterns with too long prefix (more than 5 chars)', () => {
+    const invalidPatterns = ['/toolongbot command', '/verylongbot test', '/abcdefbot merge'];
+
+    for (const pattern of invalidPatterns) {
+      expect(BOT_MENTION_REGEX.test(pattern)).toBe(false);
+    }
+  });
+
+  it('should not match without space after bot', () => {
+    const invalidPatterns = ['/lysbotmerge', '/lysbot-merge', '/lysbot'];
+
+    for (const pattern of invalidPatterns) {
+      expect(BOT_MENTION_REGEX.test(pattern)).toBe(false);
+    }
+  });
+
+  it('should not match without slash before bot name', () => {
+    const invalidPatterns = ['lysbot merge', 'mybot command'];
+
+    for (const pattern of invalidPatterns) {
+      expect(BOT_MENTION_REGEX.test(pattern)).toBe(false);
+    }
+  });
+});
 
 // =============================================================================
 // Tests for CONVENTIONAL_COMMIT_TYPES constant

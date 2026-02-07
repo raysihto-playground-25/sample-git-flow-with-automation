@@ -6,6 +6,13 @@
  */
 
 /**
+ * Bot mention regex for detecting any command starting with "/.{2,5}bot ".
+ * This pattern matches commands like "/lysbot ", "/mybot ", etc.
+ * Used for early detection to add eyes reaction.
+ */
+export const BOT_MENTION_REGEX = /\/.{2,5}bot\s/;
+
+/**
  * Command regex for matching `/lysbot merge` comments.
  * Captures optional flags after the merge command.
  * Uses simple regex pattern compatible with JavaScript.
