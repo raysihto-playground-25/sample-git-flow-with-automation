@@ -33,7 +33,7 @@
     "package:watch": "npm run package -- --watch",
     "bundle": "npm run fix:all && npm run package",
     "all": "npm run fix:all && npm run check:all && npm run package",
-    "upgrade": "npx --yes npm-check-updates -u && npm install",
+    "upgrade": "npx --yes npm-check-updates --peer -u && npm install",
     "all:upgrade": "npm run upgrade && npm run all",
     "all:full-upgrade": "npx --yes rimraf package-lock.json && npm run all:upgrade",
     "reinstall": "npx --yes rimraf package-lock.json && npm install",
