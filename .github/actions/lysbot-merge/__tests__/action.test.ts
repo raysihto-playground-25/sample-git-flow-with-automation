@@ -89,7 +89,7 @@ describe('executeAction', () => {
       expect(result.message).toContain('bot');
     });
 
-    it('skips processing for non-matching command', async () => {
+    it('skips processing for non-matching command (no bot trigger)', async () => {
       const octokit = createMockOctokit();
       const context = createEventContext({ commentBody: 'Hello world' });
       const config = createConfig();
@@ -97,7 +97,103 @@ describe('executeAction', () => {
       const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('skipped');
-      expect(result.message).toContain('not matched');
+      expect(result.message).toBe('Command not matched');
+      expect(octokit.rest.reactions.createForIssueComment).not.toHaveBeenCalled();
+      expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+    });
+
+    it('does not react or comment for non-bot-mention text', async () => {
+      const octokit = createMockOctokit();
+      const context = createEventContext({ commentBody: 'Just a regular comment' });
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(octokit.rest.reactions.createForIssueComment).not.toHaveBeenCalled();
+      expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+      expect(result.status).toBe('skipped');
+      expect(result.message).toBe('Command not matched');
+    });
+
+    it('adds eyes reaction and posts invalid-command comment when bot trigger matches but command is invalid', async () => {
+      const octokit = createMockOctokit();
+      const context = createEventContext({
+        commentBody: '/lysbot merge now',
+        commentId: 999,
+        prNumber: 42,
+        serverUrl: 'https://github.com',
+      });
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('skipped');
+      expect(result.message).toBe('Command not recognized');
+      expect(octokit.rest.reactions.createForIssueComment).toHaveBeenCalledTimes(1);
+      expect(octokit.rest.reactions.createForIssueComment).toHaveBeenCalledWith({
+        owner: 'testowner',
+        repo: 'testrepo',
+        comment_id: 999,
+        content: 'eyes',
+      });
+      expect(octokit.rest.issues.createComment).toHaveBeenCalledTimes(1);
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
+      const commentBody = (commentCalls[0]?.[0] as { body?: string } | undefined)?.body ?? '';
+      expect(commentBody).toContain('Unrecognized command');
+      expect(commentBody).toContain("I'm lysbot");
+      expect(commentBody).toContain("couldn't recognize");
+      expect(commentBody).toContain('https://github.com/testowner/testrepo/pull/42#issuecomment-999');
+    });
+
+    it('adds eyes reaction and posts unrecognized-command comment for invalid flags', async () => {
+      const octokit = createMockOctokit();
+      const context = createEventContext({
+        commentBody: '/lysbot merge --unknown-flag',
+        commentId: 456,
+        prNumber: 1,
+        serverUrl: 'https://github.com',
+      });
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('skipped');
+      expect(result.message).toBe('Command not recognized');
+      expect(octokit.rest.reactions.createForIssueComment).toHaveBeenCalledTimes(1);
+      expect(octokit.rest.reactions.createForIssueComment).toHaveBeenCalledWith({
+        owner: 'testowner',
+        repo: 'testrepo',
+        comment_id: 456,
+        content: 'eyes',
+      });
+      expect(octokit.rest.issues.createComment).toHaveBeenCalledTimes(1);
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
+      const commentBody = (commentCalls[0]?.[0] as { body?: string } | undefined)?.body ?? '';
+      expect(commentBody).toContain('Unrecognized command');
+      expect(commentBody).toContain("I'm lysbot");
+      expect(commentBody).toContain("couldn't recognize");
+      expect(commentBody).toContain('https://github.com/testowner/testrepo/pull/1#issuecomment-456');
+    });
+
+    it('builds comment URL without double slash when serverUrl has trailing slash', async () => {
+      const octokit = createMockOctokit();
+      const context = createEventContext({
+        commentBody: '/lysbot merge --unknown-flag',
+        commentId: 100,
+        prNumber: 7,
+        serverUrl: 'https://github.enterprise.com/',
+      });
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('skipped');
+      expect(result.message).toBe('Command not recognized');
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
+      const commentBody = (commentCalls[0]?.[0] as { body?: string } | undefined)?.body ?? '';
+      expect(commentBody).toContain('Unrecognized command');
+      expect(commentBody).not.toContain('https://github.enterprise.com//');
+      expect(commentBody).toContain('https://github.enterprise.com/testowner/testrepo/pull/7#issuecomment-100');
     });
 
     it('fails for users without valid author association', async () => {
