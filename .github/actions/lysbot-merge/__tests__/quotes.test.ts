@@ -26,7 +26,7 @@ describe('quotes module', () => {
       }
       // With 20 iterations and multiple quotes available, we should get at least 2 different ones
       // This test may occasionally fail due to randomness, but probability is very low
-      expect(quotes.size).toBeGreaterThanOrEqual(1);
+      expect(quotes.size).toBeGreaterThanOrEqual(2);
     });
 
     it('should include series information in quotes', () => {
