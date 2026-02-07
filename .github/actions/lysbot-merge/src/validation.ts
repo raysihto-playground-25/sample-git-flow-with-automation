@@ -32,8 +32,9 @@ export function isConventionalCommitTitle(title: string): boolean {
 }
 
 /**
- * Checks if a comment contains a bot trigger pattern at line start.
- * Pattern: optional whitespace, slash, 2–5 characters, then "bot".
+ * Checks if a comment contains a bot trigger pattern at the start of the comment body.
+ * Only leading space/tab is allowed before the trigger; leading newlines do not match.
+ * Pattern: optional space/tab, slash, 2–5 characters, then "bot".
  *
  * @param commentBody - The body of the comment to check
  * @returns true if the comment matches the bot trigger pattern
@@ -44,6 +45,7 @@ export function hasBotMention(commentBody: string): boolean {
 
 /**
  * Parses the `/lysbot merge` command and extracts options.
+ * The command must appear at the start of the comment body; only leading space/tab is allowed (no newlines).
  *
  * @param commentBody - The body of the comment containing the command
  * @returns MergeOptions with parsed flags, or null if not a valid command

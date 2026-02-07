@@ -6,18 +6,20 @@
  */
 
 /**
- * Regex to detect a bot-style command at line start (e.g. /lysbot, /xybot).
+ * Regex to detect a bot-style command at the start of the comment body (e.g. /lysbot, /xybot).
+ * Only space and tab are allowed before the trigger; leading newlines are not accepted.
  * Used to add :eyes: reaction first and to decide whether to post an invalid-command comment.
- * Pattern: optional whitespace, slash, 2–5 characters, then "bot".
+ * Pattern: optional space/tab, slash, 2–5 characters, then "bot".
  */
-export const BOT_TRIGGER_REGEX = /^\s*\/.{2,5}bot/;
+export const BOT_TRIGGER_REGEX = /^[ \t]*\/.{2,5}bot/;
 
 /**
- * Command regex for matching `/lysbot merge` comments.
- * Captures optional flags after the merge command.
- * Uses simple regex pattern compatible with JavaScript.
+ * Command regex for matching `/lysbot merge` at the start of the comment body.
+ * Only space and tab are allowed before the command and between tokens; leading or trailing newlines are not accepted.
+ * Captures optional flags after the merge command (same line only).
+ * Pattern: optional space/tab, "/lysbot", one or more space/tab, "merge", optional space/tab + rest of line.
  */
-export const COMMAND_REGEX = /^\s*\/lysbot\s+merge(?:\s+(.*))?\s*$/;
+export const COMMAND_REGEX = /^[ \t]*\/lysbot[ \t]+merge(?:[ \t]+([^\n]*))?[ \t]*$/;
 
 /**
  * List of valid command flags for `/lysbot merge`.

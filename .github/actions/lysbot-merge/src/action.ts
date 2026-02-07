@@ -100,7 +100,8 @@ export async function executeAction(
   // Parse and validate the merge command; if invalid, reply with comment URL and skip
   const mergeOptions = parseCommand(commentBody);
   if (!mergeOptions) {
-    const commentUrl = `${serverUrl}/${owner}/${repo}/pull/${prNumber}#issuecomment-${commentId}`;
+    const base = serverUrl.replace(/\/+$/, '');
+    const commentUrl = new URL(`/${owner}/${repo}/pull/${prNumber}#issuecomment-${commentId}`, base).href;
     await postComment(
       octokit,
       owner,

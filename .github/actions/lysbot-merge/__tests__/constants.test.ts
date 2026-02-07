@@ -3,7 +3,7 @@
  *
  * Tests validate the constants, regex patterns, and configuration values
  * used throughout the action, including:
- * - COMMAND_REGEX: Matching /lysbot merge commands
+ * - COMMAND_REGEX: Matching /lysbot merge at start of comment body (space/tab only, no newlines)
  * - CONVENTIONAL_COMMIT_REGEX: Validating commit message formats
  * - CONVENTIONAL_COMMIT_TYPES: Allowed commit types
  */
@@ -88,8 +88,8 @@ describe('BOT_TRIGGER_REGEX', () => {
     expect(BOT_TRIGGER_REGEX).toBeInstanceOf(RegExp);
   });
 
-  it('should match bot-style commands (slash + 2–5 chars + "bot") at line start', () => {
-    const matching = ['/lysbot', '  /lysbot', '/xybot', '/longbot', '/xxbot', '/lysbot merge'];
+  it('should match bot-style commands (slash + 2–5 chars + "bot") at start of comment body', () => {
+    const matching = ['/lysbot', '  /lysbot', '\t/lysbot', '/xybot', '/longbot', '/xxbot', '/lysbot merge'];
     for (const input of matching) {
       expect(BOT_TRIGGER_REGEX.test(input)).toBe(true);
     }
@@ -111,9 +111,14 @@ describe('BOT_TRIGGER_REGEX', () => {
     expect(BOT_TRIGGER_REGEX.test('some random text')).toBe(false);
   });
 
-  it('should not match when trigger is not at line start (text before slash)', () => {
+  it('should not match when trigger is not at start of comment body (text before slash)', () => {
     expect(BOT_TRIGGER_REGEX.test('run /lysbot merge')).toBe(false);
     expect(BOT_TRIGGER_REGEX.test('prefix /lysbot')).toBe(false);
+  });
+
+  it('should not match when trigger is after a newline (only space/tab allowed before trigger)', () => {
+    expect(BOT_TRIGGER_REGEX.test('\n/lysbot merge')).toBe(false);
+    expect(BOT_TRIGGER_REGEX.test(' \n/lysbot')).toBe(false);
   });
 
   it('should not match without slash before bot name', () => {
@@ -131,13 +136,14 @@ describe('COMMAND_REGEX', () => {
     expect(COMMAND_REGEX).toBeInstanceOf(RegExp);
   });
 
-  it('should match basic command patterns and capture optional flags', () => {
-    // Note: COMMAND_REGEX now captures optional flags after "merge"
-    // The actual flag validation is done in parseCommand
+  it('should match command at start of comment body with space/tab only (no newlines)', () => {
+    // Note: COMMAND_REGEX captures optional flags after "merge"; flag validation is in parseCommand
     const testCases = [
       { input: '/lysbot merge', expected: true },
       { input: '  /lysbot merge', expected: true },
+      { input: '\t/lysbot merge', expected: true },
       { input: '/lysbot merge  ', expected: true },
+      { input: '/lysbot merge\t', expected: true },
       { input: '/lysbot  merge', expected: true },
       { input: '/lysbot merge --override-approval-requirement', expected: true },
       { input: '/lysbot merge now', expected: true }, // Regex matches, but parseCommand rejects
@@ -147,6 +153,13 @@ describe('COMMAND_REGEX', () => {
     for (const { input, expected } of testCases) {
       expect(COMMAND_REGEX.test(input)).toBe(expected);
     }
+  });
+
+  it('should not match when command is after leading newline or has trailing newline', () => {
+    expect(COMMAND_REGEX.test('\n/lysbot merge')).toBe(false);
+    expect(COMMAND_REGEX.test(' \n/lysbot merge')).toBe(false);
+    expect(COMMAND_REGEX.test('/lysbot merge\n')).toBe(false);
+    expect(COMMAND_REGEX.test('/lysbot merge \n')).toBe(false);
   });
 
   it('should capture flags from command', () => {

@@ -91,16 +91,20 @@ describe('parseCommand', () => {
       expect(result?.overrideApprovalRequirement).toBe(true);
     });
 
-    it('matches with leading whitespace (space/tab/newline)', () => {
+    it('matches with leading space or tab only (no newline)', () => {
       expect(parseCommand('  /lysbot merge')).not.toBeNull();
       expect(parseCommand('\t/lysbot merge')).not.toBeNull();
-      expect(parseCommand('\n/lysbot merge')).not.toBeNull();
     });
 
-    it('matches with trailing whitespace (space/tab/newline)', () => {
+    it('matches with trailing space or tab only (no newline)', () => {
       expect(parseCommand('/lysbot merge  ')).not.toBeNull();
       expect(parseCommand('/lysbot merge\t')).not.toBeNull();
-      expect(parseCommand('/lysbot merge\n')).not.toBeNull();
+    });
+
+    it('returns null when command is after leading newline or has trailing newline', () => {
+      expect(parseCommand('\n/lysbot merge')).toBeNull();
+      expect(parseCommand('/lysbot merge\n')).toBeNull();
+      expect(parseCommand('  \n/lysbot merge')).toBeNull();
     });
 
     it('matches with multiple spaces between words', () => {
@@ -165,8 +169,8 @@ describe('isBot', () => {
 // =============================================================================
 
 describe('hasBotMention', () => {
-  describe('valid bot trigger patterns (line start)', () => {
-    it('matches /lysbot at line start with or without command', () => {
+  describe('valid bot trigger patterns (start of comment body)', () => {
+    it('matches /lysbot at start of comment with or without command', () => {
       expect(hasBotMention('/lysbot')).toBe(true);
       expect(hasBotMention('/lysbot merge')).toBe(true);
       expect(hasBotMention('  /lysbot merge')).toBe(true);
@@ -180,12 +184,12 @@ describe('hasBotMention', () => {
       expect(hasBotMention('/abcdebot test')).toBe(true);
     });
 
-    it('matches with leading tab or newline (whitespace at line start)', () => {
+    it('matches with leading space or tab only (no newlines)', () => {
       expect(hasBotMention('\t/lysbot')).toBe(true);
-      expect(hasBotMention('\n/lysbot merge')).toBe(true);
+      expect(hasBotMention('  /lysbot merge')).toBe(true);
     });
 
-    it('matches trigger without space after "bot" (pattern is line-start only)', () => {
+    it('matches trigger without space after "bot" (pattern is comment-start only)', () => {
       expect(hasBotMention('/lysbot')).toBe(true);
       expect(hasBotMention('/lysbotmerge')).toBe(true);
     });
@@ -207,14 +211,19 @@ describe('hasBotMention', () => {
       expect(hasBotMention('mybot command')).toBe(false);
     });
 
-    it('rejects text without bot trigger at line start', () => {
+    it('rejects text without bot trigger at start of comment', () => {
       expect(hasBotMention('Hello world')).toBe(false);
       expect(hasBotMention('some random text')).toBe(false);
     });
 
-    it('rejects when trigger is not at line start', () => {
+    it('rejects when trigger is not at start of comment body', () => {
       expect(hasBotMention('run /lysbot merge')).toBe(false);
       expect(hasBotMention('prefix /lysbot')).toBe(false);
+    });
+
+    it('rejects when trigger is after a newline (only space/tab allowed before trigger)', () => {
+      expect(hasBotMention('\n/lysbot merge')).toBe(false);
+      expect(hasBotMention(' \n/lysbot')).toBe(false);
     });
   });
 });

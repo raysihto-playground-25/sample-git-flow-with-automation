@@ -175,6 +175,27 @@ describe('executeAction', () => {
       expect(commentBody).toContain('https://github.com/testowner/testrepo/pull/1#issuecomment-456');
     });
 
+    it('builds comment URL without double slash when serverUrl has trailing slash', async () => {
+      const octokit = createMockOctokit();
+      const context = createEventContext({
+        commentBody: '/lysbot merge --unknown-flag',
+        commentId: 100,
+        prNumber: 7,
+        serverUrl: 'https://github.enterprise.com/',
+      });
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('skipped');
+      expect(result.message).toBe('Command not recognized');
+      const commentCalls = octokit.rest.issues.createComment.mock.calls;
+      const commentBody = (commentCalls[0]?.[0] as { body?: string } | undefined)?.body ?? '';
+      expect(commentBody).toContain('Unrecognized command');
+      expect(commentBody).not.toContain('https://github.enterprise.com//');
+      expect(commentBody).toContain('https://github.enterprise.com/testowner/testrepo/pull/7#issuecomment-100');
+    });
+
     it('fails for users without valid author association', async () => {
       const octokit = createMockOctokit();
       const context = createEventContext({ authorAssociation: 'NONE' });
