@@ -6,6 +6,13 @@
  */
 
 /**
+ * Regex to detect a bot-style command at line start (e.g. /lysbot, /xybot).
+ * Used to add :eyes: reaction first and to decide whether to post an invalid-command comment.
+ * Pattern: optional whitespace, slash, 2–5 characters, then "bot".
+ */
+export const BOT_TRIGGER_REGEX = /^\s*\/.{2,5}bot/;
+
+/**
  * Command regex for matching `/lysbot merge` comments.
  * Captures optional flags after the merge command.
  * Uses simple regex pattern compatible with JavaScript.

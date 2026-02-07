@@ -24,6 +24,7 @@ import {
 import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types.js';
 import {
   isBot,
+  hasBotMention,
   parseCommand,
   hasValidAuthorAssociation,
   hasValidPermission,
@@ -65,6 +66,7 @@ export async function executeAction(
     actor,
     userType,
     authorAssociation,
+    serverUrl,
     eventName,
     isPullRequest,
   } = context;
@@ -88,16 +90,26 @@ export async function executeAction(
     return { status: 'skipped', message: 'Comment is from a bot' };
   }
 
-  // Parse and validate the merge command
-  // parseCommand() returns null if the command format is invalid
-  const mergeOptions = parseCommand(commentBody);
-  if (!mergeOptions) {
+  // If comment does not look like a bot command, skip without reaction
+  if (!hasBotMention(commentBody)) {
     return { status: 'skipped', message: 'Command not matched' };
   }
 
-  // Add eyes reaction for immediate feedback
-  // This happens as soon as we know it's a valid merge command
   await addReaction(octokit, owner, repo, commentId, 'eyes');
+
+  // Parse and validate the merge command; if invalid, reply with comment URL and skip
+  const mergeOptions = parseCommand(commentBody);
+  if (!mergeOptions) {
+    const commentUrl = `${serverUrl}/${owner}/${repo}/pull/${prNumber}#issuecomment-${commentId}`;
+    await postComment(
+      octokit,
+      owner,
+      repo,
+      prNumber,
+      `## Unrecognized command\n\n> [!NOTE]\n> I'm lysbot. I couldn't recognize that command. If it was for me, please check the format.\n>\n> Comment: ${commentUrl}`,
+    );
+    return { status: 'skipped', message: 'Command not recognized' };
+  }
 
   // Check author association
   if (!hasValidAuthorAssociation(authorAssociation)) {

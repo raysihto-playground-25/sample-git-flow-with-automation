@@ -10,7 +10,12 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { CONVENTIONAL_COMMIT_TYPES, CONVENTIONAL_COMMIT_REGEX, COMMAND_REGEX } from '../src/constants.js';
+import {
+  CONVENTIONAL_COMMIT_TYPES,
+  CONVENTIONAL_COMMIT_REGEX,
+  BOT_TRIGGER_REGEX,
+  COMMAND_REGEX,
+} from '../src/constants.js';
 
 // =============================================================================
 // Tests for CONVENTIONAL_COMMIT_TYPES constant
@@ -71,6 +76,49 @@ describe('CONVENTIONAL_COMMIT_REGEX', () => {
     for (const title of invalidTitles) {
       expect(CONVENTIONAL_COMMIT_REGEX.test(title)).toBe(false);
     }
+  });
+});
+
+// =============================================================================
+// Tests for BOT_TRIGGER_REGEX constant
+// =============================================================================
+
+describe('BOT_TRIGGER_REGEX', () => {
+  it('should be a valid regex pattern', () => {
+    expect(BOT_TRIGGER_REGEX).toBeInstanceOf(RegExp);
+  });
+
+  it('should match bot-style commands (slash + 2–5 chars + "bot") at line start', () => {
+    const matching = ['/lysbot', '  /lysbot', '/xybot', '/longbot', '/xxbot', '/lysbot merge'];
+    for (const input of matching) {
+      expect(BOT_TRIGGER_REGEX.test(input)).toBe(true);
+    }
+  });
+
+  it('should not match too short prefix (less than 2 chars before "bot")', () => {
+    expect(BOT_TRIGGER_REGEX.test('/bot')).toBe(false);
+    expect(BOT_TRIGGER_REGEX.test('/xbot')).toBe(false);
+  });
+
+  it('should not match too long prefix (more than 5 chars before "bot")', () => {
+    expect(BOT_TRIGGER_REGEX.test('/longnamebot')).toBe(false);
+    expect(BOT_TRIGGER_REGEX.test('/toolongbot')).toBe(false);
+    expect(BOT_TRIGGER_REGEX.test('/abcdefbot')).toBe(false);
+  });
+
+  it('should not match text without bot trigger', () => {
+    expect(BOT_TRIGGER_REGEX.test('Hello world')).toBe(false);
+    expect(BOT_TRIGGER_REGEX.test('some random text')).toBe(false);
+  });
+
+  it('should not match when trigger is not at line start (text before slash)', () => {
+    expect(BOT_TRIGGER_REGEX.test('run /lysbot merge')).toBe(false);
+    expect(BOT_TRIGGER_REGEX.test('prefix /lysbot')).toBe(false);
+  });
+
+  it('should not match without slash before bot name', () => {
+    expect(BOT_TRIGGER_REGEX.test('lysbot merge')).toBe(false);
+    expect(BOT_TRIGGER_REGEX.test('mybot command')).toBe(false);
   });
 });
 

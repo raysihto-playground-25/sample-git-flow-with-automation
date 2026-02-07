@@ -17,6 +17,7 @@ import type { ActionConfig, PullRequestData, CheckResult } from '../src/types.js
 import {
   parseCommand,
   isBot,
+  hasBotMention,
   hasValidAuthorAssociation,
   hasValidPermission,
   determineMergeMethod,
@@ -156,6 +157,65 @@ describe('isBot', () => {
     expect(isBot('Organization')).toBe(false);
     expect(isBot('Mannequin')).toBe(false);
     expect(isBot('')).toBe(false);
+  });
+});
+
+// =============================================================================
+// Tests for hasBotMention
+// =============================================================================
+
+describe('hasBotMention', () => {
+  describe('valid bot trigger patterns (line start)', () => {
+    it('matches /lysbot at line start with or without command', () => {
+      expect(hasBotMention('/lysbot')).toBe(true);
+      expect(hasBotMention('/lysbot merge')).toBe(true);
+      expect(hasBotMention('  /lysbot merge')).toBe(true);
+    });
+
+    it('matches other bot names (2–5 chars before "bot")', () => {
+      expect(hasBotMention('/xybot')).toBe(true);
+      expect(hasBotMention('/longbot merge')).toBe(true);
+      expect(hasBotMention('/mybot help')).toBe(true);
+      expect(hasBotMention('/aibot')).toBe(true);
+      expect(hasBotMention('/abcdebot test')).toBe(true);
+    });
+
+    it('matches with leading tab or newline (whitespace at line start)', () => {
+      expect(hasBotMention('\t/lysbot')).toBe(true);
+      expect(hasBotMention('\n/lysbot merge')).toBe(true);
+    });
+
+    it('matches trigger without space after "bot" (pattern is line-start only)', () => {
+      expect(hasBotMention('/lysbot')).toBe(true);
+      expect(hasBotMention('/lysbotmerge')).toBe(true);
+    });
+  });
+
+  describe('invalid bot trigger patterns', () => {
+    it('rejects too short prefix (less than 2 chars before "bot")', () => {
+      expect(hasBotMention('/bot')).toBe(false);
+      expect(hasBotMention('/xbot test')).toBe(false);
+    });
+
+    it('rejects too long prefix (more than 5 chars before "bot")', () => {
+      expect(hasBotMention('/longnamebot')).toBe(false);
+      expect(hasBotMention('/toolongbot command')).toBe(false);
+    });
+
+    it('rejects bot name without slash', () => {
+      expect(hasBotMention('lysbot merge')).toBe(false);
+      expect(hasBotMention('mybot command')).toBe(false);
+    });
+
+    it('rejects text without bot trigger at line start', () => {
+      expect(hasBotMention('Hello world')).toBe(false);
+      expect(hasBotMention('some random text')).toBe(false);
+    });
+
+    it('rejects when trigger is not at line start', () => {
+      expect(hasBotMention('run /lysbot merge')).toBe(false);
+      expect(hasBotMention('prefix /lysbot')).toBe(false);
+    });
   });
 });
 

@@ -7,6 +7,7 @@
  */
 
 import {
+  BOT_TRIGGER_REGEX,
   COMMAND_REGEX,
   VALID_FLAGS,
   VALID_AUTHOR_ASSOCIATIONS,
@@ -28,6 +29,17 @@ import type { ActionConfig, PullRequestData, CheckResult, MergeMethodResult, Mer
  */
 export function isConventionalCommitTitle(title: string): boolean {
   return CONVENTIONAL_COMMIT_REGEX.test(title);
+}
+
+/**
+ * Checks if a comment contains a bot trigger pattern at line start.
+ * Pattern: optional whitespace, slash, 2–5 characters, then "bot".
+ *
+ * @param commentBody - The body of the comment to check
+ * @returns true if the comment matches the bot trigger pattern
+ */
+export function hasBotMention(commentBody: string): boolean {
+  return BOT_TRIGGER_REGEX.test(commentBody);
 }
 
 /**
