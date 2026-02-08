@@ -78,7 +78,10 @@ Where:
 
 ### 2.2 Formatting Rules
 
-- Spacing MUST follow the pattern shown above (single space after commas and particles)
+- Spacing MUST follow the pattern shown above:
+  - Single space after "は、" (topic marker with comma)
+  - Single space after "したい。" before the benefit clause
+  - Single space after "のために" before the period
 - Punctuation MUST use the specified Japanese punctuation marks (、。)
 - The three components MUST appear in the specified order
 
