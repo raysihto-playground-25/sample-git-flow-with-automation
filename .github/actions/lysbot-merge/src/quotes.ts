@@ -34,6 +34,10 @@ const quotes: Record<QuoteCategory, Quote[]> = {
     { text: 'わくわくもんだぁ！', character: 'オーキド博士', series: 'ポケモン' },
     { text: 'プリキュア、がんばります！', series: 'プリキュア' },
     { text: 'ピカピカー！⚡', character: 'ピカチュウ', series: 'ポケモン' },
+    { text: 'やる気まんまん！行くよ！', series: 'ポケモン' },
+    { text: 'さあ、始めましょう！キラキラ輝く冒険を！✨', series: 'プリキュア' },
+    { text: 'いくぞー！みんな、力を合わせて！', series: 'ポケモン' },
+    { text: 'プリキュア・メタモルフォーゼ！', series: 'プリキュア' },
   ],
   checksPassed: [
     { text: 'きみにきめた！', character: 'サトシ', series: 'ポケモン' },
@@ -41,6 +45,10 @@ const quotes: Record<QuoteCategory, Quote[]> = {
     { text: 'プリキュア・スマイルチャージ！', series: 'スマイルプリキュア' },
     { text: 'みんなの力を合わせて、レッツゴー！', series: 'プリキュア' },
     { text: '100点満点！', series: 'ポケモン' },
+    { text: 'よーし！完璧だ！', series: 'ポケモン' },
+    { text: '準備万端！いつでもOKだよ！', series: 'ポケモン' },
+    { text: 'プリキュア・ラブリンク！準備完了！', series: 'プリキュア' },
+    { text: 'すべてクリア！素晴らしい！', series: 'ポケモン' },
   ],
   success: [
     { text: 'やったね！ポケモンマスターに一歩近づいたよ！', series: 'ポケモン' },
@@ -49,6 +57,11 @@ const quotes: Record<QuoteCategory, Quote[]> = {
     { text: 'キラキラ☆プリキュアアラモード！マージ完了！', series: 'キラキラ☆プリキュアアラモード' },
     { text: 'すごいぞ！まさにポケモントレーナーの鑑だね！', series: 'ポケモン' },
     { text: 'にこにこピース！✌️', series: 'プリキュア' },
+    { text: 'パーフェクト！大成功だよ！', series: 'ポケモン' },
+    { text: 'ミッションコンプリート！やったね！🎉', series: 'プリキュア' },
+    { text: 'サイコー！最強のチームワークだ！', series: 'ポケモン' },
+    { text: 'きらきら輝く勝利！おめでとう！⭐', series: 'プリキュア' },
+    { text: 'バッチリ決まった！これぞチャンピオンロード！', series: 'ポケモン' },
   ],
   checksFailed: [
     { text: 'まだまだトレーニングが必要だね！次は頑張ろう！', series: 'ポケモン' },
@@ -56,6 +69,9 @@ const quotes: Record<QuoteCategory, Quote[]> = {
     { text: 'ポケモンバトルは諦めたら終わり。もう一度挑戦だ！', series: 'ポケモン' },
     { text: '次はきっと上手くいくよ！', series: 'ポケモン' },
     { text: '大丈夫！みんなで力を合わせれば、きっとできるよ！', series: 'プリキュア' },
+    { text: '失敗は成功のもと！もう一回チャレンジ！', series: 'ポケモン' },
+    { text: '諦めない心が、明日への希望になる！', series: 'プリキュア' },
+    { text: 'まだまだこれから！次のバトルで勝とう！', series: 'ポケモン' },
   ],
 };
 

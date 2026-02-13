@@ -10,6 +10,7 @@ A TypeScript-based GitHub Action that provides automated PR merging via the `/ly
 - 🔀 **Smart merge method** - Automatically selects squash or merge commit based on branch patterns
 - 🔒 **Stale approval handling** - Dismisses approvals on outdated commits
 - 📊 **Detailed feedback** - Posts clear status messages to PR comments
+- 🎉 **Fun catchphrases** - Engaging messages from Pokémon and Precure to brighten your day
 - ✅ **Unit tested** - Comprehensive test suite with extensive test coverage
 
 ## Next Steps
@@ -244,3 +245,79 @@ The workflow must have the following permissions:
 > [!NOTE]
 >
 > **Authorization required**: Only organization owners, members, or collaborators with write access can use the command
+
+## Fun Catchphrases Feature 🎉
+
+lysbot-merge includes engaging messages inspired by popular Japanese franchises like Pokémon and Precure to make your merge operations more enjoyable!
+
+### What You'll See
+
+When you use `/lysbot merge`, you'll receive fun, encouraging messages at key moments:
+
+**1. When your command is recognized:**
+
+```markdown
+## 🤖 lysbot-merge starting!
+
+> 💬 ポケモンゲットだぜ！みんな、準備はいいかい？
+>
+> — サトシ (ポケモン)
+
+_Processing your merge request..._
+```
+
+**2. When all checks pass:**
+
+```markdown
+## Merge checks passed
+
+> 💬 きみにきめた！
+>
+> — サトシ (ポケモン)
+
+All checks passed. Proceeding to merge...
+```
+
+**3. When merge succeeds:**
+
+```markdown
+## Merged by lysbot-merge
+
+> 💬 ゲットだぜ！
+>
+> — サトシ (ポケモン)
+
+This PR has been successfully merged.
+```
+
+**4. When checks fail (encouraging retry):**
+
+```markdown
+## Merge checks failed
+
+...
+
+---
+
+> 💬 あきらめないで！プリキュアは何度でも立ち上がる！
+>
+> — プリキュア
+```
+
+### Quote Categories
+
+- **Greeting** (8 quotes): Welcoming messages when processing starts
+- **Checks Passed** (9 quotes): Celebrating when validation succeeds
+- **Success** (11 quotes): Joyful messages when merge completes
+- **Checks Failed** (8 quotes): Encouraging messages to try again
+
+### Why Catchphrases?
+
+The catchphrases feature aims to:
+
+- ✨ **Create excitement** through familiar, beloved characters
+- 😊 **Bring joy** to routine development tasks
+- 💪 **Encourage resilience** when things don't work the first time
+- 🎭 **Add personality** to automated processes
+
+Each quote is randomly selected from its category, so every interaction feels fresh and engaging!
