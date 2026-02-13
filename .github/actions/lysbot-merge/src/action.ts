@@ -337,12 +337,15 @@ export async function executeAction(
   }
 
   // Check final mergeability
-  if (prData.mergeable === false || prData.mergeable === null || prData.mergeableState === 'dirty') {
+  // Enforce the same mergeabilty requirements as initial checks to prevent TOCTOU issues
+  if (prData.mergeable === false || prData.mergeable === null || prData.mergeableState !== 'clean') {
     let errorComment: string;
     if (prData.mergeable === null) {
       errorComment = `## Mergeability status pending\n\n> [!NOTE]\n> GitHub is still calculating mergeability for this PR.\n>\n> - Mergeable: \`null\`\n> - Mergeable State: \`${prData.mergeableState}\`\n> - Retries: count=${config.mergeableRetryCount}, interval=${config.mergeableRetryInterval}s\n>\n> Please try \`/lysbot merge\` again shortly.`;
     } else if (prData.mergeableState === 'dirty') {
       errorComment = `## Conflicts detected\n\n> [!CAUTION]\n> This PR has merge conflicts that must be resolved before merging.\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\`\n>\n> Please resolve the conflicts and try again.`;
+    } else if (prData.mergeableState !== 'clean') {
+      errorComment = `## Mergeable state is not clean\n\n> [!CAUTION]\n> This PR's mergeable state changed during validation and is no longer clean.\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\` (${getMergeableStateDescription(prData.mergeableState)})\n>\n> Please resolve the issue and try \`/lysbot merge\` again.`;
     } else {
       errorComment = `## Cannot merge\n\n> [!CAUTION]\n> This PR cannot be merged:\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\`\n>\n> Please resolve any conflicts or issues before attempting to merge.`;
     }
