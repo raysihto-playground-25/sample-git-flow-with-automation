@@ -321,3 +321,7 @@ The catchphrases feature aims to:
 - 🎭 **Add personality** to automated processes
 
 Each quote is randomly selected from its category, so every interaction feels fresh and engaging!
+
+### Contributing Quotes
+
+Want to add more catchphrases? See **[QUOTES.md](./QUOTES.md)** for a comprehensive guide on contributing new quotes to lysbot-merge.
