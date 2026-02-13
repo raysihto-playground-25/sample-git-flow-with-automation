@@ -914,6 +914,135 @@ describe('executeAction', () => {
       expect(result.status).toBe('failed');
     });
 
+    it('fails when PR has unstable mergeable state (failing checks)', async () => {
+      const octokit = createMockOctokit();
+
+      octokit.rest.pulls.get.mockResolvedValue({
+        data: {
+          state: 'open',
+          locked: false,
+          draft: false,
+          merged: false,
+          mergeable: true,
+          mergeable_state: 'unstable',
+          head: {
+            sha: 'abc1234567890',
+            ref: 'feature/test',
+            repo: { fork: false, owner: { id: 1 } },
+          },
+          base: {
+            ref: 'develop',
+            repo: { owner: { id: 1 } },
+          },
+          user: { login: 'testuser' },
+          title: 'feat: test pull request',
+        },
+      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
+
+      // Mock valid approval
+      octokit.paginate.mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('failed');
+    });
+
+    it('fails when PR has blocked mergeable state (branch protection)', async () => {
+      const octokit = createMockOctokit();
+
+      octokit.rest.pulls.get.mockResolvedValue({
+        data: {
+          state: 'open',
+          locked: false,
+          draft: false,
+          merged: false,
+          mergeable: true,
+          mergeable_state: 'blocked',
+          head: {
+            sha: 'abc1234567890',
+            ref: 'feature/test',
+            repo: { fork: false, owner: { id: 1 } },
+          },
+          base: {
+            ref: 'develop',
+            repo: { owner: { id: 1 } },
+          },
+          user: { login: 'testuser' },
+          title: 'feat: test pull request',
+        },
+      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
+
+      // Mock valid approval
+      octokit.paginate.mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('failed');
+    });
+
+    it('fails when PR has behind mergeable state (needs update)', async () => {
+      const octokit = createMockOctokit();
+
+      octokit.rest.pulls.get.mockResolvedValue({
+        data: {
+          state: 'open',
+          locked: false,
+          draft: false,
+          merged: false,
+          mergeable: true,
+          mergeable_state: 'behind',
+          head: {
+            sha: 'abc1234567890',
+            ref: 'feature/test',
+            repo: { fork: false, owner: { id: 1 } },
+          },
+          base: {
+            ref: 'develop',
+            repo: { owner: { id: 1 } },
+          },
+          user: { login: 'testuser' },
+          title: 'feat: test pull request',
+        },
+      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
+
+      // Mock valid approval
+      octokit.paginate.mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'reviewer' },
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('failed');
+    });
+
     it('handles merge API failure', async () => {
       const octokit = createMockOctokit();
 
