@@ -344,10 +344,11 @@ export async function executeAction(
       errorComment = `## Mergeability status pending\n\n> [!NOTE]\n> GitHub is still calculating mergeability for this PR.\n>\n> - Mergeable: \`null\`\n> - Mergeable State: \`${prData.mergeableState}\`\n> - Retries: count=${config.mergeableRetryCount}, interval=${config.mergeableRetryInterval}s\n>\n> Please try \`/lysbot merge\` again shortly.`;
     } else if (prData.mergeableState === 'dirty') {
       errorComment = `## Conflicts detected\n\n> [!CAUTION]\n> This PR has merge conflicts that must be resolved before merging.\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\`\n>\n> Please resolve the conflicts and try again.`;
-    } else if (prData.mergeableState !== 'clean') {
-      errorComment = `## Mergeable state is not clean\n\n> [!CAUTION]\n> This PR's mergeable state changed during validation and is no longer clean.\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\` (${getMergeableStateDescription(prData.mergeableState)})\n>\n> Please resolve the issue and try \`/lysbot merge\` again.`;
-    } else {
+    } else if (prData.mergeable === false) {
       errorComment = `## Cannot merge\n\n> [!CAUTION]\n> This PR cannot be merged:\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\`\n>\n> Please resolve any conflicts or issues before attempting to merge.`;
+    } else {
+      // mergeableState is not 'clean' (e.g., 'behind', 'blocked', 'unstable')
+      errorComment = `## Mergeable state is not clean\n\n> [!CAUTION]\n> This PR's mergeable state changed during validation and is no longer clean.\n>\n> - Mergeable: \`${prData.mergeable}\`\n> - Mergeable State: \`${prData.mergeableState}\` (${getMergeableStateDescription(prData.mergeableState)})\n>\n> Please resolve the issue and try \`/lysbot merge\` again.`;
     }
     await postComment(octokit, owner, repo, prNumber, errorComment);
     return { status: 'failed', message: 'Not mergeable' };
