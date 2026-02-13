@@ -52,6 +52,31 @@ function createEventContext(overrides: Partial<EventContext> = {}): EventContext
   };
 }
 
+/**
+ * Creates a mock PR with specific mergeable_state for testing non-clean states.
+ */
+function createPRWithMergeableState(mergeableState: string, mergeable = true) {
+  return {
+    state: 'open',
+    locked: false,
+    draft: false,
+    merged: false,
+    mergeable,
+    mergeable_state: mergeableState,
+    head: {
+      sha: 'abc1234567890',
+      ref: 'feature/test',
+      repo: { fork: false, owner: { id: 1 } },
+    },
+    base: {
+      ref: 'develop',
+      repo: { owner: { id: 1 } },
+    },
+    user: { login: 'testuser' },
+    title: 'feat: test pull request',
+  };
+}
+
 describe('executeAction', () => {
   describe('event type validation', () => {
     it('skips processing for non-issue_comment events', async () => {
@@ -918,25 +943,7 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       octokit.rest.pulls.get.mockResolvedValue({
-        data: {
-          state: 'open',
-          locked: false,
-          draft: false,
-          merged: false,
-          mergeable: true,
-          mergeable_state: 'unstable',
-          head: {
-            sha: 'abc1234567890',
-            ref: 'feature/test',
-            repo: { fork: false, owner: { id: 1 } },
-          },
-          base: {
-            ref: 'develop',
-            repo: { owner: { id: 1 } },
-          },
-          user: { login: 'testuser' },
-          title: 'feat: test pull request',
-        },
+        data: createPRWithMergeableState('unstable', true),
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock valid approval
@@ -961,25 +968,7 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       octokit.rest.pulls.get.mockResolvedValue({
-        data: {
-          state: 'open',
-          locked: false,
-          draft: false,
-          merged: false,
-          mergeable: true,
-          mergeable_state: 'blocked',
-          head: {
-            sha: 'abc1234567890',
-            ref: 'feature/test',
-            repo: { fork: false, owner: { id: 1 } },
-          },
-          base: {
-            ref: 'develop',
-            repo: { owner: { id: 1 } },
-          },
-          user: { login: 'testuser' },
-          title: 'feat: test pull request',
-        },
+        data: createPRWithMergeableState('blocked', true),
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock valid approval
@@ -1004,25 +993,7 @@ describe('executeAction', () => {
       const octokit = createMockOctokit();
 
       octokit.rest.pulls.get.mockResolvedValue({
-        data: {
-          state: 'open',
-          locked: false,
-          draft: false,
-          merged: false,
-          mergeable: true,
-          mergeable_state: 'behind',
-          head: {
-            sha: 'abc1234567890',
-            ref: 'feature/test',
-            repo: { fork: false, owner: { id: 1 } },
-          },
-          base: {
-            ref: 'develop',
-            repo: { owner: { id: 1 } },
-          },
-          user: { login: 'testuser' },
-          title: 'feat: test pull request',
-        },
+        data: createPRWithMergeableState('behind', true),
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock valid approval
