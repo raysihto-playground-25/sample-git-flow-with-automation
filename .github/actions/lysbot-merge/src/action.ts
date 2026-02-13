@@ -337,7 +337,7 @@ export async function executeAction(
   }
 
   // Check final mergeability
-  // Enforce the same mergeabilty requirements as initial checks to prevent TOCTOU issues
+  // Enforce the same mergeability requirements as initial checks to prevent TOCTOU issues
   if (prData.mergeable === false || prData.mergeable === null || prData.mergeableState !== 'clean') {
     let errorComment: string;
     if (prData.mergeable === null) {
