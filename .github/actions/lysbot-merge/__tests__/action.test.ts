@@ -55,7 +55,10 @@ function createEventContext(overrides: Partial<EventContext> = {}): EventContext
 /**
  * Creates a mock PR with specific mergeable_state for testing non-clean states.
  */
-function createPRWithMergeableState(mergeableState: string, mergeable = true) {
+function createPRWithMergeableState(
+  mergeableState: 'clean' | 'dirty' | 'unstable' | 'blocked' | 'behind' | 'unknown',
+  mergeable = true
+) {
   return {
     state: 'open',
     locked: false,
