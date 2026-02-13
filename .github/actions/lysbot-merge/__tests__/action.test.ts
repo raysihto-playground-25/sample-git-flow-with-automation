@@ -57,7 +57,7 @@ function createEventContext(overrides: Partial<EventContext> = {}): EventContext
  */
 function createPRWithMergeableState(
   mergeableState: 'clean' | 'dirty' | 'unstable' | 'blocked' | 'behind' | 'unknown',
-  mergeable = true
+  mergeable = true,
 ) {
   return {
     state: 'open',
