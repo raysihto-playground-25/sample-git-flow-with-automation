@@ -56,7 +56,7 @@ function createEventContext(overrides: Partial<EventContext> = {}): EventContext
  * Creates a mock PR with specific mergeable_state for testing non-clean states.
  */
 function createPRWithMergeableState(
-  mergeableState: 'clean' | 'dirty' | 'unstable' | 'blocked' | 'behind' | 'unknown',
+  mergeableState: 'clean' | 'dirty' | 'unstable' | 'blocked' | 'behind' | 'unknown' | 'has_hooks' | 'draft',
   mergeable = true,
 ) {
   return {
@@ -927,6 +927,7 @@ describe('executeAction', () => {
       const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
+      expect(result.message).toContain('checks failed');
     });
 
     it('handles merge API failure', async () => {
