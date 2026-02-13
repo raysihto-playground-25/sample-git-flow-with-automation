@@ -337,7 +337,8 @@ export async function executeAction(
   }
 
   // Check final mergeability
-  if (prData.mergeable === false || prData.mergeable === null || prData.mergeableState === 'dirty') {
+  // Final mergeability gate to prevent TOCTOU issues, revalidating both mergeable flag and mergeableState
+  if (prData.mergeable === false || prData.mergeable === null || prData.mergeableState !== 'clean') {
     let errorComment: string;
     if (prData.mergeable === null) {
       errorComment = `## Mergeability status pending\n\n> [!NOTE]\n> GitHub is still calculating mergeability for this PR.\n>\n> - Mergeable: \`null\`\n> - Mergeable State: \`${prData.mergeableState}\`\n> - Retries: count=${config.mergeableRetryCount}, interval=${config.mergeableRetryInterval}s\n>\n> Please try \`/lysbot merge\` again shortly.`;
