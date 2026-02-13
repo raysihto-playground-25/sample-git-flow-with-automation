@@ -237,12 +237,12 @@ export async function executeAction(
     ...(approvalOverridden && { optional: true }),
   };
 
-  // Merge conflicts check (based on mergeable_state)
-  const noConflicts = prData.mergeableState === 'clean';
-  const conflictsCheck: CheckResult = {
-    name: 'No merge conflicts',
-    passed: noConflicts,
-    ...(!noConflicts && { details: getMergeableStateDescription(prData.mergeableState) }),
+  // Mergeable-state check: this tool allows merge only when mergeable_state is 'clean'.
+  const mergeableStateIsClean = prData.mergeableState === 'clean';
+  const mergeableStateCheck: CheckResult = {
+    name: 'Mergeable state is clean',
+    passed: mergeableStateIsClean,
+    ...(!mergeableStateIsClean && { details: getMergeableStateDescription(prData.mergeableState) }),
   };
 
   // Optional: Conventional Commits check for PR title
@@ -262,7 +262,7 @@ export async function executeAction(
     ...prStateChecks,
     threadsCheck,
     approvalCheck,
-    conflictsCheck,
+    mergeableStateCheck,
     conventionalCommitsCheck,
   ];
 
