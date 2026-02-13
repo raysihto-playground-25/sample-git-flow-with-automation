@@ -21,6 +21,7 @@ import {
   mergePullRequest,
   fetchPullRequestCommits,
 } from './github-api.js';
+import { getFormattedRandomQuote } from './quotes.js';
 import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types.js';
 import {
   isBot,
@@ -111,6 +112,16 @@ export async function executeAction(
     );
     return { status: 'skipped', message: 'Command not recognized' };
   }
+
+  // Add a fun greeting after command validation passes
+  const greetingQuote = getFormattedRandomQuote('greeting');
+  await postComment(
+    octokit,
+    owner,
+    repo,
+    prNumber,
+    `## 🤖 lysbot-merge starting!\n\n${greetingQuote}\n\n_Processing your merge request..._`,
+  );
 
   // Check author association
   if (!hasValidAuthorAssociation(authorAssociation)) {
@@ -276,23 +287,25 @@ export async function executeAction(
   // -------------------------------------------------------------------------
 
   if (!allPassed) {
+    const encouragementQuote = getFormattedRandomQuote('checksFailed');
     await postComment(
       octokit,
       owner,
       repo,
       prNumber,
-      `## Merge checks failed\n\nThe following checks must pass before merging:\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`,
+      `## Merge checks failed\n\nThe following checks must pass before merging:\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}\n\n---\n\n${encouragementQuote}`,
     );
     return { status: 'failed', message: 'Merge checks failed' };
   }
 
   // All checks passed - post status and proceed to merge
+  const checksPassedQuote = getFormattedRandomQuote('checksPassed');
   await postComment(
     octokit,
     owner,
     repo,
     prNumber,
-    `## Merge checks passed\n\nAll checks passed. Proceeding to merge...\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`,
+    `## Merge checks passed\n\n${checksPassedQuote}\n\nAll checks passed. Proceeding to merge...\n\n${checksMarkdown}\n\n### Merge Method\n\n- **Method:** \`${mergeMethodResult.method}\`\n- **Reason:** ${mergeMethodResult.reason}`,
   );
 
   // -------------------------------------------------------------------------
@@ -442,12 +455,13 @@ export async function executeAction(
     mergeCommitInfo = `\n- **Merge Commit SHA:** ${mergeResult.mergeCommitSha}`;
   }
 
+  const successQuote = getFormattedRandomQuote('success');
   await postComment(
     octokit,
     owner,
     repo,
     prNumber,
-    `## Merged by lysbot-merge\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** ${originalHeadSha}${mergeCommitInfo}`,
+    `## Merged by lysbot-merge\n\n${successQuote}\n\nThis PR has been successfully merged.\n\n### Details\n\n- **Merge Method:** \`${mergeMethodResult.method}\`\n- **Base Branch:** \`${prData.baseRef}\`\n- **Head Branch:** \`${prData.headRef}\`\n- **HEAD SHA:** ${originalHeadSha}${mergeCommitInfo}`,
   );
 
   return {
