@@ -899,58 +899,16 @@ describe('executeAction', () => {
       expect(result.message).toContain('Not mergeable');
     });
 
-    it('fails when PR has dirty mergeable state (conflicts)', async () => {
-      const octokit = createMockOctokit();
-
-      octokit.rest.pulls.get.mockResolvedValue({
-        data: {
-          state: 'open',
-          locked: false,
-          draft: false,
-          merged: false,
-          mergeable: false,
-          mergeable_state: 'dirty',
-          head: {
-            sha: 'abc1234567890',
-            ref: 'feature/test',
-            repo: { fork: false, owner: { id: 1 } },
-          },
-          base: {
-            ref: 'develop',
-            repo: { owner: { id: 1 } },
-          },
-          user: { login: 'testuser' },
-          title: 'feat: test pull request',
-        },
-      } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
-
-      // Mock valid approval
-      octokit.paginate.mockResolvedValue([
-        {
-          id: 1,
-          state: 'APPROVED',
-          commit_id: 'abc1234567890',
-          user: { login: 'reviewer' },
-        },
-      ]);
-
-      const context = createEventContext();
-      const config = createConfig();
-
-      const result = await executeAction(octokit, context, config);
-
-      expect(result.status).toBe('failed');
-    });
-
     it.each([
-      { state: 'unstable', description: 'failing checks' },
-      { state: 'blocked', description: 'branch protection' },
-      { state: 'behind', description: 'needs update' },
-    ] as const)('fails when PR has $state mergeable state ($description)', async ({ state }) => {
+      { state: 'dirty', description: 'conflicts', mergeable: false },
+      { state: 'unstable', description: 'failing checks', mergeable: true },
+      { state: 'blocked', description: 'branch protection', mergeable: true },
+      { state: 'behind', description: 'needs update', mergeable: true },
+    ] as const)('fails when PR has $state mergeable state ($description)', async ({ state, mergeable }) => {
       const octokit = createMockOctokit();
 
       octokit.rest.pulls.get.mockResolvedValue({
-        data: createPRWithMergeableState(state, true),
+        data: createPRWithMergeableState(state, mergeable),
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock valid approval
