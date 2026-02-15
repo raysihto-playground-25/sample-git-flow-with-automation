@@ -52,6 +52,34 @@ function createEventContext(overrides: Partial<EventContext> = {}): EventContext
   };
 }
 
+/**
+ * Creates a mock PR with specific mergeable_state for testing non-clean states.
+ */
+function createPRWithMergeableState(
+  mergeableState: 'clean' | 'dirty' | 'unstable' | 'blocked' | 'behind' | 'unknown' | 'has_hooks' | 'draft',
+  mergeable = true,
+) {
+  return {
+    state: 'open',
+    locked: false,
+    draft: false,
+    merged: false,
+    mergeable,
+    mergeable_state: mergeableState,
+    head: {
+      sha: 'abc1234567890',
+      ref: 'feature/test',
+      repo: { fork: false, owner: { id: 1 } },
+    },
+    base: {
+      ref: 'develop',
+      repo: { owner: { id: 1 } },
+    },
+    user: { login: 'testuser' },
+    title: 'feat: test pull request',
+  };
+}
+
 describe('executeAction', () => {
   describe('event type validation', () => {
     it('skips processing for non-issue_comment events', async () => {
@@ -871,29 +899,16 @@ describe('executeAction', () => {
       expect(result.message).toContain('Not mergeable');
     });
 
-    it('fails when PR has dirty mergeable state (conflicts)', async () => {
+    it.each([
+      { state: 'dirty', description: 'conflicts', mergeable: false },
+      { state: 'unstable', description: 'failing checks', mergeable: true },
+      { state: 'blocked', description: 'branch protection', mergeable: true },
+      { state: 'behind', description: 'needs update', mergeable: true },
+    ] as const)('fails when PR has $state mergeable state ($description)', async ({ state, mergeable }) => {
       const octokit = createMockOctokit();
 
       octokit.rest.pulls.get.mockResolvedValue({
-        data: {
-          state: 'open',
-          locked: false,
-          draft: false,
-          merged: false,
-          mergeable: false,
-          mergeable_state: 'dirty',
-          head: {
-            sha: 'abc1234567890',
-            ref: 'feature/test',
-            repo: { fork: false, owner: { id: 1 } },
-          },
-          base: {
-            ref: 'develop',
-            repo: { owner: { id: 1 } },
-          },
-          user: { login: 'testuser' },
-          title: 'feat: test pull request',
-        },
+        data: createPRWithMergeableState(state, mergeable),
       } as unknown as Awaited<ReturnType<typeof octokit.rest.pulls.get>>);
 
       // Mock valid approval
@@ -912,6 +927,7 @@ describe('executeAction', () => {
       const result = await executeAction(octokit, context, config);
 
       expect(result.status).toBe('failed');
+      expect(result.message).toContain('checks failed');
     });
 
     it('handles merge API failure', async () => {

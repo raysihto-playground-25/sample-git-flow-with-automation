@@ -439,27 +439,31 @@ describe('getMergeableStateDescription', () => {
   });
 
   it('should return correct description for blocked state', () => {
-    expect(getMergeableStateDescription('blocked')).toContain('blocked');
+    expect(getMergeableStateDescription('blocked')).toBe('failing or missing required status checks');
   });
 
   it('should return correct description for unstable state', () => {
-    expect(getMergeableStateDescription('unstable')).toContain('failing status checks');
+    expect(getMergeableStateDescription('unstable')).toBe('optional status checks pending or failing');
   });
 
   it('should return correct description for behind state', () => {
-    expect(getMergeableStateDescription('behind')).toContain('behind');
+    expect(getMergeableStateDescription('behind')).toBe('head branch is behind base branch');
   });
 
   it('should return correct description for unknown state', () => {
-    expect(getMergeableStateDescription('unknown')).toContain('not yet computed');
+    expect(getMergeableStateDescription('unknown')).toBe('mergeability not yet computed; please retry');
   });
 
   it('should return correct description for has_hooks state', () => {
-    expect(getMergeableStateDescription('has_hooks')).toContain('hooks');
+    expect(getMergeableStateDescription('has_hooks')).toBe('repository has custom pre-receive hooks');
   });
 
   it('should return correct description for clean state', () => {
     expect(getMergeableStateDescription('clean')).toBe('ready to merge');
+  });
+
+  it('should return correct description for draft state', () => {
+    expect(getMergeableStateDescription('draft')).toBe('draft PR; not ready for review');
   });
 
   it('should return fallback for unknown states', () => {
