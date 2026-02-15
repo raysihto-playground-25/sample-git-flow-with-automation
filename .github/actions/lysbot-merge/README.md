@@ -155,7 +155,7 @@ Before merging, the action validates:
 1. ✅ PR is ready for review (open, unlocked, and not a draft)
 2. ✅ All review conversations are resolved
 3. ✅ At least one valid approval from another user
-4. ✅ No merge conflicts
+4. ✅ Mergeable state is clean
 5. ✅ PR title follows Conventional Commits
 
 ### Check Status Icons

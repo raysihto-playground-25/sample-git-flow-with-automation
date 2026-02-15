@@ -237,12 +237,12 @@ export async function executeAction(
     ...(approvalOverridden && { optional: true }),
   };
 
-  // Merge conflicts check (based on mergeable_state)
-  const noConflicts = prData.mergeableState === 'clean';
-  const conflictsCheck: CheckResult = {
-    name: 'No merge conflicts',
-    passed: noConflicts,
-    ...(!noConflicts && { details: getMergeableStateDescription(prData.mergeableState) }),
+  // Mergeable-state check: this tool allows merge only when mergeable_state is 'clean'.
+  const mergeableStateIsClean = prData.mergeableState === 'clean';
+  const mergeableStateCheck: CheckResult = {
+    name: 'Mergeable state is clean',
+    passed: mergeableStateIsClean,
+    ...(!mergeableStateIsClean && { details: getMergeableStateDescription(prData.mergeableState) }),
   };
 
   // Optional: Conventional Commits check for PR title
@@ -262,7 +262,7 @@ export async function executeAction(
     ...prStateChecks,
     threadsCheck,
     approvalCheck,
-    conflictsCheck,
+    mergeableStateCheck,
     conventionalCommitsCheck,
   ];
 
@@ -337,7 +337,8 @@ export async function executeAction(
   }
 
   // Check final mergeability
-  if (prData.mergeable === false || prData.mergeable === null || prData.mergeableState === 'dirty') {
+  // Final mergeability gate to prevent TOCTOU issues, revalidating both mergeable flag and mergeableState
+  if (prData.mergeable === false || prData.mergeable === null || prData.mergeableState !== 'clean') {
     let errorComment: string;
     if (prData.mergeable === null) {
       errorComment = `## Mergeability status pending\n\n> [!NOTE]\n> GitHub is still calculating mergeability for this PR.\n>\n> - Mergeable: \`null\`\n> - Mergeable State: \`${prData.mergeableState}\`\n> - Retries: count=${config.mergeableRetryCount}, interval=${config.mergeableRetryInterval}s\n>\n> Please try \`/lysbot merge\` again shortly.`;
