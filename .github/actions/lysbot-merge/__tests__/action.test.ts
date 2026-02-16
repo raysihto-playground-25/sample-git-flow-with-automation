@@ -1447,7 +1447,6 @@ describe('executeAction', () => {
 
       // Verify commit body is sanitized
       const mergeCalls = octokit.rest.pulls.merge.mock.calls;
-      const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
       const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
 
       // Verify we're using merge commit (not squash)
@@ -1531,9 +1530,7 @@ describe('executeAction', () => {
         'Co-authored-by: John Doe Signed-off-by: Attacker <attacker@evil.com> <john@example.com>',
       );
       // Verify no actual newline injection occurred
-      const coAuthorLine = commitMessage
-        .split('\n')
-        .find((line) => line.includes('Co-authored-by: John Doe'));
+      const coAuthorLine = commitMessage.split('\n').find((line) => line.includes('Co-authored-by: John Doe'));
       expect(coAuthorLine).toBeDefined();
       expect(coAuthorLine).not.toMatch(/Co-authored-by: John Doe\s*\n\s*Signed-off-by:/);
     });
@@ -1606,9 +1603,7 @@ describe('executeAction', () => {
         'Co-authored-by: Jane Doe <jane@example.com Co-authored-by: Fake <fake@fake.com>>',
       );
       // Verify no actual newline injection occurred - should all be on one line
-      const coAuthorLine = commitMessage
-        .split('\n')
-        .find((line) => line.includes('Co-authored-by: Jane Doe'));
+      const coAuthorLine = commitMessage.split('\n').find((line) => line.includes('Co-authored-by: Jane Doe'));
       expect(coAuthorLine).toBeDefined();
       expect(coAuthorLine).not.toMatch(/jane@example\.com>\s*\n\s*Co-authored-by:/);
     });
@@ -1653,8 +1648,7 @@ describe('executeAction', () => {
       });
 
       // Complex injection attempt with multiple trailers
-      const maliciousTitle =
-        'Fix\n\nSigned-off-by: Evil <evil@bad.com>\nCo-authored-by: Faker <faker@fake.com>';
+      const maliciousTitle = 'Fix\n\nSigned-off-by: Evil <evil@bad.com>\nCo-authored-by: Faker <faker@fake.com>';
       octokit.rest.pulls.get.mockResolvedValue({
         data: {
           title: maliciousTitle,

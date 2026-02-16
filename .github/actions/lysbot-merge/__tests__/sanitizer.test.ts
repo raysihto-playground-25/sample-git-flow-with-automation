@@ -52,8 +52,7 @@ describe('sanitizeNewlines', () => {
     });
 
     it('should prevent multiple trailer injection in PR title', () => {
-      const maliciousTitle =
-        'Urgent fix\n\nSigned-off-by: Evil <evil@bad.com>\nCo-authored-by: Faker <faker@fake.com>';
+      const maliciousTitle = 'Urgent fix\n\nSigned-off-by: Evil <evil@bad.com>\nCo-authored-by: Faker <faker@fake.com>';
       const sanitized = sanitizeNewlines(maliciousTitle);
       expect(sanitized).not.toContain('\n');
       expect(sanitized.split('\n')).toHaveLength(1);
@@ -93,9 +92,7 @@ describe('sanitizeNewlines', () => {
     });
 
     it('should handle strings without newlines', () => {
-      expect(sanitizeNewlines('Normal text without newlines')).toBe(
-        'Normal text without newlines',
-      );
+      expect(sanitizeNewlines('Normal text without newlines')).toBe('Normal text without newlines');
     });
 
     it('should preserve other whitespace characters', () => {
