@@ -182,14 +182,33 @@ export async function executeAction(
   let validApprovals = 0;
   const dismissFailures: string[] = [];
 
+  // Cache permission lookups to avoid redundant API calls for the same reviewer
+  const permissionCache = new Map<string, string>();
+
   for (const review of approvedReviews) {
     // Skip self-approval
     if (review.user?.login === prData.author) {
       continue;
     }
 
-    // Skip reviews from users without valid author association
-    if (!hasValidAuthorAssociation(review.author_association ?? '')) {
+    // Skip reviews from users without sufficient permissions
+    // Note: We check permission level via API instead of review.author_association
+    // because GitHub App tokens (GITHUB_TOKEN) may return 'NONE' for author_association
+    // even when the user has valid permissions. See: https://github.com/orgs/community/discussions/70568
+    const reviewerLogin = review.user?.login;
+    if (!reviewerLogin) {
+      // Skip reviews from deleted users or users without login
+      continue;
+    }
+
+    // Check cache first to avoid redundant API calls
+    let reviewerPermission = permissionCache.get(reviewerLogin);
+    if (reviewerPermission === undefined) {
+      reviewerPermission = await getCollaboratorPermission(octokit, owner, repo, reviewerLogin);
+      permissionCache.set(reviewerLogin, reviewerPermission);
+    }
+
+    if (!hasValidPermission(reviewerPermission)) {
       continue;
     }
 
