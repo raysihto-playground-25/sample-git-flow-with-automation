@@ -237,11 +237,25 @@ The workflow must have the following permissions:
 
 ### User Authorization
 
-Only users with **write access** or higher can execute the `/lysbot merge` command. Specifically, the following user types are authorized:
+To execute the `/lysbot merge` command, users must satisfy **both** of the following requirements:
 
-- **Repository owners** - Full repository ownership
-- **Organization members** - Members of the organization owning the repository
-- **Collaborators with write access** - External collaborators explicitly granted write permissions
+1. **Author Association**: Must be one of the following:
+   - **OWNER** - Repository owner
+   - **MEMBER** - Organization member
+   - **COLLABORATOR** - Explicitly added as a collaborator
+
+2. **Permission Level**: Must have one of the following permissions:
+   - **admin** - Full administrative access
+   - **maintain** - Maintain access (manage repository without destructive actions)
+   - **write** - Write access (push to repository)
+
+Both checks are performed because:
+
+- **Author association** verifies the user's relationship to the repository
+- **Permission level** confirms the user has actual write capabilities
+
+> [!NOTE]
+> **Approval validation uses different criteria**: When validating PR approvals, the action only checks the reviewer's permission level (admin/maintain/write) and does not check author association. This is because GitHub App tokens (like `GITHUB_TOKEN`) may return `'NONE'` for author_association even for valid collaborators. See [GitHub Community Discussion #70568](https://github.com/orgs/community/discussions/70568).
 
 Users without sufficient permissions will receive a clear error message when attempting to use the command.
 

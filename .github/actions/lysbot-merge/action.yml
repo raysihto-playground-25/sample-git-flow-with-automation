@@ -33,6 +33,11 @@
 # - This Action has no stable release yet. Please use `@develop` until the
 #   first versioned tag becomes available.
 #
+# AUTHORIZATION:
+# - Users must have BOTH valid author association (OWNER/MEMBER/COLLABORATOR)
+#   AND write-level permissions (admin/maintain/write) to execute /lysbot merge
+# - See README.md "User Authorization" section for complete details
+#
 # LIMITATIONS:
 # - Fork PRs are NOT supported (this action explicitly rejects fork PRs as a
 #   design decision; typical usage with passed GITHUB_TOKEN has restrictions)
