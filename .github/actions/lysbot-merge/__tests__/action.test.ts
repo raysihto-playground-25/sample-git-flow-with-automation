@@ -331,6 +331,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -361,6 +362,91 @@ describe('executeAction', () => {
 
       expect(result.status).toBe('failed');
       expect(result.message).toContain('checks failed');
+    });
+
+    it('skips reviews from users without valid author association', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock reviews from users with invalid author associations
+      octokit.paginate.mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'contributor' },
+          author_association: 'CONTRIBUTOR', // Invalid association
+        },
+        {
+          id: 2,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'firsttimer' },
+          author_association: 'FIRST_TIME_CONTRIBUTOR', // Invalid association
+        },
+        {
+          id: 3,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: { login: 'none' },
+          author_association: 'NONE', // Invalid association
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      // Should fail because no reviews have valid author association
+      expect(result.status).toBe('failed');
+      expect(result.message).toContain('checks failed');
+    });
+
+    it('accepts reviews with valid author association and skips invalid ones', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock mix of valid and invalid author associations
+      let paginateCalls = 0;
+      octokit.paginate.mockImplementation(async () => {
+        paginateCalls++;
+        if (paginateCalls === 1) {
+          // First call: approved reviews
+          return [
+            {
+              id: 1,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'contributor' },
+              author_association: 'CONTRIBUTOR', // Invalid - should be skipped
+            },
+            {
+              id: 2,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'member' },
+              author_association: 'MEMBER', // Valid - should count
+            },
+            {
+              id: 3,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'collaborator' },
+              author_association: 'COLLABORATOR', // Valid - should count
+            },
+          ];
+        } else {
+          // Second call: commits for squash merge
+          return [{ commit: { message: 'feat: add feature' } }];
+        }
+      });
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      // Should succeed with 2 valid approvals (MEMBER and COLLABORATOR)
+      expect(result.status).toBe('merged');
     });
 
     it('Case A: fails when no approvals and no override flag, shows cross icon', async () => {
@@ -492,6 +578,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -549,6 +636,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'oldcommit456', // Different from currenthead123
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -606,6 +694,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'oldcommit456',
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -667,6 +756,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -706,6 +796,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -769,6 +860,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'original123',
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -827,6 +919,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -884,6 +977,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'abc1234567890',
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -918,6 +1012,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'abc1234567890',
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -944,6 +1039,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -1010,6 +1106,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -1065,6 +1162,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'abc1234567890',
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -1127,6 +1225,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -1178,6 +1277,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -1219,6 +1319,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -1284,6 +1385,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {

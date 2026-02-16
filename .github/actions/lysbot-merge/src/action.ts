@@ -188,6 +188,11 @@ export async function executeAction(
       continue;
     }
 
+    // Skip reviews from users without valid author association
+    if (!hasValidAuthorAssociation(review.author_association ?? '')) {
+      continue;
+    }
+
     // Check if review is stale (not on current HEAD)
     if (review.commit_id !== prData.headSha) {
       const message = `Approval dismissed: New commits were pushed after this review was submitted (reviewed commit: ${review.commit_id?.slice(0, 7)}, current HEAD: ${prData.headSha.slice(0, 7)}).`;
@@ -197,9 +202,10 @@ export async function executeAction(
           `- Failed to dismiss approval from @${review.user?.login} (insufficient permissions or branch protection settings)`,
         );
       }
-    } else {
-      validApprovals++;
+      continue;
     }
+
+    validApprovals++;
   }
 
   // Post stale dismissal notification only when there are failures.
