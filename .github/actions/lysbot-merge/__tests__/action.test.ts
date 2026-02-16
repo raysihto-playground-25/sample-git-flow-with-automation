@@ -1325,6 +1325,364 @@ describe('executeAction', () => {
       expect(parts.at(-1)).toContain('Merged-by: lysbot-merge');
     });
   });
+
+  // =============================================================================
+  // Security Tests - Newline Injection Prevention
+  // =============================================================================
+  describe('Security: Newline injection prevention', () => {
+    it('sanitizes newlines in PR title for squash commits', async () => {
+      const octokit = createMockOctokit();
+
+      let paginateCalls = 0;
+      octokit.paginate.mockImplementation(async () => {
+        paginateCalls++;
+        if (paginateCalls === 1) {
+          return [
+            {
+              id: 1,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'reviewer' },
+            },
+          ];
+        } else if (paginateCalls === 2) {
+          return [
+            {
+              sha: 'abc1234567890',
+              commit: {
+                message: 'feat: add feature',
+                author: { name: 'John Doe', email: 'john@example.com' },
+              },
+            },
+          ];
+        } else if (paginateCalls === 3) {
+          return []; // No unresolved threads
+        }
+        return [];
+      });
+
+      const context = createEventContext({
+        prNumber: 1,
+        commentBody: '/lysbot merge',
+      });
+
+      // Malicious PR title with newline injection attempt
+      const maliciousTitle = 'Fix bug\nSigned-off-by: Attacker <attacker@evil.com>';
+      octokit.rest.pulls.get.mockResolvedValue({
+        data: {
+          title: maliciousTitle,
+          base: { ref: 'develop' },
+          head: { ref: 'feature/test', sha: 'abc1234567890' },
+          state: 'open',
+          draft: false,
+          mergeable: true,
+          mergeable_state: 'clean',
+          user: { login: 'testuser' },
+        },
+      } as never);
+
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+
+      // Verify commit title is sanitized
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
+      const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
+
+      // Should not contain newlines
+      expect(commitTitle).not.toContain('\n');
+      expect(commitTitle).not.toContain('\r');
+      // Should contain sanitized version (newline replaced with space)
+      expect(commitTitle).toContain('Fix bug Signed-off-by: Attacker <attacker@evil.com>');
+    });
+
+    it('sanitizes newlines in PR title for merge commits', async () => {
+      const octokit = createMockOctokit();
+
+      let paginateCalls = 0;
+      octokit.paginate.mockImplementation(async () => {
+        paginateCalls++;
+        if (paginateCalls === 1) {
+          return [
+            {
+              id: 1,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'reviewer' },
+            },
+          ];
+        } else if (paginateCalls === 2) {
+          return []; // No unresolved threads
+        }
+        return [];
+      });
+
+      const context = createEventContext({
+        prNumber: 1,
+        commentBody: '/lysbot merge',
+      });
+
+      // Malicious PR title with newline injection
+      const maliciousTitle = 'Feature\nCo-authored-by: Fake <fake@fake.com>';
+      octokit.rest.pulls.get.mockResolvedValue({
+        data: {
+          title: maliciousTitle,
+          base: { ref: 'main' }, // Use main to trigger merge commit path
+          head: { ref: 'feature/test', sha: 'abc1234567890' },
+          state: 'open',
+          draft: false,
+          mergeable: true,
+          mergeable_state: 'clean',
+          user: { login: 'testuser' },
+        },
+      } as never);
+
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+
+      // Verify commit body is sanitized
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
+      const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
+      const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
+
+      // Verify we're using merge commit (not squash)
+      expect(result.mergeMethod).toBe('merge');
+
+      // For merge commits, body format is: {PR_TITLE}\n\n{ADDITIONAL_MESSAGES}
+      // The PR title should be sanitized (newlines replaced with spaces)
+      expect(commitMessage).toContain('Feature Co-authored-by: Fake <fake@fake.com>');
+      // Verify the sanitized title appears before the "Merged-by" message
+      const lines = commitMessage.split('\n');
+      expect(lines[0]).toBe('Feature Co-authored-by: Fake <fake@fake.com>');
+      // Ensure no actual newlines from PR title created multiple lines
+      expect(commitMessage).not.toMatch(/Feature\s*\n\s*Co-authored-by:/);
+    });
+
+    it('sanitizes newlines in author names', async () => {
+      const octokit = createMockOctokit();
+
+      let paginateCalls = 0;
+      octokit.paginate.mockImplementation(async () => {
+        paginateCalls++;
+        if (paginateCalls === 1) {
+          return [
+            {
+              id: 1,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'reviewer' },
+            },
+          ];
+        } else if (paginateCalls === 2) {
+          return [
+            {
+              sha: 'abc1234567890',
+              commit: {
+                message: 'feat: add feature',
+                author: {
+                  // Malicious author name with newline injection
+                  name: 'John Doe\nSigned-off-by: Attacker <attacker@evil.com>',
+                  email: 'john@example.com',
+                },
+              },
+            },
+          ];
+        } else if (paginateCalls === 3) {
+          return []; // No unresolved threads
+        }
+        return [];
+      });
+
+      const context = createEventContext({
+        prNumber: 1,
+        commentBody: '/lysbot merge',
+      });
+
+      octokit.rest.pulls.get.mockResolvedValue({
+        data: {
+          title: 'feat: test pull request',
+          base: { ref: 'develop' },
+          head: { ref: 'feature/test', sha: 'abc1234567890' },
+          state: 'open',
+          draft: false,
+          mergeable: true,
+          mergeable_state: 'clean',
+          user: { login: 'testuser' },
+        },
+      } as never);
+
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+
+      // Verify author name is sanitized in Co-authored-by
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
+      const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
+
+      // The malicious newline should be replaced with a space
+      expect(commitMessage).toContain(
+        'Co-authored-by: John Doe Signed-off-by: Attacker <attacker@evil.com> <john@example.com>',
+      );
+      // Verify no actual newline injection occurred
+      const coAuthorLine = commitMessage
+        .split('\n')
+        .find((line) => line.includes('Co-authored-by: John Doe'));
+      expect(coAuthorLine).toBeDefined();
+      expect(coAuthorLine).not.toMatch(/Co-authored-by: John Doe\s*\n\s*Signed-off-by:/);
+    });
+
+    it('sanitizes newlines in author emails', async () => {
+      const octokit = createMockOctokit();
+
+      let paginateCalls = 0;
+      octokit.paginate.mockImplementation(async () => {
+        paginateCalls++;
+        if (paginateCalls === 1) {
+          return [
+            {
+              id: 1,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'reviewer' },
+            },
+          ];
+        } else if (paginateCalls === 2) {
+          return [
+            {
+              sha: 'abc1234567890',
+              commit: {
+                message: 'feat: add feature',
+                author: {
+                  name: 'Jane Doe',
+                  // Malicious author email with newline injection
+                  email: 'jane@example.com\nCo-authored-by: Fake <fake@fake.com>',
+                },
+              },
+            },
+          ];
+        } else if (paginateCalls === 3) {
+          return []; // No unresolved threads
+        }
+        return [];
+      });
+
+      const context = createEventContext({
+        prNumber: 1,
+        commentBody: '/lysbot merge',
+      });
+
+      octokit.rest.pulls.get.mockResolvedValue({
+        data: {
+          title: 'feat: test pull request',
+          base: { ref: 'develop' },
+          head: { ref: 'feature/test', sha: 'abc1234567890' },
+          state: 'open',
+          draft: false,
+          mergeable: true,
+          mergeable_state: 'clean',
+          user: { login: 'testuser' },
+        },
+      } as never);
+
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+
+      // Verify author email is sanitized in Co-authored-by
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
+      const commitMessage = mergeCalls[0]?.[0]?.commit_message ?? '';
+
+      // The malicious newline should be replaced with a space
+      expect(commitMessage).toContain(
+        'Co-authored-by: Jane Doe <jane@example.com Co-authored-by: Fake <fake@fake.com>>',
+      );
+      // Verify no actual newline injection occurred - should all be on one line
+      const coAuthorLine = commitMessage
+        .split('\n')
+        .find((line) => line.includes('Co-authored-by: Jane Doe'));
+      expect(coAuthorLine).toBeDefined();
+      expect(coAuthorLine).not.toMatch(/jane@example\.com>\s*\n\s*Co-authored-by:/);
+    });
+
+    it('prevents multiple trailer injection attempts', async () => {
+      const octokit = createMockOctokit();
+
+      let paginateCalls = 0;
+      octokit.paginate.mockImplementation(async () => {
+        paginateCalls++;
+        if (paginateCalls === 1) {
+          return [
+            {
+              id: 1,
+              state: 'APPROVED',
+              commit_id: 'abc1234567890',
+              user: { login: 'reviewer' },
+            },
+          ];
+        } else if (paginateCalls === 2) {
+          return [
+            {
+              sha: 'abc1234567890',
+              commit: {
+                message: 'feat: add feature',
+                author: {
+                  name: 'Test User',
+                  email: 'test@example.com',
+                },
+              },
+            },
+          ];
+        } else if (paginateCalls === 3) {
+          return []; // No unresolved threads
+        }
+        return [];
+      });
+
+      const context = createEventContext({
+        prNumber: 1,
+        commentBody: '/lysbot merge',
+      });
+
+      // Complex injection attempt with multiple trailers
+      const maliciousTitle =
+        'Fix\n\nSigned-off-by: Evil <evil@bad.com>\nCo-authored-by: Faker <faker@fake.com>';
+      octokit.rest.pulls.get.mockResolvedValue({
+        data: {
+          title: maliciousTitle,
+          base: { ref: 'develop' },
+          head: { ref: 'feature/test', sha: 'abc1234567890' },
+          state: 'open',
+          draft: false,
+          mergeable: true,
+          mergeable_state: 'clean',
+          user: { login: 'testuser' },
+        },
+      } as never);
+
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      expect(result.status).toBe('merged');
+
+      const mergeCalls = octokit.rest.pulls.merge.mock.calls;
+      const commitTitle = mergeCalls[0]?.[0]?.commit_title ?? '';
+
+      // All newlines should be replaced with spaces
+      expect(commitTitle).not.toContain('\n');
+      expect(commitTitle).not.toContain('\r');
+      expect(commitTitle.split('\n')).toHaveLength(1);
+    });
+  });
 });
 
 describe('buildSummaryMarkdown', () => {

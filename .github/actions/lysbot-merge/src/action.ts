@@ -21,6 +21,7 @@ import {
   mergePullRequest,
   fetchPullRequestCommits,
 } from './github-api.js';
+import { sanitizeNewlines } from './sanitizer.js';
 import type { ActionConfig, EventContext, ActionResult, CheckResult, Octokit } from './types.js';
 import {
   isBot,
@@ -367,12 +368,12 @@ export async function executeAction(
     // Title: Merge pull request #{PR_NUMBER} from {PR_MERGE_HEAD}
     // Body: {PR_TITLE}\n\n{ADDITIONAL_MESSAGES}
     commitTitle = `Merge pull request #${prNumber} from ${prData.headRef}`;
-    commitBody = `${prData.title}\n\n${additionalMessages}`;
+    commitBody = `${sanitizeNewlines(prData.title)}\n\n${additionalMessages}`;
   } else {
     // For squash commits:
     // Title: {PR_TITLE} (#{PR_NUMBER})
     // Body: * {COMMIT_TITLE_01}\n* {COMMIT_TITLE_02}\n...\n\nCo-authored-by: ...\n\n{ADDITIONAL_MESSAGES}
-    commitTitle = `${prData.title} (#${prNumber})`;
+    commitTitle = `${sanitizeNewlines(prData.title)} (#${prNumber})`;
 
     // Fetch commits to list their titles and collect co-authors
     const commits = await fetchPullRequestCommits(octokit, owner, repo, prNumber);
@@ -391,8 +392,11 @@ export async function executeAction(
     commits.forEach((c) => {
       const author = c.commit.author;
       if (author?.name && author?.email) {
+        // Sanitize author name and email to prevent newline injection
+        const sanitizedName = sanitizeNewlines(author.name);
+        const sanitizedEmail = sanitizeNewlines(author.email);
         // Create unique key for author
-        const authorLine = `Co-authored-by: ${author.name} <${author.email}>`;
+        const authorLine = `Co-authored-by: ${sanitizedName} <${sanitizedEmail}>`;
         if (!coAuthors.includes(authorLine)) {
           coAuthors.push(authorLine);
         }
