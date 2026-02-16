@@ -31,7 +31,7 @@ export const VALID_FLAGS = ['--override-approval-requirement'] as const;
  * Why: Only trusted users with write access should be able to trigger merges.
  * OWNER/MEMBER have org-level trust, COLLABORATOR has explicit repo access.
  * CONTRIBUTOR and others may have submitted PRs but lack merge authority.
- * 
+ *
  * Note: Command actors must pass BOTH author association and permission checks.
  * Reviewers are validated using permission level only (see VALID_PERMISSIONS).
  */
@@ -41,7 +41,7 @@ export const VALID_AUTHOR_ASSOCIATIONS = ['OWNER', 'MEMBER', 'COLLABORATOR'] as 
  * Valid permission levels that can use the /lysbot merge command.
  * Why: Maps to GitHub's permission model - admin/maintain/write can merge PRs.
  * Read-only users should not be able to trigger merges even if they can comment.
- * 
+ *
  * Note: This check is used for both command actors (with author association check)
  * and reviewers (permission-only check, as GitHub App tokens may return 'NONE'
  * for author_association even for valid collaborators).

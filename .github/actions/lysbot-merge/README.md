@@ -250,6 +250,7 @@ To execute the `/lysbot merge` command, users must satisfy **both** of the follo
    - **write** - Write access (push to repository)
 
 Both checks are performed because:
+
 - **Author association** verifies the user's relationship to the repository
 - **Permission level** confirms the user has actual write capabilities
 
