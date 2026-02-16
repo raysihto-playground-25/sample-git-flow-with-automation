@@ -169,7 +169,7 @@ describe('main.ts', () => {
       // Mock custom configuration
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const customConfig: Record<string, string> = {
-          'token': 'custom-token',
+          token: 'custom-token',
           release_branch_prefix: 'rel/',
           develop_branch: 'main',
           sync_branch_prefix: 'sync/',
@@ -526,7 +526,7 @@ describe('main.ts', () => {
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
-          'token': 'test-token',
+          token: 'test-token',
           mergeable_retry_count: '10',
           mergeable_retry_interval: '20',
         };
@@ -553,7 +553,7 @@ describe('main.ts', () => {
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
-          'token': 'test-token',
+          token: 'test-token',
           mergeable_retry_count: 'not-a-number',
           mergeable_retry_interval: '10',
         };
@@ -577,7 +577,7 @@ describe('main.ts', () => {
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
-          'token': 'test-token',
+          token: 'test-token',
           mergeable_retry_count: '-5',
           mergeable_retry_interval: '10',
         };
@@ -598,7 +598,7 @@ describe('main.ts', () => {
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
-          'token': 'test-token',
+          token: 'test-token',
           mergeable_retry_count: '100', // > max 20
           mergeable_retry_interval: '10',
         };
@@ -619,7 +619,7 @@ describe('main.ts', () => {
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
-          'token': 'test-token',
+          token: 'test-token',
           mergeable_retry_count: '20', // max valid
           mergeable_retry_interval: '1', // min valid
         };
@@ -647,7 +647,7 @@ describe('main.ts', () => {
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
-          'token': 'test-token',
+          token: 'test-token',
           mergeable_retry_count: '5',
           mergeable_retry_interval: 'not-a-number',
         };
@@ -668,7 +668,7 @@ describe('main.ts', () => {
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
-          'token': 'test-token',
+          token: 'test-token',
           mergeable_retry_count: '5',
           mergeable_retry_interval: '0',
         };
@@ -689,7 +689,7 @@ describe('main.ts', () => {
 
       (mockCore.getInput as Mock).mockImplementation((name: string) => {
         const config: Record<string, string> = {
-          'token': 'test-token',
+          token: 'test-token',
           mergeable_retry_count: '5',
           mergeable_retry_interval: '61',
         };
