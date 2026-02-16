@@ -193,9 +193,7 @@ jobs:
       issues: write
     steps:
       - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
-        # All inputs are optional with sensible defaults
         # with:
-        #   token: ${{ secrets.GITHUB_TOKEN }}
         #   release_branch_prefix: "release/"
         #   develop_branch: "develop"
         #   sync_branch_prefix: "fix/sync/"

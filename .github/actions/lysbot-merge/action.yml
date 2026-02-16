@@ -21,11 +21,10 @@
 #         issues: write
 #       steps:
 #         - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
-#           with:
-#             # token: ${{ secrets.GITHUB_TOKEN }}
-#             # release_branch_prefix: "release/"
-#             # develop_branch: "develop"
-#             # sync_branch_prefix: "fix/sync/"
+#           # with:
+#           #   release_branch_prefix: "release/"
+#           #   develop_branch: "develop"
+#           #   sync_branch_prefix: "fix/sync/"
 #
 # NOTES:
 # - Replace `{ORG}` with the organization or user name and `{REPO}` with the
