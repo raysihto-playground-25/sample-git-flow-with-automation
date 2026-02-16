@@ -331,6 +331,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -492,6 +493,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -549,6 +551,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'oldcommit456', // Different from currenthead123
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -606,6 +609,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'oldcommit456',
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -667,6 +671,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -706,6 +711,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -769,6 +775,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'original123',
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -827,6 +834,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -884,6 +892,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'abc1234567890',
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -918,6 +927,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'abc1234567890',
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -944,6 +954,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -1010,6 +1021,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -1065,6 +1077,7 @@ describe('executeAction', () => {
           state: 'APPROVED',
           commit_id: 'abc1234567890',
           user: { login: 'reviewer' },
+          author_association: 'MEMBER',
         },
       ]);
 
@@ -1127,6 +1140,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -1178,6 +1192,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -1219,6 +1234,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
@@ -1284,6 +1300,7 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'reviewer' },
+              author_association: 'MEMBER',
             },
           ];
         } else {
