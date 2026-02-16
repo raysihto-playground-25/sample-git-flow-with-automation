@@ -193,17 +193,19 @@ jobs:
       issues: write
     steps:
       - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # release_branch_prefix: "release/"
-          # develop_branch: "develop"
-          # sync_branch_prefix: "fix/sync/"
+        # All inputs are optional with sensible defaults
+        # with:
+        #   token: ${{ secrets.GITHUB_TOKEN }}  # Optional: defaults to ${{ github.token }}
+        #   release_branch_prefix: "release/"
+        #   develop_branch: "develop"
+        #   sync_branch_prefix: "fix/sync/"
 ```
 
 > [!NOTE]
 >
 > - Replace `{ORG}` with the organization or user name and `{REPO}` with the repository name where this action is hosted.
 > - This Action has no stable release yet. Please use `@develop` until the first versioned tag becomes available.
+> - The `token` input is optional and defaults to `${{ github.token }}`. You can omit all inputs to use the default configuration.
 
 ## Inputs
 
@@ -215,6 +217,17 @@ jobs:
 | `sync_branch_prefix`       | string | No       | `fix/sync/`           | -           | Prefix for sync branches (back-merges)             |
 | `mergeable_retry_count`    | number | No       | `5`                   | 1-20        | Number of retries for mergeable status calculation |
 | `mergeable_retry_interval` | number | No       | `10`                  | 1-60        | Interval in seconds between retries                |
+
+> [!NOTE]
+>
+> **Token Input**: The `token` input is optional and defaults to `${{ github.token }}`. You can omit this input in most cases:
+>
+> ```yaml
+> - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
+>   # token defaults to ${{ github.token }}, no need to specify
+> ```
+>
+> Only specify it explicitly if you need to use a different token (e.g., a Personal Access Token with additional permissions).
 
 > [!NOTE]
 >
