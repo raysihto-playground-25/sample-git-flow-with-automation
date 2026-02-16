@@ -193,11 +193,10 @@ jobs:
       issues: write
     steps:
       - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          # release_branch_prefix: "release/"
-          # develop_branch: "develop"
-          # sync_branch_prefix: "fix/sync/"
+        # with:
+        #   release_branch_prefix: "release/"
+        #   develop_branch: "develop"
+        #   sync_branch_prefix: "fix/sync/"
 ```
 
 > [!NOTE]
@@ -207,14 +206,14 @@ jobs:
 
 ## Inputs
 
-| Input                      | Type   | Required | Default     | Valid Range | Description                                        |
-| -------------------------- | ------ | -------- | ----------- | ----------- | -------------------------------------------------- |
-| `github-token`             | string | Yes      | -           | -           | GitHub token for API authentication                |
-| `release_branch_prefix`    | string | No       | `release/`  | -           | Prefix for release branches                        |
-| `develop_branch`           | string | No       | `develop`   | -           | Name of the develop branch                         |
-| `sync_branch_prefix`       | string | No       | `fix/sync/` | -           | Prefix for sync branches (back-merges)             |
-| `mergeable_retry_count`    | number | No       | `5`         | 1-20        | Number of retries for mergeable status calculation |
-| `mergeable_retry_interval` | number | No       | `10`        | 1-60        | Interval in seconds between retries                |
+| Input                      | Type   | Required | Default               | Valid Range | Description                                        |
+| -------------------------- | ------ | -------- | --------------------- | ----------- | -------------------------------------------------- |
+| `token`                    | string | No       | `${{ github.token }}` | -           | GitHub token for API authentication                |
+| `release_branch_prefix`    | string | No       | `release/`            | -           | Prefix for release branches                        |
+| `develop_branch`           | string | No       | `develop`             | -           | Name of the develop branch                         |
+| `sync_branch_prefix`       | string | No       | `fix/sync/`           | -           | Prefix for sync branches (back-merges)             |
+| `mergeable_retry_count`    | number | No       | `5`                   | 1-20        | Number of retries for mergeable status calculation |
+| `mergeable_retry_interval` | number | No       | `10`                  | 1-60        | Interval in seconds between retries                |
 
 > [!NOTE]
 >
