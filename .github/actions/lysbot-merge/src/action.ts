@@ -193,11 +193,13 @@ export async function executeAction(
     // because GitHub App tokens (GITHUB_TOKEN) may return 'NONE' for author_association
     // even when the user has valid permissions. See: https://github.com/orgs/community/discussions/70568
     const reviewerLogin = review.user?.login;
-    if (reviewerLogin) {
-      const reviewerPermission = await getCollaboratorPermission(octokit, owner, repo, reviewerLogin);
-      if (!hasValidPermission(reviewerPermission)) {
-        continue;
-      }
+    if (!reviewerLogin) {
+      // Skip reviews from deleted users or users without login
+      continue;
+    }
+    const reviewerPermission = await getCollaboratorPermission(octokit, owner, repo, reviewerLogin);
+    if (!hasValidPermission(reviewerPermission)) {
+      continue;
     }
 
     // Check if review is stale (not on current HEAD)

@@ -414,6 +414,35 @@ describe('executeAction', () => {
       expect(result.message).toContain('checks failed');
     });
 
+    it('skips reviews from users without login (deleted accounts)', async () => {
+      const octokit = createMockOctokit();
+
+      // Mock review from a deleted user (no login)
+      octokit.paginate.mockResolvedValue([
+        {
+          id: 1,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: null, // Deleted user
+        },
+        {
+          id: 2,
+          state: 'APPROVED',
+          commit_id: 'abc1234567890',
+          user: {}, // User without login
+        },
+      ]);
+
+      const context = createEventContext();
+      const config = createConfig();
+
+      const result = await executeAction(octokit, context, config);
+
+      // Should fail because no valid reviews exist
+      expect(result.status).toBe('failed');
+      expect(result.message).toContain('checks failed');
+    });
+
     it('accepts reviews with valid permissions and skips invalid ones', async () => {
       const octokit = createMockOctokit();
 
