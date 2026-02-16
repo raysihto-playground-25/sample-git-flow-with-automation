@@ -38,7 +38,7 @@ jobs:
       - name: Run lysbot-merge action
         uses: raysihto-playground-25/sample-git-flow-with-automation/.github/actions/lysbot-merge@develop
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           ## Project-specific branch naming configuration
           # release_branch_prefix: "release/"
           # develop_branch: "develop"
