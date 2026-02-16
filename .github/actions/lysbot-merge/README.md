@@ -235,12 +235,18 @@ The workflow must have the following permissions:
 - `pull-requests: write` - For posting comments and dismissing reviews
 - `issues: write` - For adding reactions to comments
 
+### User Authorization
+
+Only users with **write access** or higher can execute the `/lysbot merge` command. Specifically, the following user types are authorized:
+
+- **Repository owners** - Full repository ownership
+- **Organization members** - Members of the organization owning the repository
+- **Collaborators with write access** - External collaborators explicitly granted write permissions
+
+Users without sufficient permissions will receive a clear error message when attempting to use the command.
+
 ## Limitations
 
 > [!WARNING]
 >
-> **Fork PRs are NOT supported**: `GITHUB_TOKEN` has limited write permissions for fork-originated PRs
-
-> [!NOTE]
->
-> **Authorization required**: Only organization owners, members, or collaborators with write access can use the command
+> **Fork PRs are NOT supported**: GitHub's security model blocks write operations (including merges) on fork PRs when using `GITHUB_TOKEN`. This is a fundamental security boundary to prevent untrusted code from external contributors from executing with elevated repository permissions. To merge fork PRs, repository maintainers must use the GitHub web interface or push the fork branch to the main repository first.
