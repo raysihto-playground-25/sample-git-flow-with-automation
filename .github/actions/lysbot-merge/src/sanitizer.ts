@@ -2,15 +2,15 @@
  * sanitizer.ts - Utility functions for sanitizing Git commit message content
  *
  * These functions prevent newline injection attacks in Git commit messages
- * by removing or replacing newline characters in user-controlled inputs.
+ * by replacing newline characters in user-controlled inputs with spaces.
  */
 
 /**
- * Sanitizes a string by removing all newline characters (LF and CRLF).
+ * Sanitizes a string by replacing all newline characters (LF, CR, and CRLF) with spaces.
  * This prevents newline injection attacks in Git commit messages.
  *
  * @param input - The string to sanitize
- * @returns The sanitized string with all newlines removed
+ * @returns The sanitized string with all newlines replaced by spaces and trimmed
  *
  * @example
  * ```typescript
