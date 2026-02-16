@@ -36,8 +36,6 @@
 # LIMITATIONS:
 # - Fork PRs are NOT supported (this action explicitly rejects fork PRs as a
 #   design decision; typical usage with passed GITHUB_TOKEN has restrictions)
-# - Only organization owners, members, or collaborators with write access
-#   can use the `/lysbot merge` command
 #
 # THIRD-PARTY LICENSES:
 # - Twemoji graphics (https://github.com/twitter/twemoji) are used for emoji
