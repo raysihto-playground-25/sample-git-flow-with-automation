@@ -364,48 +364,60 @@ describe('executeAction', () => {
       expect(result.message).toContain('checks failed');
     });
 
-    it('skips reviews from users without valid author association', async () => {
+    it('skips reviews from users without valid permissions', async () => {
       const octokit = createMockOctokit();
 
-      // Mock reviews from users with invalid author associations
+      // Mock reviews from users
       octokit.paginate.mockResolvedValue([
         {
           id: 1,
           state: 'APPROVED',
           commit_id: 'abc1234567890',
           user: { login: 'contributor' },
-          author_association: 'CONTRIBUTOR', // Invalid association
         },
         {
           id: 2,
           state: 'APPROVED',
           commit_id: 'abc1234567890',
           user: { login: 'firsttimer' },
-          author_association: 'FIRST_TIME_CONTRIBUTOR', // Invalid association
         },
         {
           id: 3,
           state: 'APPROVED',
           commit_id: 'abc1234567890',
-          user: { login: 'none' },
-          author_association: 'NONE', // Invalid association
+          user: { login: 'nouser' },
         },
       ]);
+
+      // Mock permission checks - actor has write, but reviewers have insufficient permissions
+      octokit.rest.repos.getCollaboratorPermissionLevel.mockImplementation(async (params) => {
+        const username = params?.username;
+        // Actor has write permission to execute the command
+        if (username === 'testactor') {
+          return {
+            data: { permission: 'write' },
+          } as Awaited<ReturnType<typeof octokit.rest.repos.getCollaboratorPermissionLevel>>;
+        }
+        // All reviewers have insufficient permissions
+        return {
+          data: { permission: username === 'nouser' ? 'none' : 'read' },
+        } as Awaited<ReturnType<typeof octokit.rest.repos.getCollaboratorPermissionLevel>>;
+      });
 
       const context = createEventContext();
       const config = createConfig();
 
       const result = await executeAction(octokit, context, config);
 
-      // Should fail because no reviews have valid author association
+      // Should fail because no reviews have valid permissions
       expect(result.status).toBe('failed');
       expect(result.message).toContain('checks failed');
     });
 
-    it('accepts reviews with valid author association and skips invalid ones', async () => {
+    it('accepts reviews with valid permissions and skips invalid ones', async () => {
       const octokit = createMockOctokit();
 
-      // Mock mix of valid and invalid author associations
+      // Mock mix of valid and invalid permissions
       let paginateCalls = 0;
       octokit.paginate.mockImplementation(async () => {
         paginateCalls++;
@@ -417,21 +429,18 @@ describe('executeAction', () => {
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'contributor' },
-              author_association: 'CONTRIBUTOR', // Invalid - should be skipped
             },
             {
               id: 2,
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'member' },
-              author_association: 'MEMBER', // Valid - should count
             },
             {
               id: 3,
               state: 'APPROVED',
               commit_id: 'abc1234567890',
               user: { login: 'collaborator' },
-              author_association: 'COLLABORATOR', // Valid - should count
             },
           ];
         } else {
@@ -440,12 +449,26 @@ describe('executeAction', () => {
         }
       });
 
+      // Mock permission checks - actor has write, contributor has 'read', others have valid permissions
+      octokit.rest.repos.getCollaboratorPermissionLevel.mockImplementation(async (params) => {
+        const username = params?.username;
+        const permissions: Record<string, string> = {
+          testactor: 'write', // Actor needs write permission
+          contributor: 'read', // Invalid - should be skipped
+          member: 'write', // Valid - should count
+          collaborator: 'admin', // Valid - should count
+        };
+        return {
+          data: { permission: permissions[username || ''] || 'none' },
+        } as Awaited<ReturnType<typeof octokit.rest.repos.getCollaboratorPermissionLevel>>;
+      });
+
       const context = createEventContext();
       const config = createConfig();
 
       const result = await executeAction(octokit, context, config);
 
-      // Should succeed with 2 valid approvals (MEMBER and COLLABORATOR)
+      // Should succeed with 2 valid approvals (member and collaborator with write/admin permissions)
       expect(result.status).toBe('merged');
     });
 
