@@ -182,6 +182,9 @@ export async function executeAction(
   let validApprovals = 0;
   const dismissFailures: string[] = [];
 
+  // Cache permission lookups to avoid redundant API calls for the same reviewer
+  const permissionCache = new Map<string, string>();
+
   for (const review of approvedReviews) {
     // Skip self-approval
     if (review.user?.login === prData.author) {
@@ -197,7 +200,14 @@ export async function executeAction(
       // Skip reviews from deleted users or users without login
       continue;
     }
-    const reviewerPermission = await getCollaboratorPermission(octokit, owner, repo, reviewerLogin);
+
+    // Check cache first to avoid redundant API calls
+    let reviewerPermission = permissionCache.get(reviewerLogin);
+    if (reviewerPermission === undefined) {
+      reviewerPermission = await getCollaboratorPermission(octokit, owner, repo, reviewerLogin);
+      permissionCache.set(reviewerLogin, reviewerPermission);
+    }
+
     if (!hasValidPermission(reviewerPermission)) {
       continue;
     }
