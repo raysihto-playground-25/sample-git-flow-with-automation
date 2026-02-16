@@ -249,4 +249,4 @@ Users without sufficient permissions will receive a clear error message when att
 
 > [!WARNING]
 >
-> **Fork PRs are NOT supported**: GitHub's security model blocks write operations (including merges) on fork PRs when using `GITHUB_TOKEN`. This is a fundamental security boundary to prevent untrusted code from external contributors from executing with elevated repository permissions. To merge fork PRs, repository maintainers must use the GitHub web interface or push the fork branch to the main repository first.
+> **Fork PRs are NOT supported**: This action explicitly rejects PRs from forked repositories. This design decision is made because the typical usage pattern involves passing `GITHUB_TOKEN`, which has restricted write permissions on fork PRs as a GitHub security feature. While technically possible to support fork PRs with a Personal Access Token (PAT), this action intentionally does not support them to maintain a consistent and predictable behavior. To merge fork PRs, repository maintainers should use the GitHub web interface or push the fork branch to the main repository first.
