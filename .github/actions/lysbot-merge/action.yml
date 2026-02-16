@@ -22,7 +22,7 @@
 #       steps:
 #         - uses: {ORG}/{REPO}/.github/actions/lysbot-merge@develop
 #           with:
-#             token: ${{ secrets.GITHUB_TOKEN }}
+#             # token: ${{ secrets.GITHUB_TOKEN }}
 #             # release_branch_prefix: "release/"
 #             # develop_branch: "develop"
 #             # sync_branch_prefix: "fix/sync/"
@@ -52,8 +52,8 @@ description: 'Automated PR merging with validation checks via /lysbot merge comm
 
 inputs:
   token:
-    description: 'GitHub token for API authentication. Defaults to the automatic token provided by GitHub Actions.'
-    required: false
+    description: 'GitHub token for API authentication'
+    default: ${{ github.token }}
   release_branch_prefix:
     description: 'OPTIONAL: Prefix for release branches (e.g., "release/")'
     required: false

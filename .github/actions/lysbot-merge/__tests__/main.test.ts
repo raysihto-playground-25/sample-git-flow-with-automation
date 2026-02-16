@@ -152,7 +152,7 @@ describe('main.ts', () => {
       await run(deps);
 
       // Assert
-      expect(mockCore.getInput).toHaveBeenCalledWith('token');
+      expect(mockCore.getInput).toHaveBeenCalledWith('token', { required: true });
       expect(mockGetOctokit).toHaveBeenCalledWith('test-token');
       expect(executeActionSpy).toHaveBeenCalled();
       expect(mockCore.setOutput).toHaveBeenCalledWith('result', 'merged');

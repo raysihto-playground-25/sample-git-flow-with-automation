@@ -135,12 +135,7 @@ function buildEventContext(context: GitHubContext, env: RuntimeEnvironment): Eve
  */
 export async function run(deps: RunDependencies = createProductionDependencies()): Promise<void> {
   try {
-    const token = deps.core.getInput('token') || process.env.GITHUB_TOKEN || '';
-    if (!token) {
-      throw new Error(
-        'GitHub token is required but not provided. Please ensure the token input is set or GITHUB_TOKEN is available.',
-      );
-    }
+    const token = deps.core.getInput('token', { required: true });
     const config = parseConfig(deps.core);
     const context = buildEventContext(deps.context, deps.env);
     const octokit = deps.getOctokit(token);
